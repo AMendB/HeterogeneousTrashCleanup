@@ -8,7 +8,7 @@ import numpy as np
 # Selection of PARAMETERS TO TRAIN #
 reward_function = 'basic_reward' # basic_reward
 reward_weights = (10, 10, 0) 
-memory_size = int(1E6)
+memory_size = int(1E4)
 network_type = 'independent_networks_per_team'
 device = 'cuda:0'
 episodes = 60000
@@ -60,9 +60,9 @@ env = MultiAgentCleanupEnvironment(scenario_map = scenario_map,
 							flag_to_check_collisions_within = True,
 							max_collisions = 10,
 							reward_function = reward_function, 
+							reward_weights = reward_weights,
 							dynamic = True,
 							obstacles = False,
-							reward_weights = reward_weights,
 							show_plot_graphics = SHOW_PLOT_GRAPHICS,
 							)
 

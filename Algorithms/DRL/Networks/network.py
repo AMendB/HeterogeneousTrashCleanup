@@ -129,58 +129,6 @@ class DuelingVisualNetwork(nn.Module):
 
 		return q
 
-class DuelingVisualNetworkWithSensorsNoises(nn.Module):
-
-	def __init__(
-			self,
-			in_dim: tuple,
-			out_dim: int,
-			number_of_features: int,
-	):
-		"""Initialization."""
-		super(DuelingVisualNetworkWithSensorsNoises, self).__init__()
-
-		self.out_dim = out_dim
-
-		# set common feature layer
-
-		self.feature_extractor = FeatureExtractor(in_dim, number_of_features)
-		self.linear_main_layers_first = nn.Linear(number_of_features, 255)
-
-		self.linear_main_layers_second = nn.Sequential(
-			nn.Linear(256, 256),
-			nn.ReLU(),
-			nn.Linear(256, 256),
-			nn.ReLU(),
-		)
-
-		# set advantage layer
-		self.advantage_hidden_layer = nn.Linear(256, 64)
-		self.advantage_layer = nn.Linear(64, out_dim)
-
-		# set value layer
-		self.value_hidden_layer = nn.Linear(256, 64)
-		self.value_layer = nn.Linear(64, 1)
-
-	def forward(self, x: torch.Tensor, x_noise: torch.Tensor) -> torch.Tensor:
-		"""Forward method implementation."""
-
-		x = self.feature_extractor(x)
-		x = F.relu(self.linear_main_layers_first(x))
-		x = torch.hstack((x, x_noise.view(-1, 1)))
-		x = F.relu(self.linear_main_layers_second(x))
-		
-
-		adv_hid = F.relu(self.advantage_hidden_layer(x))
-		val_hid = F.relu(self.value_hidden_layer(x))
-
-		value = self.value_layer(val_hid)
-		advantage = self.advantage_layer(adv_hid)
-
-		q = value + advantage - advantage.mean(dim=-1, keepdim=True)
-
-		return q
-
 class NoisyDuelingVisualNetwork(nn.Module):
 
 	def __init__(
@@ -238,7 +186,6 @@ class NoisyDuelingVisualNetwork(nn.Module):
 
 		self.value_hidden_layer.reset_noise()
 		self.value_layer.reset_noise()
-
 
 class DistributionalVisualNetwork(nn.Module):
 

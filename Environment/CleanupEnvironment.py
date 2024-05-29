@@ -731,7 +731,8 @@ class MultiAgentCleanupEnvironment:
 			changes_in_model = np.array(
 				[np.sum(
 					changes_in_whole_model[agent.influence_mask.astype(bool)] / self.redundancy_mask[agent.influence_mask.astype(bool)]
-					) if idx in explorers_alive else 0 for idx, agent in enumerate(self.fleet.vehicles)
+					# ) if idx in explorers_alive else 0 for idx, agent in enumerate(self.fleet.vehicles) # only explorers will get reward for finding trash
+					) for idx, agent in enumerate(self.fleet.vehicles)  # all agents will get reward for finding trash, not only explorers
 				])
 			
 			# CLEANERS TEAM #
@@ -750,56 +751,20 @@ class MultiAgentCleanupEnvironment:
 
 		return {idx: veh.actual_agent_position for idx, veh in enumerate(self.fleet.vehicles) if self.active_agents[idx]}
 
-	def get_gt_in_visitable_locations(self):
-		""" Returns the ground truth values only for visitable locations """
-
-		return self.real_trash_map[self.visitable_locations[:, 0], self.visitable_locations[:, 1]]
-
-	def get_model_mu_in_visitable_locations(self):
-		""" Returns the model mean values only for visitable locations """
-
-		return self.model_trash_map[self.visitable_locations[:, 0], self.visitable_locations[:, 1]]
-
 	def get_model_mu_mean_abs_error(self):
 			""" Returns the mean absolute error """
 
-			return mean_absolute_error(self.get_gt_in_visitable_locations(), self.get_model_mu_in_visitable_locations())
+			return mean_absolute_error(self.real_trash_map, self.model_trash_map)
 
 	def get_model_mu_mse_error(self, squared = False):
 			""" Returns the MSE error """
 
-			return mean_squared_error(self.get_gt_in_visitable_locations(), self.get_model_mu_in_visitable_locations(), squared = squared)
-
-	def get_model_mu_mse_error_in_peaks(self, squared = False):
-			""" Returns the MSE error in peaks of the ground truth """
-
-			gt_in_visitable_locations = self.get_gt_in_visitable_locations()
-			model_mu_in_visitable_locations = self.get_model_mu_in_visitable_locations()
-			
-			peaks_mask = np.where(self.get_gt_in_visitable_locations() >= 0.9, True, False)
-
-			gt_in_peaks = gt_in_visitable_locations[peaks_mask]
-			model_mu_in_peaks = model_mu_in_visitable_locations[peaks_mask]
-
-			return mean_squared_error(y_true=gt_in_peaks, y_pred=model_mu_in_peaks, sample_weight=gt_in_peaks, squared=squared)
-
-	def get_model_mu_mse_error_in_non_peaks(self, squared = False):
-			""" Returns the MSE error in non peaks of the ground truth """
-
-			gt_in_visitable_locations = self.get_gt_in_visitable_locations()
-			model_mu_in_visitable_locations = self.get_model_mu_in_visitable_locations()
-			
-			non_peaks_mask = np.where(self.get_gt_in_visitable_locations() < 0.9, True, False)
-
-			gt_in_non_peaks = gt_in_visitable_locations[non_peaks_mask]
-			model_mu_in_non_peaks = model_mu_in_visitable_locations[non_peaks_mask]
-
-			return mean_squared_error(y_true=gt_in_non_peaks, y_pred=model_mu_in_non_peaks, sample_weight=gt_in_non_peaks, squared=squared)
+			return mean_squared_error(self.real_trash_map, self.model_trash_map, squared = squared)
 
 	def get_model_mu_r2_error(self):
 			""" Returns the R2 error """
 
-			return r2_score(self.get_gt_in_visitable_locations(), self.get_model_mu_in_visitable_locations())
+			return r2_score(self.real_trash_map, self.model_trash_map)
 
 	def get_redundancy_max(self):
 			""" Returns the max number of agents that are in overlapping areas. """
@@ -813,6 +778,7 @@ class MultiAgentCleanupEnvironment:
 
 			'scenario_map': self.scenario_map.tolist(),
 			'number_of_agents_by_team': self.number_of_agents_by_team,
+			'n_actions': self.n_actions,
 			'max_distance_travelled_by_team': self.max_distance_travelled_by_team,
 			'fleet_initial_positions': self.backup_fleet_initial_positions_entry if isinstance(self.backup_fleet_initial_positions_entry, str) else self.backup_fleet_initial_positions_entry.tolist(),
 			'seed': self.seed,
@@ -875,9 +841,9 @@ if __name__ == '__main__':
 							   flag_to_check_collisions_within = True,
 							   max_collisions = 1000,
 							   reward_function = 'basic_reward',  # basic_reward
+							   reward_weights = (1, 1, 0),
 							   dynamic = True,
 							   obstacles = False,
-							   reward_weights = (1, 1, 0),
 							   show_plot_graphics = True,
 							 )
 	

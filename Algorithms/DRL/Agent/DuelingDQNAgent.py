@@ -392,16 +392,17 @@ class MultiAgentDuelingDQNAgent:
 					# Process the agent step #
 					next_states, reward, done = self.step(actions)
 
-					# Store every observation for every agent #
-					for agent_id in next_states.keys():
-						self.transition = [states[agent_id],
-											actions[agent_id],
-											reward[agent_id],
-											next_states[agent_id],
-											done[agent_id],
-											{}]
+					if np.random.rand() < 0.8: # Store only 80% of the transitions to have more diversity in experiences
+						# Store every observation for every agent #
+						for agent_id in next_states.keys():
+							self.transition = [states[agent_id],
+												actions[agent_id],
+												reward[agent_id],
+												next_states[agent_id],
+												done[agent_id],
+												{}]
 
-						self.memory[self.env.team_id_of_each_agent[agent_id]].store(*self.transition)
+							self.memory[self.env.team_id_of_each_agent[agent_id]].store(*self.transition)
 
 					# Update the state
 					states = next_states
@@ -542,15 +543,16 @@ class MultiAgentDuelingDQNAgent:
 					# Process the agent step #
 					next_states, reward, done = self.step(actions)
 
-					# Store every observation for every agent #
-					for agent_id in next_states.keys():
-						self.transition = [states[agent_id],
-											actions[agent_id],
-											reward[agent_id],
-											next_states[agent_id],
-											done[agent_id]]
+					if np.random.rand() < 0.8: # Store only 80% of the transitions to have more diversity in experiences
+						# Store every observation for every agent #
+						for agent_id in next_states.keys():
+							self.transition = [states[agent_id],
+												actions[agent_id],
+												reward[agent_id],
+												next_states[agent_id],
+												done[agent_id]]
 
-						self.memory.store(*self.transition)
+							self.memory.store(*self.transition)
 
 					# Update the state
 					states = next_states
