@@ -728,12 +728,13 @@ class MultiAgentCleanupEnvironment:
 		if self.reward_function == 'basic_reward':
 			# EXPLORERS TEAM #
 			changes_in_whole_model = np.abs(self.model_trash_map - self.previous_model_trash_map)
-			explorers_alive = [idx for idx, agent_id in enumerate(self.team_id_of_each_agent) if agent_id == self.explorers_team_id and self.active_agents[idx]]
+			# explorers_alive = [idx for idx, agent_id in enumerate(self.team_id_of_each_agent) if agent_id == self.explorers_team_id and self.active_agents[idx]]
 			changes_in_model = np.array(
 				[np.sum(
-					changes_in_whole_model[agent.influence_mask.astype(bool)] / self.redundancy_mask[agent.influence_mask.astype(bool)]
+					# changes_in_whole_model[agent.influence_mask.astype(bool)] / self.redundancy_mask[agent.influence_mask.astype(bool)]
 					# ) if idx in explorers_alive else 0 for idx, agent in enumerate(self.fleet.vehicles) # only explorers will get reward for finding trash
-					) for idx, agent in enumerate(self.fleet.vehicles)  # all agents will get reward for finding trash, not only explorers
+					changes_in_whole_model[agent.influence_mask.astype(bool)] / self.redundancy_mask[agent.influence_mask.astype(bool)] * (1-self.team_id_of_each_agent[idx]*2/3)
+					) if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles) # All active agents will get reward for finding trash, not only explorers. But cleaners will get 1/3 of the reward that would get an explorer.
 				])
 			
 			# CLEANERS TEAM #
