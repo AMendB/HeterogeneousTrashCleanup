@@ -430,6 +430,7 @@ class MultiAgentCleanupEnvironment:
 		pollution_spots_number = self.rng_pollution_spots_number.integers(1, max_number_of_pollution_spots+1)
 		pollution_spots_indexes = self.rng_pollution_spots_locations_indexes.choice(np.arange(0, len(self.visitable_locations)), pollution_spots_number, replace=False)
 		number_of_trash_elements_in_each_spot = self.rng_trash_elements_number.normal(loc=max_number_of_trash_elements_per_spot, scale=10, size=pollution_spots_number).round().astype(int)
+		number_of_trash_elements_in_each_spot[number_of_trash_elements_in_each_spot <= 0] = 10 # minimum number of trash elements in a spot
 		
 		# Generate the trash positions #
 		trash_positions_yx = np.array([])
