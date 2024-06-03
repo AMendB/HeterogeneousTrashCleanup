@@ -80,8 +80,9 @@ class MultiAgentDuelingDQNAgent:
 		self.eval_episodes = eval_episodes
 
 		""" Observation space dimensions """
-		obs_dim = env.observation_space_shape
-		action_dim = env.n_actions
+		self.obs_dim = env.observation_space_shape
+		self.action_dim_by_team = env.n_actions_by_team
+		self.action_dim_of_each_agent = env.n_actions_of_each_agent
 
 		""" Agent embeds the environment """
 		self.env = env
@@ -112,26 +113,26 @@ class MultiAgentDuelingDQNAgent:
 
 		""" Prioritized Experience Replay """
 		if self.independent_networks_per_team:
-			self.memory = [PrioritizedReplayBuffer(obs_dim, memory_size, batch_size, alpha=alpha) for _ in range(self.env.n_teams)]
+			self.memory = [PrioritizedReplayBuffer(self.obs_dim, memory_size, batch_size, alpha=alpha) for _ in range(self.env.n_teams)]
 		else:
-			self.memory = PrioritizedReplayBuffer(obs_dim, memory_size, batch_size, alpha=alpha)
+			self.memory = PrioritizedReplayBuffer(self.obs_dim, memory_size, batch_size, alpha=alpha)
 		self.beta = beta
 		self.prior_eps = prior_eps
 
 		""" Create the DQN and the DQN-Target (noisy if selected) """
 		if self.independent_networks_per_team:
-			self.dqn = [DuelingVisualNetwork(obs_dim, action_dim, number_of_features).to(self.device) for _ in range(self.env.n_teams)]
-			self.dqn_target = [DuelingVisualNetwork(obs_dim, action_dim, number_of_features).to(self.device) for _ in range(self.env.n_teams)]
+			self.dqn = [DuelingVisualNetwork(self.obs_dim, self.action_dim_by_team[team_id], number_of_features).to(self.device) for team_id in range(self.env.n_teams)]
+			self.dqn_target = [DuelingVisualNetwork(self.obs_dim, self.action_dim_by_team[team_id], number_of_features).to(self.device) for team_id in range(self.env.n_teams)]
 		elif self.noisy:
-			self.dqn = NoisyDuelingVisualNetwork(obs_dim, action_dim, number_of_features).to(self.device)
-			self.dqn_target = NoisyDuelingVisualNetwork(obs_dim, action_dim, number_of_features).to(self.device)
+			self.dqn = NoisyDuelingVisualNetwork(self.obs_dim, action_dim, number_of_features).to(self.device)
+			self.dqn_target = NoisyDuelingVisualNetwork(self.obs_dim, action_dim, number_of_features).to(self.device)
 		elif self.distributional:
 			self.support = torch.linspace(self.v_interval[0], self.v_interval[1], self.num_atoms).to(self.device)
-			self.dqn = DistributionalVisualNetwork(obs_dim, action_dim, number_of_features, num_atoms, self.support).to(self.device)
-			self.dqn_target = DistributionalVisualNetwork(obs_dim, action_dim, number_of_features, num_atoms, self.support).to(self.device)
+			self.dqn = DistributionalVisualNetwork(self.obs_dim, action_dim, number_of_features, num_atoms, self.support).to(self.device)
+			self.dqn_target = DistributionalVisualNetwork(self.obs_dim, action_dim, number_of_features, num_atoms, self.support).to(self.device)
 		else:
-			self.dqn = DuelingVisualNetwork(obs_dim, action_dim, number_of_features).to(self.device)
-			self.dqn_target = DuelingVisualNetwork(obs_dim, action_dim, number_of_features).to(self.device)
+			self.dqn = DuelingVisualNetwork(self.obs_dim, action_dim, number_of_features).to(self.device)
+			self.dqn_target = DuelingVisualNetwork(self.obs_dim, action_dim, number_of_features).to(self.device)
 
 		if self.independent_networks_per_team:
 			# Load weights from dqn to dqn_target to be equal at the begining, and eval #
@@ -166,7 +167,7 @@ class MultiAgentDuelingDQNAgent:
 
 		# Masking utilities #
 		if self.concensus_actions:
-			self.consensus_safe_masking_module = ConsensusSafeActionMasking(navigation_map = self.env.scenario_map, action_space_dim = action_dim, movement_length_of_each_agent = self.env.movement_length_of_each_agent)
+			self.consensus_safe_masking_module = ConsensusSafeActionMasking(navigation_map = self.env.scenario_map, movement_length_of_each_agent = self.env.movement_length_of_each_agent)
 			self.nogobackfleet_masking_module = NoGoBackFleetMasking()
 		elif self.masked_actions:
 			self.safe_masking_module = SafeActionMasking(action_space_dim = action_dim, movement_length = self.env.movement_length)
@@ -221,7 +222,7 @@ class MultiAgentDuelingDQNAgent:
 
 		return actions
 
-	def select_concensus_actions(self, states: dict, positions: np.ndarray, n_actions: int, done: dict, deterministic: bool = False):
+	def select_concensus_actions(self, states: dict, positions: np.ndarray, n_actions_of_each_agent: int, done: dict, deterministic: bool = False):
 		""" Select an action masked to avoid collisions and so """
 		
 		# Update navigation map if there are dynamic obstacles #
@@ -230,7 +231,7 @@ class MultiAgentDuelingDQNAgent:
 
 		if self.epsilon > np.random.rand() and not self.noisy and not deterministic:
 			# Compute randomly the q's #
-			q_values = {agent_id: np.random.rand(n_actions) for agent_id in states.keys() if not done[agent_id]}
+			q_values = {agent_id: np.random.rand(n_actions_of_each_agent[agent_id]) for agent_id in states.keys() if not done[agent_id]}
 		else:
 			# The network compute the q's #
 			if self.independent_networks_per_team:
@@ -387,7 +388,7 @@ class MultiAgentDuelingDQNAgent:
 					steps += 1
 
 					# Select the action using the current policy #
-					actions = self.select_concensus_actions(states=states, positions=self.env.get_active_agents_positions_dict(), n_actions=self.env.n_actions, done = done)
+					actions = self.select_concensus_actions(states=states, positions=self.env.get_active_agents_positions_dict(), n_actions_of_each_agent=self.action_dim_of_each_agent, done = done)
 
 					# Process the agent step #
 					next_states, reward, done = self.step(actions)
@@ -533,7 +534,7 @@ class MultiAgentDuelingDQNAgent:
 
 					# Select the action using the current policy #
 					if self.concensus_actions:
-						actions = self.select_concensus_actions(states=states, positions=self.env.get_active_agents_positions_dict(), n_actions=self.env.n_actions, done = done)
+						actions = self.select_concensus_actions(states=states, positions=self.env.get_active_agents_positions_dict(), n_actions_of_each_agent=self.action_dim_of_each_agent, done = done)
 					elif self.masked_actions:
 						actions = self.select_masked_actions(states=states, positions=self.env.fleet.get_positions())
 					else:
@@ -799,7 +800,7 @@ class MultiAgentDuelingDQNAgent:
 
 					# Select the action using the current policy
 					if self.concensus_actions:
-						actions = self.select_concensus_actions(states=states, positions=self.env.get_active_agents_positions_dict(), n_actions=self.env.n_actions, done = done)
+						actions = self.select_concensus_actions(states=states, positions=self.env.get_active_agents_positions_dict(), n_actions_of_each_agent=self.action_dim_of_each_agent, done = done)
 					elif self.masked_actions:
 						actions = self.select_masked_actions(states=states, positions=self.env.fleet.get_positions())
 					else:
@@ -850,7 +851,7 @@ class MultiAgentDuelingDQNAgent:
 
 					# Select the action using the current policy
 					if self.concensus_actions:
-						actions = self.select_concensus_actions(states=states, positions=self.env.get_active_agents_positions_dict(), n_actions=self.env.n_actions, done = done)
+						actions = self.select_concensus_actions(states=states, positions=self.env.get_active_agents_positions_dict(), n_actions_of_each_agent=self.action_dim_of_each_agent, done = done)
 					elif self.masked_actions:
 						actions = self.select_masked_actions(states=states, positions=self.env.fleet.get_positions())
 					else:

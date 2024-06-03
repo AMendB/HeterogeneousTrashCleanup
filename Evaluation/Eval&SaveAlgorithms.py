@@ -487,8 +487,8 @@ if __name__ == '__main__':
             movement_length_explorers = 2
             movement_length_cleaners = 1
             movement_length_of_each_agent = np.repeat((movement_length_explorers, movement_length_cleaners), (n_explorers, n_cleaners))
-            vision_length_explorers = 1
-            vision_length_cleaners = 4
+            vision_length_explorers = 4
+            vision_length_cleaners = 1
             max_distance_travelled_explorers = 400
             max_distance_travelled_cleaners = 200
             reward_function = 'basic_reward' # 
@@ -506,7 +506,7 @@ if __name__ == '__main__':
             # Create environment # 
             env = MultiAgentCleanupEnvironment(scenario_map = scenario_map,
                                     number_of_agents_by_team=(n_explorers,n_cleaners),
-                                    n_actions=n_actions,
+                                    n_actions_by_team=n_actions,
                                     max_distance_travelled_by_team = (max_distance_travelled_explorers, max_distance_travelled_cleaners),
                                     fleet_initial_positions = initial_positions, # None, 'area', 'fixed' or positions array
                                     seed = SEED,
@@ -528,7 +528,7 @@ if __name__ == '__main__':
                 selected_algorithm_agents = [WanderingAgent(world=scenario_map, number_of_actions=8, movement_length=movement_length, seed=SEED+i) for i in range(n_agents)]
             elif selected_algorithm == "PSO":
                 selected_algorithm_agents = [ParticleSwarmOptimizationAgent(world=scenario_map, number_of_actions=8, movement_length=movement_length, seed=SEED+i) for i in range(n_agents)]
-                consensus_safe_masking_module = ConsensusSafeActionMasking(navigation_map = scenario_map, action_space_dim = env.n_actions, movement_length_of_each_agent = env.movement_length)
+                consensus_safe_masking_module = ConsensusSafeActionMasking(navigation_map = scenario_map, angle_set_of_each_agent=env.angle_set_of_each_agent, movement_length_of_each_agent = env.movement_length)
 
         else:
             # Load env config #
@@ -538,7 +538,7 @@ if __name__ == '__main__':
             
             env = MultiAgentCleanupEnvironment(scenario_map = np.array(env_config['scenario_map']),
                                     number_of_agents_by_team=env_config['number_of_agents_by_team'],
-                                    n_actions=env_config['n_actions'],
+                                    n_actions_by_team=env_config['n_actions'],
                                     max_distance_travelled_by_team = env_config['max_distance_travelled_by_team'],
                                     fleet_initial_positions = np.array(env_config['fleet_initial_positions']), #env_config['fleet_initial_positions'], #
                                     seed = SEED,
@@ -642,7 +642,7 @@ if __name__ == '__main__':
             # Take first actions #
             if selected_algorithm  in ['Network_With_SensorNoises', 'Independent_Networks_By_Sensors_Type', 'Network']:
                 network.nogobackfleet_masking_module.reset()
-                actions = network.select_concensus_actions(states=states, sensor_error=env.std_sensormeasure, positions=env.get_active_agents_positions_dict(), n_actions=env.n_actions, done = done)
+                actions = network.select_concensus_actions(states=states, sensor_error=env.std_sensormeasure, positions=env.get_active_agents_positions_dict(), n_actions_of_each_agent=env.n_actions_by_team, done = done)
             elif selected_algorithm  in ['WanderingAgent', 'LawnMower']:
                 actions = {i: selected_algorithm_agents[i].move(env.fleet.vehicles[i].actual_agent_position) for i in env.get_active_agents_positions_dict().keys()}
             elif selected_algorithm == 'PSO':
@@ -666,7 +666,7 @@ if __name__ == '__main__':
 
                 # Take new actions #
                 if selected_algorithm  in ['Network_With_SensorNoises', 'Independent_Networks_By_Sensors_Type', 'Network']:
-                    actions = network.select_concensus_actions(states=states, sensor_error=env.std_sensormeasure, positions=env.get_active_agents_positions_dict(), n_actions=env.n_actions, done = done)
+                    actions = network.select_concensus_actions(states=states, sensor_error=env.std_sensormeasure, positions=env.get_active_agents_positions_dict(), n_actions_of_each_agent=env.n_actions_by_team, done = done)
                 elif selected_algorithm  in ['WanderingAgent', 'LawnMower']:
                     actions = {i: selected_algorithm_agents[i].move(env.fleet.vehicles[i].actual_agent_position) for i in env.get_active_agents_positions_dict().keys()}
                 elif selected_algorithm == 'PSO':

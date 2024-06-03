@@ -31,16 +31,24 @@ class DiscreteVehicle: # class for single vehicle
 		self.influence_mask = self.compute_influence_mask()
 		if n_actions == 8:
 			self.angle_set = np.linspace(0, 2 * np.pi, n_actions, endpoint=False) # array with the 8 cardinal points in RADIANS, dividing a circle in 8 directions: [0. , 0.78539816, 1.57079633, 2.35619449, 3.14159265, 3.92699082, 4.71238898, 5.49778714]
-		elif n_actions == 9: # there is an action to stay in the same position
+		elif n_actions == 9: # there is an action to stay in the same position (loiter mode)
 			self.angle_set = np.linspace(0, 2 * np.pi, n_actions-1, endpoint=False)
-			self.angle_set = np.append(self.angle_set, -1) # add the action to stay in the same position
+			self.angle_set = np.append(self.angle_set, -1) # add the action to loter mode (-1)
+		elif n_actions == 10: # there is an action to stay in the same position (loiter mode) and another to clean
+			self.angle_set = np.linspace(0, 2 * np.pi, n_actions-2, endpoint=False)
+			self.angle_set = np.append(self.angle_set, [-1, -2]) # loiter mode = -1, clean = -2
 		
 
 	def move_agent(self, action, valid=True):
 		""" Move a vehicle in the direction of the action. If valid is False, the action is not performed. """
 
 		next_position = self.calculate_next_position(action)
-		self.distance_traveled += np.linalg.norm(self.actual_agent_position - next_position) if action!=9 else self.movement_length # add to the total traveled distance the distance of the actual movement
+		if action == 9: # if action is to clean, the agent stays in the same position and consume distance traveled
+			self.distance_traveled += self.movement_length
+		elif action == 8: # if action is to stay in the same position, the agent stays in the same position and consume just a little distance (loiter mode)
+			self.distance_traveled += self.movement_length/5
+		else:  # add to the total traveled distance the distance of the actual movement
+			self.distance_traveled += np.linalg.norm(self.actual_agent_position - next_position)
 
 		if self.check_agent_collision_with_obstacle(next_position) or not valid: # if next positions is a collision (with ground or between agents):
 			collide = True
@@ -56,7 +64,7 @@ class DiscreteVehicle: # class for single vehicle
 	
 	def calculate_next_position(self, action):
 		angle = self.angle_set[action] # takes as the angle of movement the angle associated with the action taken, the action serves as the index of the array of cardinal points
-		if angle == -1: # the action is no movement
+		if angle < 0: # if angle is negative, the action is to stay in the same position or clean
 			next_position = self.actual_agent_position
 		else:
 			movement = (np.round([np.cos(angle), np.sin(angle)]) * self.movement_length).astype(int) # converts the angle into cartesian motion (how many cells are moved in x-axis and how many in y-axis).
@@ -113,33 +121,29 @@ class DiscreteFleet: # class to create FLEETS of class DiscreteVehicle
 	""" Coordinator of the movements of the fleet. """
 
 	def __init__(self,
-				 number_of_agents_by_team,
+				 number_of_vehicles,
 				 team_id_of_each_agent,
 				 fleet_initial_positions,
-				 n_actions,
-				 movement_length_by_team,
-				 vision_length_by_team,
+				 n_actions_of_each_agent,
+				 movement_length_of_each_agent,
+				 vision_length_of_each_agent,
 				 navigation_map,
 				 check_collisions_within):
 
 		""" Set init variables """
-		self.number_of_agents_by_team = number_of_agents_by_team 
-		self.number_of_vehicles = np.sum(self.number_of_agents_by_team)
+		self.number_of_vehicles = number_of_vehicles
 		self.team_id_of_each_agent = team_id_of_each_agent
 		self.initial_position_of_each_agent = fleet_initial_positions
-		self.n_actions = n_actions 
-		self.movement_length_by_team = movement_length_by_team 
-		self.vision_length_by_team = vision_length_by_team 
+		self.n_actions_of_each_agent = n_actions_of_each_agent 
+		self.movement_length_of_each_agent = movement_length_of_each_agent 
+		self.vision_length_of_each_agent = vision_length_of_each_agent 
 		self.check_collisions_within = check_collisions_within
-
-		self.movement_length_of_each_agent = np.repeat(self.movement_length_by_team, number_of_agents_by_team) # movement length of each agent
-		self.vision_length_of_each_agent = np.repeat(self.vision_length_by_team, number_of_agents_by_team) # movement length of each agent
 
 
 		""" Create the vehicles object array """
 		self.vehicles = [DiscreteVehicle(initial_position = self.initial_position_of_each_agent[idx],
 										 team_id = self.team_id_of_each_agent[idx],
-										 n_actions = self.n_actions,
+										 n_actions = self.n_actions_of_each_agent[idx],
 										 movement_length = self.movement_length_of_each_agent[idx],
 										 vision_length = self.vision_length_of_each_agent[idx],
 										 navigation_map = navigation_map) for idx in range(self.number_of_vehicles)]
@@ -235,8 +239,9 @@ class MultiAgentCleanupEnvironment:
 	def __init__(self, 
 	      		 scenario_map,
 				 max_distance_travelled_by_team,
+				 max_steps_per_episode,
 				 number_of_agents_by_team = (2, 2),
-				 n_actions = 8,
+				 n_actions_by_team = 8,
 				 fleet_initial_positions = None,
 				 seed = 0,
 				 movement_length_by_team = (2,1),
@@ -267,10 +272,12 @@ class MultiAgentCleanupEnvironment:
 		self.number_of_agents_by_team = number_of_agents_by_team
 		self.n_agents = np.sum(self.number_of_agents_by_team)
 		self.n_teams = len(self.number_of_agents_by_team)
-		self.n_actions = n_actions
+		self.n_actions_by_team = n_actions_by_team
+		self.n_actions_of_each_agent = np.repeat(n_actions_by_team, number_of_agents_by_team)
 		self.movement_length_by_team = movement_length_by_team
 		self.movement_length_of_each_agent = np.repeat(movement_length_by_team, number_of_agents_by_team)
 		self.vision_length_by_team = vision_length_by_team
+		self.vision_length_of_each_agent = np.repeat(vision_length_by_team, number_of_agents_by_team)
 		self.reward_function = reward_function
 		self.reward_weights = reward_weights
 		self.dynamic = dynamic
@@ -297,7 +304,8 @@ class MultiAgentCleanupEnvironment:
 		elif fleet_initial_positions == 'fixed': # Random choose between 4 fixed deployment positions #
 			self.random_inititial_positions = 'fixed'
 			self.deployment_positions = np.zeros_like(self.scenario_map)
-			self.deployment_positions[[46,46,49,49], [28,31,28,31]] = 1
+			self.deployment_positions[[46,46,49,49], [28,31,28,31]] = 1 # Ypacarai map
+			# self.deployment_positions[[32,30,28,26], [7,7,7,7]] = 1 # A Coruna port
 			self.initial_positions = np.argwhere(self.deployment_positions == 1)[self.rng_initial_agents_positions.choice(len(np.argwhere(self.deployment_positions == 1)), self.n_agents, replace=False)]
 		elif fleet_initial_positions == 'area': # Random deployment positions inside an area #
 			self.random_inititial_positions = 'area'
@@ -310,6 +318,8 @@ class MultiAgentCleanupEnvironment:
 		# Limits to be declared a death/done agent and initialize done dict #
 		self.max_distance_travelled_by_team = max_distance_travelled_by_team
 		self.max_distance_travelled_of_each_agent = np.repeat(max_distance_travelled_by_team, number_of_agents_by_team)
+		self.max_steps_per_episode = max_steps_per_episode
+		self.steps = 0
 		self.max_collisions = max_collisions
 		self.done = {i:False for i in range(self.n_agents)} 
 		self.dones_by_teams = {teams: False for teams in range(self.n_teams)}  
@@ -320,14 +330,14 @@ class MultiAgentCleanupEnvironment:
 		self.set_agents_id_info()
 	
 		# Create the fleets #
-		self.fleet = DiscreteFleet(number_of_agents_by_team=self.number_of_agents_by_team,
+		self.fleet = DiscreteFleet(number_of_vehicles = self.n_agents,
 							 team_id_of_each_agent = self.team_id_of_each_agent,
 							 fleet_initial_positions = self.initial_positions,
-							 n_actions = self.n_actions,
-							 movement_length_by_team = self.movement_length_by_team,
-							 vision_length_by_team = vision_length_by_team,
+							 n_actions_of_each_agent = self.n_actions_of_each_agent,
+							 movement_length_of_each_agent = self.movement_length_of_each_agent,
+							 vision_length_of_each_agent = self.vision_length_of_each_agent,
 							 navigation_map = self.scenario_map,
-							 check_collisions_within = flag_to_check_collisions_within)
+							 check_collisions_within = self.flag_to_check_collisions_within)
 
 		# Create trash map #
 		self.real_trash_map = self.init_real_trash_map()
@@ -340,8 +350,9 @@ class MultiAgentCleanupEnvironment:
 		# Init the redundancy mask #
 		self.redundancy_mask = np.sum([agent.influence_mask for idx, agent in enumerate(self.fleet.vehicles) if self.active_agents[idx]], axis = 0)
 
-		# Info for training # 
+		# Info for training among others # 
 		self.observation_space_shape = (6, *self.scenario_map.shape)
+		self.angle_set_of_each_agent = {idx: self.fleet.vehicles[idx].angle_set for idx in range(self.n_agents)}
 
 	def set_agents_id_info(self):
 
@@ -401,6 +412,7 @@ class MultiAgentCleanupEnvironment:
 		# self.set_agents_specs(reset=True)
 		
 		# Reset the positions of the fleet #
+		self.steps = 0
 		self.fleet.reset_fleet(initial_positions=self.initial_positions)
 		self.done = {agent_id: False for agent_id in range(self.n_agents)}
 		self.dones_by_teams = {team: False for team in range(self.n_teams)}  
@@ -464,12 +476,10 @@ class MultiAgentCleanupEnvironment:
 		cleaners_actions = {idx: action for idx, action in actions.items() if self.team_id_of_each_agent[idx] == self.cleaners_team_id}
 		cleaners_positions = self.get_active_agents_team_cleaners_positions()
 		rounded_trash_positions = self.trash_positions_yx.round()
-		def get_indexes_with_ramdomness(indexes, mean = 0.8, std = 0.1):
+		def get_indexes_to_clean_with_ramdomness(indexes, mean = 0.8, std = 0.1):
 			return np.random.choice(indexes, round(len(indexes)*np.clip(0,1,np.random.normal(loc=mean,scale=std))), replace=False)
-		# indexes_to_remove = [np.array([np.random.choice(indexes)]) if cleaners_actions[idx] !=9 else get_indexes_with_ramdomness(indexes) for idx, position in cleaners_positions.items() if len(indexes := np.where((rounded_trash_positions == position).all(1))[0]) > 0]
-		self.trashes_removed_per_agent = {idx: np.array([np.random.choice(indexes)]) if cleaners_actions[idx] !=9 else get_indexes_with_ramdomness(indexes) for idx, position in cleaners_positions.items() if len(indexes := np.where((rounded_trash_positions == position).all(1))[0]) > 0}
+		self.trashes_removed_per_agent = {idx: np.array([np.random.choice(indexes)]) if cleaners_actions[idx] !=9 else get_indexes_to_clean_with_ramdomness(indexes) for idx, position in cleaners_positions.items() if len(indexes := np.where((rounded_trash_positions == position).all(1))[0]) > 0}
 		if self.trashes_removed_per_agent:
-			# indexes_to_remove = np.concatenate(indexes_to_remove)
 			indexes_to_remove = np.concatenate([*self.trashes_removed_per_agent.values()])
 			self.trash_positions_yx = np.delete(self.trash_positions_yx, indexes_to_remove, axis = 0)
 		
@@ -520,6 +530,9 @@ class MultiAgentCleanupEnvironment:
 	def step(self, actions: dict):
 		"""Execute all updates for each step"""
 
+		# Update the steps #
+		self.steps += 1
+
 		# Update trash map if dynamic and execute cleaning process #
 		self.update_real_trash_map(actions)
 
@@ -545,8 +558,14 @@ class MultiAgentCleanupEnvironment:
 		if self.activate_plot_graphics:
 			self.render()
 
-		# Final conditions #
-		self.done = {agent_id: (self.fleet.get_fleet_distances_traveled()[agent_id] > self.max_distance_travelled_of_each_agent[agent_id] or self.fleet.fleet_collisions > self.max_collisions) for agent_id in range(self.n_agents)}
+		# FINAL CONDITIONS #
+		# By distance: 
+		# self.done = {agent_id: (self.fleet.get_fleet_distances_traveled()[agent_id] > self.max_distance_travelled_of_each_agent[agent_id] or self.fleet.fleet_collisions > self.max_collisions) for agent_id in range(self.n_agents)}
+		
+		# By steps: 
+		if self.steps >= self.max_steps_per_episode:
+			self.done = {agent_id: True for agent_id in range(self.n_agents)}
+		
 		self.dones_by_teams = {team: all([is_done for agent_id, is_done in self.done.items() if self.team_id_of_each_agent[agent_id] == team]) for team in self.teams_ids}  
 		# If cleaners team is done, the episode is done #
 		if self.dones_by_teams[self.cleaners_team_id]:
@@ -739,9 +758,10 @@ class MultiAgentCleanupEnvironment:
 			
 			# CLEANERS TEAM #
 			cleaners_alive = [idx for idx, agent_id in enumerate(self.team_id_of_each_agent) if agent_id == self.cleaners_team_id and self.active_agents[idx]]
-			changes_in_trash = np.array([len(self.trashes_removed_per_agent[idx]) if idx in cleaners_alive and idx in self.trashes_removed_per_agent else 0 for idx, agent in enumerate(self.fleet.vehicles)])
+			changes_in_trash = np.array([len(self.trashes_removed_per_agent[idx]) if idx in cleaners_alive and idx in self.trashes_removed_per_agent else 0 for idx in range(self.n_agents)])
+			penalization_for_cleaning_when_no_trash = np.array([-10 if idx in cleaners_alive and actions[idx] == 9 and not idx in self.trashes_removed_per_agent else 0 for idx in range(self.n_agents)])
 
-			rewards = changes_in_model * self.reward_weights[self.explorers_team_id] + changes_in_trash * self.reward_weights[self.cleaners_team_id]
+			rewards = changes_in_model * self.reward_weights[self.explorers_team_id] + changes_in_trash * self.reward_weights[self.cleaners_team_id] + penalization_for_cleaning_when_no_trash
 
 		return {agent_id: rewards[agent_id] if self.active_agents[agent_id] else 0 for agent_id in range(self.n_agents)}
 	
@@ -780,7 +800,7 @@ class MultiAgentCleanupEnvironment:
 
 			'scenario_map': self.scenario_map.tolist(),
 			'number_of_agents_by_team': self.number_of_agents_by_team,
-			'n_actions': self.n_actions,
+			'n_actions': self.n_actions_by_team,
 			'max_distance_travelled_by_team': self.max_distance_travelled_by_team,
 			'fleet_initial_positions': self.backup_fleet_initial_positions_entry if isinstance(self.backup_fleet_initial_positions_entry, str) else self.backup_fleet_initial_positions_entry.tolist(),
 			'seed': self.seed,
@@ -809,17 +829,19 @@ if __name__ == '__main__':
 	# scenario_map = np.genfromtxt('Environment/Maps/ypacarai_lake_58x41.csv', delimiter=',')
 
 	# Agents info #
-	n_actions = 9
+	n_actions_explorers = 9
+	n_actions_cleaners = 10
 	n_explorers = 2
 	n_cleaners = 2
 	n_agents = n_explorers + n_cleaners
 	movement_length_explorers = 2
 	movement_length_cleaners = 1
 	movement_length_of_each_agent = np.repeat((movement_length_explorers, movement_length_cleaners), (n_explorers, n_cleaners))
-	vision_length_explorers = 1
-	vision_length_cleaners = 4
+	vision_length_explorers = 4
+	vision_length_cleaners = 1
 	max_distance_travelled_explorers = 400
 	max_distance_travelled_cleaners = 200
+	max_steps_per_episode = 150
 
 
 	# Set initial positions #
@@ -834,8 +856,9 @@ if __name__ == '__main__':
 	# Create environment # 
 	env = MultiAgentCleanupEnvironment(scenario_map = scenario_map,
 							   number_of_agents_by_team=(n_explorers,n_cleaners),
-							   n_actions=n_actions,
+							   n_actions_by_team=(n_actions_explorers, n_actions_cleaners),
 							   max_distance_travelled_by_team = (max_distance_travelled_explorers, max_distance_travelled_cleaners),
+							   max_steps_per_episode = max_steps_per_episode,
 							   fleet_initial_positions = initial_positions, # None, 'area', 'fixed' or positions array
 							   seed = seed,
 							   movement_length_by_team =  (movement_length_explorers, movement_length_cleaners),
@@ -849,20 +872,22 @@ if __name__ == '__main__':
 							   show_plot_graphics = True,
 							 )
 	
-	action_masking_module = ConsensusSafeActionMasking(navigation_map = scenario_map, action_space_dim = n_actions, movement_length_of_each_agent = movement_length_of_each_agent)
+	action_masking_module = ConsensusSafeActionMasking(navigation_map = env.scenario_map, 
+													angle_set_of_each_agent = env.angle_set_of_each_agent,  
+													movement_length_of_each_agent = env.movement_length_of_each_agent)
  
 	env.reset_env()
 	env.render()
 
 	R = [] # reward
 	MEAN_ABS_ERROR = [] 
-
-	actions = {i: np.random.randint(0,8) for i in range(n_agents)} 
+	
+	actions = {i: np.random.randint(env.n_actions_of_each_agent[i]) for i in range(n_agents)} 
 	done = {i:False for i in range(n_agents)} 
 
 	while any([not value for value in done.values()]): # while at least 1 active
 	
-		q = {idx: np.random.rand(n_actions) for idx in range(n_agents) if env.active_agents[idx]} # only generate q values for active agents
+		q = {idx: np.random.rand(env.n_actions_of_each_agent[idx]) for idx in range(n_agents) if env.active_agents[idx]} # only generate q values for active agents
 
 		for agent_id, action in actions.items(): 
 			if env.active_agents[agent_id]:

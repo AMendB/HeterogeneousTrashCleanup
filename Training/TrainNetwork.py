@@ -8,10 +8,10 @@ import numpy as np
 # Selection of PARAMETERS TO TRAIN #
 reward_function = 'basic_reward' # basic_reward
 reward_weights = (10, 10, 0) 
-memory_size = int(1E4)
+memory_size = int(1E6/2)
 network_type = 'independent_networks_per_team'
 device = 'cuda:0'
-episodes = 60000
+episodes = 50000
 n_agents = 4  # max 4
 
 
@@ -24,17 +24,19 @@ SHOW_PLOT_GRAPHICS = False
 seed = 0
 
 # Agents info #
-n_actions = 9
+n_actions_explorers = 9
+n_actions_cleaners = 10
 n_explorers = 2
 n_cleaners = 2
 n_agents = n_explorers + n_cleaners
 movement_length_explorers = 2
 movement_length_cleaners = 1
 movement_length_of_each_agent = np.repeat((movement_length_explorers, movement_length_cleaners), (n_explorers, n_cleaners))
-vision_length_explorers = 1
-vision_length_cleaners = 4
+vision_length_explorers = 4
+vision_length_cleaners = 1
 max_distance_travelled_explorers = 400
 max_distance_travelled_cleaners = 200
+max_steps_per_episode = 150
 
 
 # scenario_map = np.genfromtxt('Environment/Maps/ypacarai_map_low_res.csv', delimiter=',')
@@ -51,8 +53,9 @@ else:
 # Create environment # 
 env = MultiAgentCleanupEnvironment(scenario_map = scenario_map,
 							number_of_agents_by_team=(n_explorers,n_cleaners),
-							n_actions=n_actions,
+							n_actions_by_team=(n_actions_explorers, n_actions_cleaners),
 							max_distance_travelled_by_team = (max_distance_travelled_explorers, max_distance_travelled_cleaners),
+							max_steps_per_episode = max_steps_per_episode,
 							fleet_initial_positions = initial_positions, # None, 'area', 'fixed' or positions array
 							seed = seed,
 							movement_length_by_team =  (movement_length_explorers, movement_length_cleaners),
@@ -76,7 +79,7 @@ else:
 	logdir = f'Training/Trning_RW_{reward_function.split("_")[0]}_' + '_'.join(map(str, reward_weights))
 
 network = MultiAgentDuelingDQNAgent(env=env,
-									memory_size=memory_size,  #int(1E6), 1E5
+									memory_size=memory_size, 
 									batch_size=128,
 									target_update=1000,
 									soft_update=True,
@@ -87,12 +90,12 @@ network = MultiAgentDuelingDQNAgent(env=env,
 									gamma=0.99,
 									lr=1e-4,
 									save_every=5000, # 5000
-									train_every=4, #15
+									train_every=10, #15
 									masked_actions=False,
 									concensus_actions=True,
 									device=device,
 									logdir=logdir,
-									eval_episodes=50, # 10
+									eval_episodes=10, # 10
 									eval_every=1000, #1000
 									noisy=False,
 									distributional=False,

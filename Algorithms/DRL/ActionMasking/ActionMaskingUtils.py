@@ -73,9 +73,11 @@ class NoGoBackFleetMasking:
 		if self.previous_actions is None:
 			self.previous_actions = {idx: np.argmax(q_values[idx]) for idx in q_values.keys()}
 		else:
+			# Find the action that would make the agent go back
 			return_actions = {idx: (self.previous_actions[idx] + len(q_values[idx]) // 2) % len(q_values[idx]) for idx in q_values.keys()}
 			for idx in q_values.keys():
-				q_values[idx][return_actions[idx]] = -1000 # a very low value instead of -np.inf to not have probability of collide with obstacle in random select in case of no alternative way out
+				if self.previous_actions[idx] < 8: # if the previous action induced a movement, i.e., it was not to stay in the same position
+					q_values[idx][return_actions[idx]] = -1000 # a very low value instead of -np.inf to not have probability of collide with obstacle in random select in case of no alternative way out
 
 		return q_values
 
@@ -86,16 +88,12 @@ class NoGoBackFleetMasking:
 class ConsensusSafeActionMasking:
 	""" The optimists decide first! """
 
-	def __init__(self, navigation_map, action_space_dim: int, movement_length_of_each_agent: float) -> None:
+	def __init__(self, navigation_map, angle_set_of_each_agent: dict, movement_length_of_each_agent) -> None:
 		
 		self.movement_length_of_each_agent = movement_length_of_each_agent
-		if action_space_dim == 8:
-			self.angle_set = np.linspace(0, 2 * np.pi, action_space_dim, endpoint=False) # array with the 8 cardinal points in RADIANS, dividing a circle in 8 directions: [0. , 0.78539816, 1.57079633, 2.35619449, 3.14159265, 3.92699082, 4.71238898, 5.49778714]
-		elif action_space_dim == 9: # there is an action to stay in the same position
-			self.angle_set = np.linspace(0, 2 * np.pi, action_space_dim-1, endpoint=False)
-			self.angle_set = np.append(self.angle_set, -1) # add the action to stay in the same position
-		self.fleet_map = np.zeros_like(navigation_map)
+		self.angle_set_of_each_agent = angle_set_of_each_agent
 		self.navigation_map = navigation_map
+		self.obstacles_map = self.navigation_map.copy()
 
 	def update_map(self, new_navigation_map: np.ndarray):
 
@@ -108,7 +106,7 @@ class ConsensusSafeActionMasking:
 		# 3) Then, compute the next position of the agent and update the fleet map
 		# 4) The next agent is selected based on the updated fleet map, etc
 		
-		self.fleet_map = self.navigation_map.copy()
+		self.obstacles_map = self.navigation_map.copy()
 		q_max = {idx: q_values[idx].max() for idx in q_values.keys()}
 		agents_order = sorted(q_max, key=q_max.get)[::-1]
 		final_actions = {}
@@ -119,12 +117,12 @@ class ConsensusSafeActionMasking:
 			agent_position = positions[agent_id]
 
 			# Compute all next possible positions
-			possible_movements = np.array([(0,0) if angle == -1 else np.round([np.cos(angle), np.sin(angle)]) * self.movement_length_of_each_agent[agent_id] for angle in self.angle_set]).astype(int)
+			possible_movements = np.array([(0,0) if angle < 0 else np.round([np.cos(angle), np.sin(angle)]) * self.movement_length_of_each_agent[agent_id] for angle in self.angle_set_of_each_agent[agent_id]]).astype(int)
 			next_positions = agent_position + possible_movements
-			next_positions = np.clip(next_positions, (0,0), np.array(self.fleet_map.shape)-1) # saturate movement if out of indexes values (map edges)
+			next_positions = np.clip(next_positions, (0,0), np.array(self.obstacles_map.shape)-1) # saturate movement if out of indexes values (map edges)
 			
 			# Check which next possible positions lead to a collision
-			action_mask = np.array([self.fleet_map[int(next_position[0]), int(next_position[1])] == 0 for next_position in next_positions]).astype(bool)
+			action_mask = np.array([self.obstacles_map[int(next_position[0]), int(next_position[1])] == 0 for next_position in next_positions]).astype(bool)
 
 			# Censor the impossible actions in the Q-values
 			q_values[agent_id][action_mask] = -np.inf
@@ -132,9 +130,9 @@ class ConsensusSafeActionMasking:
 			# Select the action
 			action = np.argmax(q_values[agent_id])
 
-			# Update the fleet map
+			# Update the obstacles map with the positions where the agent will move, so the next agents will consider them as obstacles
 			next_position = next_positions[action]
-			self.fleet_map[int(next_position[0]), int(next_position[1])] = 0
+			self.obstacles_map[int(next_position[0]), int(next_position[1])] = 0
 
 			# Store the action
 			final_actions[agent_id] = action.copy()
