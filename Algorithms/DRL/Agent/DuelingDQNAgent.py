@@ -167,7 +167,9 @@ class MultiAgentDuelingDQNAgent:
 
 		# Masking utilities #
 		if self.concensus_actions:
-			self.consensus_safe_masking_module = ConsensusSafeActionMasking(navigation_map = self.env.scenario_map, movement_length_of_each_agent = self.env.movement_length_of_each_agent)
+			self.consensus_safe_masking_module = ConsensusSafeActionMasking(navigation_map = self.env.scenario_map, 
+																   angle_set_of_each_agent= self.env.angle_set_of_each_agent, 
+																   movement_length_of_each_agent = self.env.movement_length_of_each_agent)
 			self.nogobackfleet_masking_module = NoGoBackFleetMasking()
 		elif self.masked_actions:
 			self.safe_masking_module = SafeActionMasking(action_space_dim = action_dim, movement_length = self.env.movement_length)
