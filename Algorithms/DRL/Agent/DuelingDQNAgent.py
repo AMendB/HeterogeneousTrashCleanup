@@ -802,7 +802,7 @@ class MultiAgentDuelingDQNAgent:
 
 					# Select the action using the current policy
 					if self.concensus_actions:
-						actions = self.select_concensus_actions(states=states, positions=self.env.get_active_agents_positions_dict(), n_actions_of_each_agent=self.action_dim_of_each_agent, done = done)
+						actions = self.select_concensus_actions(states=states, positions=self.env.get_active_agents_positions_dict(), n_actions_of_each_agent=self.action_dim_of_each_agent, done = done, deterministic=True)
 					elif self.masked_actions:
 						actions = self.select_masked_actions(states=states, positions=self.env.fleet.get_positions())
 					else:
@@ -853,7 +853,7 @@ class MultiAgentDuelingDQNAgent:
 
 					# Select the action using the current policy
 					if self.concensus_actions:
-						actions = self.select_concensus_actions(states=states, positions=self.env.get_active_agents_positions_dict(), n_actions_of_each_agent=self.action_dim_of_each_agent, done = done)
+						actions = self.select_concensus_actions(states=states, positions=self.env.get_active_agents_positions_dict(), n_actions_of_each_agent=self.action_dim_of_each_agent, done = done, deterministic=True)
 					elif self.masked_actions:
 						actions = self.select_masked_actions(states=states, positions=self.env.fleet.get_positions())
 					else:

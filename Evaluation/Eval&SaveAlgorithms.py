@@ -114,48 +114,18 @@ class AlgorithmRecorderAndAnalizer:
                 heatmaps = [np.zeros_like(self.scenario_map) for _ in range(self.env.n_teams)]
             
             # Heatmap by sensors type #
-            for sens_type in range(self.env.n_teams):           
-                visited_locations = np.vstack([self.env.fleet.vehicles[agent].waypoints for agent in range(self.n_agents) if self.env.sensors_type[agent] == sens_type])
-                heatmaps[sens_type][visited_locations[:,0], visited_locations[:,1]] += 1
+            for team in range(self.env.n_teams):           
+                visited_locations = np.vstack([self.env.fleet.vehicles[agent].waypoints for agent in range(self.n_agents) if self.env.team_id[agent] == team])
+                heatmaps[team][visited_locations[:,0], visited_locations[:,1]] += 1
 
         return(heatmaps)
-
-    def save_gp_model(self, run):
-        gridspec = dict(hspace=0.0, width_ratios=[1, 0.4, 1, 1])
-        fig, axs = plt.subplots(1, 4, figsize=(12,4.5), gridspec_kw=gridspec)
-
-        # AXIS 0: Print model mean #
-        ground_truth = self.env.ground_truth.read()
-        ground_truth[env.non_water_mask] = np.nan
-        axs[0].imshow(ground_truth, cmap ='cet_linear_bgy_10_95_c74', vmin = 0.0, vmax = 1.0)
-        axs[0].set_title("Ground Truth")
-
-        axs[1].set_visible(False)
-
-        # AXIS 1: Print model mean #
-        model_mean = env.model_trash_map.copy()
-        model_mean[env.non_water_mask] = np.nan
-        axs[2].imshow(model_mean, cmap ='cet_linear_bgy_10_95_c74', vmin = 0.0, vmax = 1.0)
-        axs[2].set_title("Model Mean")
-
-        # AXIS 1: Print model uncertainty #
-        model_uncertainty = env.model_uncertainty_map.copy()
-        model_uncertainty[env.non_water_mask] = np.nan
-        axs[3].imshow(model_uncertainty, cmap ='gray', vmin = 0.0, vmax = 1.0)#, norm='log')
-        axs[3].set_title("Model Uncertainty")
-
-        # Save figure #
-        plt.suptitle(f"{self.algorithm.split('_')[0]} | {self.reward_funct.split('_')[0]}_{'_'.join(map(str, self.reward_weights))} | EP{run}", ha='center')
-        plt.savefig(fname=f"{self.relative_path}/Models/Ep{run}.png")
-        plt.savefig(fname=f"{self.relative_path}/Models_svg/Ep{run}.svg")
-        plt.close()
 
     def plot_paths(self, run = None, save_plot = False):
         # Agents path plot over ground truth #
         plt.figure(figsize=(7,5))
 
         waypoints = [self.env.fleet.vehicles[i].waypoints for i in range(self.n_agents)]
-        gt = self.env.ground_truth.read()
+        gt = self.env.real_trash_map.copy()
         gt[self.env.non_water_mask] = np.nan
 
         plt.imshow(gt,  cmap ='cet_linear_bgy_10_95_c74', vmin = 0.0, vmax = 1.0, alpha = 0.3)
@@ -198,23 +168,23 @@ class AlgorithmRecorderAndAnalizer:
             if plot_std:
                 ax[0][1].fill_between(self.results_std.index, self.results_mean['MSE'] - self.results_std['MSE'], self.results_mean['MSE'] + self.results_std['MSE'], alpha=0.2, label='Std')
 
-            # ax[0][2].plot(self.error_r2, '-')
-            # ax[0][2].set(title = 'R2_error', xlabel = 'Step')
-            ax[0][2].plot(self.mse_peaks, '-')
-            ax[0][2].set(title = 'MSE_peaks', xlabel = 'Step')
-            ax[0][2].grid()
-            if plot_std:
-                # ax[0][2].fill_between(self.results_std.index, self.results_mean['R2_error'] - self.results_std['R2_error'], self.results_mean['R2_error'] + self.results_std['R2_error'], alpha=0.2, label='Std')
-                ax[0][2].fill_between(self.results_std.index, self.results_mean['MSE_peaks'] - self.results_std['MSE_peaks'], self.results_mean['MSE_peaks'] + self.results_std['MSE_peaks'], alpha=0.2, label='Std')
+            # # ax[0][2].plot(self.error_r2, '-')
+            # # ax[0][2].set(title = 'R2_error', xlabel = 'Step')
+            # ax[0][2].plot(self.mse_peaks, '-')
+            # ax[0][2].set(title = 'MSE_peaks', xlabel = 'Step')
+            # ax[0][2].grid()
+            # if plot_std:
+            #     # ax[0][2].fill_between(self.results_std.index, self.results_mean['R2_error'] - self.results_std['R2_error'], self.results_mean['R2_error'] + self.results_std['R2_error'], alpha=0.2, label='Std')
+            #     ax[0][2].fill_between(self.results_std.index, self.results_mean['MSE_peaks'] - self.results_std['MSE_peaks'], self.results_mean['MSE_peaks'] + self.results_std['MSE_peaks'], alpha=0.2, label='Std')
 
-            ax[1][0].plot(self.uncert_mean, '-')
-            ax[1][0].plot(self.uncert_max, '-')
-            ax[1][0].set(title = 'Uncertainty', xlabel = 'Step')
-            ax[1][0].legend(['Mean', 'Max'])
-            ax[1][0].grid()
-            if plot_std:
-                ax[1][0].fill_between(self.results_std.index, self.results_mean['Uncert_mean'] - self.results_std['Uncert_mean'], self.results_mean['Uncert_mean'] + self.results_std['Uncert_mean'], alpha=0.2, label='Std')
-                ax[1][0].fill_between(self.results_std.index, self.results_mean['Uncert_max'] - self.results_std['Uncert_max'], self.results_mean['Uncert_max'] + self.results_std['Uncert_max'], alpha=0.2, label='Std')
+            # ax[1][0].plot(self.uncert_mean, '-')
+            # ax[1][0].plot(self.uncert_max, '-')
+            # ax[1][0].set(title = 'Uncertainty', xlabel = 'Step')
+            # ax[1][0].legend(['Mean', 'Max'])
+            # ax[1][0].grid()
+            # if plot_std:
+            #     ax[1][0].fill_between(self.results_std.index, self.results_mean['Uncert_mean'] - self.results_std['Uncert_mean'], self.results_mean['Uncert_mean'] + self.results_std['Uncert_mean'], alpha=0.2, label='Std')
+            #     ax[1][0].fill_between(self.results_std.index, self.results_mean['Uncert_max'] - self.results_std['Uncert_max'], self.results_mean['Uncert_max'] + self.results_std['Uncert_max'], alpha=0.2, label='Std')
 
             plot_traveled_distance = False
             if plot_traveled_distance == True or self.n_agents == 1:
@@ -247,23 +217,6 @@ class AlgorithmRecorderAndAnalizer:
             if show_plot:
                 plt.show()
 
-    def plot_r_and_e(self, run):
-        # Reward and Error final graphs #
-        final_fig, final_axes = plt.subplots(1, 2, figsize=(15,5))
-
-        final_axes[0].plot(self.reward_agents_acc , '-')
-        final_axes[0].set(title = 'Accumulated Reward', xlabel = 'Step', ylabel = 'Reward')
-        final_axes[0].legend([f'Agent {i}' for i in range(self.n_agents)])
-        final_axes[0].plot(self.reward_acc, 'b-', linewidth=4)
-        final_axes[0].grid()
-
-        final_axes[1].plot(self.mse, '-')
-        final_axes[1].set(title = 'Error', xlabel = 'Step', ylabel = 'Absolute Error')
-        final_axes[1].grid()
-        final_fig.suptitle('Run nº: ' + str(run), fontsize=16)
-
-        plt.show()
-
     def save_ground_truths(self, ground_truths_to_save):
 
         output_filename = '/GroundTruths.npy'
@@ -277,11 +230,7 @@ class AlgorithmRecorderAndAnalizer:
             self.reward_steps_agents = [[0 for _ in range(self.n_agents)]]
             self.reward_steps = [0]
             self.mse = [self.env.get_model_mu_mse_error()]
-            self.mse_peaks = [self.env.get_model_mu_mse_error_in_peaks()]
-            self.mse_non_peaks = [self.env.get_model_mu_mse_error_in_non_peaks()]
             self.error_r2 = [self.env.get_model_mu_r2_error()]
-            self.uncert_mean = [self.env.get_uncertainty_mean()]
-            self.uncert_max = [self.env.get_uncertainty_max()]
             self.traveled_distance_agents = [self.env.fleet.get_fleet_distances_traveled()]
             self.traveled_distance = [0]
             self.max_redundancy = [self.env.get_redundancy_max()]
@@ -292,11 +241,7 @@ class AlgorithmRecorderAndAnalizer:
             self.reward_steps_agents.append(list(new_reward.values()))
             self.reward_steps.append(np.sum(list(new_reward.values())))
             self.mse.append(self.env.get_model_mu_mse_error())
-            self.mse_peaks.append(self.env.get_model_mu_mse_error_in_peaks())
-            self.mse_non_peaks.append(self.env.get_model_mu_mse_error_in_non_peaks())
             self.error_r2.append(self.env.get_model_mu_r2_error())
-            self.uncert_mean.append(self.env.get_uncertainty_mean())
-            self.uncert_max.append(self.env.get_uncertainty_max())
             self.traveled_distance_agents.append(self.env.fleet.get_fleet_distances_traveled())
             self.traveled_distance.append(np.sum(self.env.fleet.get_fleet_distances_traveled()))
             self.max_redundancy.append(self.env.get_redundancy_max())
@@ -308,9 +253,9 @@ class AlgorithmRecorderAndAnalizer:
 
         # Save metrics #
         if self.n_agents > 1:
-            data = [*self.reward_agents_acc[-1], self.reward_acc[-1], self.mse[-1], self.mse_peaks[-1], self.mse_non_peaks[-1], self.error_r2[-1], self.uncert_mean[-1], self.uncert_max[-1], self.traveled_distance[-1], self.max_redundancy[-1], *self.traveled_distance_agents[-1], *self.distances_between_agents[-1]]
+            data = [*self.reward_agents_acc[-1], self.reward_acc[-1], self.mse[-1], self.error_r2[-1], self.uncert_mean[-1], self.uncert_max[-1], self.traveled_distance[-1], self.max_redundancy[-1], *self.traveled_distance_agents[-1], *self.distances_between_agents[-1]]
         else:
-            data = [*self.reward_agents_acc[-1], self.reward_acc[-1], self.mse[-1], self.mse_peaks[-1], self.mse_non_peaks[-1], self.error_r2[-1], self.uncert_mean[-1], self.uncert_max[-1], self.traveled_distance[-1], self.max_redundancy[-1], *self.traveled_distance_agents[-1]]
+            data = [*self.reward_agents_acc[-1], self.reward_acc[-1], self.mse[-1], self.error_r2[-1], self.uncert_mean[-1], self.uncert_max[-1], self.traveled_distance[-1], self.max_redundancy[-1], *self.traveled_distance_agents[-1]]
         metrics.save_step(run_num=run, step=step, metrics=data)
 
         # Save waypoints #
@@ -328,29 +273,18 @@ class AlgorithmRecorderAndAnalizer:
         metrics_df = MetricsDataCreator.load_csv_as_df(metrics_path)
         self.runs = metrics_df['Run'].unique()
 
+        # Obtain dataframes #
         numeric_columns = metrics_df.select_dtypes(include=[np.number])
+        self.results_mean = numeric_columns.groupby('Step').agg('mean')
+        self.results_std = numeric_columns.groupby('Step').agg('std')
 
-        # For all episodes to have the same length, df will be extended by repeating the last values up to max_steps lenght #
-        max_steps = 51
-        padded_df = numeric_columns.groupby('Run', group_keys=False).apply(lambda group: group.set_index('Step').reindex(range(max_steps)).fillna(method='ffill')).reset_index().astype({'Run': int})
-        self.results_mean = padded_df.groupby('Step').agg('mean')
-        self.results_std = padded_df.groupby('Step').agg('std')
-
-        self.results_mean = self.results_mean.reindex(range(max_steps), method='ffill')
-        self.results_std = self.results_std.reindex(range(max_steps), method='ffill')
-        # self.results_mean = self.results_mean.head(min_steps)  
-        # self.results_std = self.results_std.head(min_steps)  
-
+        # Extract data #
         first_accreward_agent_index = self.results_mean.columns.get_loc('AccRw0')
         self.reward_agents_acc = self.results_mean.iloc[:, first_accreward_agent_index:first_accreward_agent_index + self.n_agents].values.tolist()
         self.reward_acc = self.results_mean['R_acc'].values.tolist()
         self.mse = self.results_mean['MSE'].values.tolist()
         self.mse_std = self.results_std['MSE'].values.tolist()
-        self.mse_peaks = self.results_mean['MSE_peaks'].values.tolist()
-        self.mse_non_peaks = self.results_mean['MSE_non_peaks'].values.tolist()
         self.error_r2 = self.results_mean['R2_error'].values.tolist()
-        self.uncert_mean = self.results_mean['Uncert_mean'].values.tolist()
-        self.uncert_max = self.results_mean['Uncert_max'].values.tolist()
         self.traveled_distance = self.results_mean['Traveled_distance'].values.tolist()
         self.max_redundancy = self.results_mean['Max_Redundancy'].values.tolist()
         first_traveldist_agent_index = self.results_mean.columns.get_loc('TravelDist0')
@@ -372,12 +306,11 @@ class AlgorithmRecorderAndAnalizer:
 
         if not name_alg.capitalize() in table:
             new_df = pd.DataFrame(
-                    # columns=pd.MultiIndex.from_product([[name_alg], ["Mean33", "Std33", "Mean66", "Std66", "Mean100", "Std100"]]),
                     columns=pd.MultiIndex.from_product([[name_alg], ["Mean33", "CI33 95%", "Mean66", "CI66 95%", "Mean100", "CI100 95%"]]),
                     index=table.index)
             table = pd.concat([table, new_df], axis=1)
 
-        # Calculate the real mse at 33%, 66% and 100% of each episode and add to table #
+        # Calculate the mse at 33%, 66% and 100% of each episode and add to table #
         mse_33 = []
         mse_66 = []
         mse_100 = []
@@ -394,21 +327,18 @@ class AlgorithmRecorderAndAnalizer:
             r2_33.append(r2_episode[round(len(r2_episode)*0.33)])
             r2_66.append(r2_episode[round(len(r2_episode)*0.66)])
             r2_100.append(r2_episode[-1])
-            accumulated_mse.append(np.sum(padded_df[padded_df['Run']==episode]['MSE']))
-        # table.loc['MSE-'+name_rw, name_alg] = [np.mean(mse_33), np.std(mse_33), np.mean(mse_66), np.std(mse_66), np.mean(mse_100), np.std(mse_100)]
-        # table.loc['R2-'+name_rw, name_alg] = [np.mean(r2_33), np.std(r2_33), np.mean(r2_66), np.std(r2_66), np.mean(r2_100), np.std(r2_100)]
-        # table.loc['AccumulatedMSE-'+name_rw, name_alg] = ['-', '-', '-', '-', np.mean(accumulated_mse), np.std(accumulated_mse)]
+            accumulated_mse.append(np.sum(numeric_columns[numeric_columns['Run']==episode]['MSE']))
         table.loc['MSE-'+name_rw, name_alg] = [np.mean(mse_33), 1.96*np.std(mse_33)/np.sqrt(len(self.runs)), np.mean(mse_66),1.96*np.std(mse_66)/np.sqrt(len(self.runs)), np.mean(mse_100), 1.96*np.std(mse_100)/np.sqrt(len(self.runs))]
         table.loc['R2-'+name_rw, name_alg] = [np.mean(r2_33), 1.96*np.std(r2_33)/np.sqrt(len(self.runs)), np.mean(r2_66), 1.96*np.std(r2_66)/np.sqrt(len(self.runs)), np.mean(r2_100), 1.96*np.std(r2_100)/np.sqrt(len(self.runs))]
         table.loc['AccumulatedMSE-'+name_rw, name_alg] = ['-', '-', '-', '-', np.mean(accumulated_mse), 1.96*np.std(accumulated_mse)/np.sqrt(len(self.runs))]
         
 
 
-        # To do WILCOXON TEST, extract the MSE vector of len(vector)=runs from df at steps 33%, 66% and 100% of min_steps=48 for each episode #
-        min_steps = 48
-        series_33 = numeric_columns[numeric_columns['Step']==round(min_steps*0.33)]['MSE'].reset_index(drop='True').rename('33')
-        series_66 = numeric_columns[numeric_columns['Step']==round(min_steps*0.66)]['MSE'].reset_index(drop='True').rename('66')
-        series_100 = numeric_columns[numeric_columns['Step']==round(min_steps*1)]['MSE'].reset_index(drop='True').rename('100')
+        # To do WILCOXON TEST, extract the MSE vector of len(vector)=runs from df at steps 33%, 66% and 100% of n_steps_per_episode for each episode #
+        n_steps_per_episode = self.env.max_steps_per_episode
+        series_33 = numeric_columns[numeric_columns['Step']==round(n_steps_per_episode*0.33)]['MSE'].reset_index(drop='True').rename('33')
+        series_66 = numeric_columns[numeric_columns['Step']==round(n_steps_per_episode*0.66)]['MSE'].reset_index(drop='True').rename('66')
+        series_100 = numeric_columns[numeric_columns['Step']==round(n_steps_per_episode*1)]['MSE'].reset_index(drop='True').rename('100')
         wilcoxon_dict[f'{name_alg.capitalize()} - {name_rw.capitalize()}'] = pd.concat([series_33, series_66, series_100], axis=1)
         
         return table, wilcoxon_dict
@@ -447,19 +377,24 @@ if __name__ == '__main__':
     from Algorithms.LawnMower import LawnMowerAgent
     from Algorithms.NRRA import WanderingAgent
     from Algorithms.PSO import ParticleSwarmOptimizationAgent
+    from Algorithms.Greedy import OneStepGreedyFleet
     from Algorithms.DRL.Agent.DuelingDQNAgent import MultiAgentDuelingDQNAgent
     from Algorithms.DRL.ActionMasking.ActionMaskingUtils import ConsensusSafeActionMasking
 
     algorithms = [
-        'WanderingAgent', 
-        'LawnMower', 
+        # 'WanderingAgent', 
+        # 'LawnMower', 
         # 'PSO', 
+        # 'Greedy',
+        'Training/Trning_RW_basic_10_10_0/',
         ]
 
     SHOW_FINAL_PLOT_GRAPHICS = False
-    SHOW_PLOT_GRAPHICS = False
-    SAVE_PLOTS = True
-    SAVE_COLLAGES = True
+    SHOW_PLOT_GRAPHICS = True
+    SAVE_PLOTS = False
+    SAVE_COLLAGES = False
+    SAVE_DATA = False
+    SAVE_WILCOX = False
     RUNS = 100
     SEED = 3
 
@@ -474,13 +409,14 @@ if __name__ == '__main__':
 
     for path_to_training_folder in algorithms:
 
-        if path_to_training_folder in ['WanderingAgent', 'LawnMower', 'PSO']:
+        if path_to_training_folder in ['WanderingAgent', 'LawnMower', 'PSO', 'Greedy']:
             selected_algorithm = path_to_training_folder
 
             # Set config #
             # scenario_map = np.genfromtxt('Environment/Maps/ypacarai_map_low_res.csv', delimiter=',')
             scenario_map = np.genfromtxt('Environment/Maps/acoruna_port.csv', delimiter=',') #coruna_port
-            n_actions = 9
+            n_actions_explorers = 9
+            n_actions_cleaners = 10
             n_explorers = 2
             n_cleaners = 2
             n_agents = n_explorers + n_cleaners
@@ -491,6 +427,8 @@ if __name__ == '__main__':
             vision_length_cleaners = 1
             max_distance_travelled_explorers = 400
             max_distance_travelled_cleaners = 200
+            max_steps_per_episode = 150
+
             reward_function = 'basic_reward' # 
             reward_weights=(10, 10, 0)
 
@@ -506,8 +444,9 @@ if __name__ == '__main__':
             # Create environment # 
             env = MultiAgentCleanupEnvironment(scenario_map = scenario_map,
                                     number_of_agents_by_team=(n_explorers,n_cleaners),
-                                    n_actions_by_team=n_actions,
+                                    n_actions_by_team=(n_actions_explorers, n_actions_cleaners),
                                     max_distance_travelled_by_team = (max_distance_travelled_explorers, max_distance_travelled_cleaners),
+                                    max_steps_per_episode = max_steps_per_episode,
                                     fleet_initial_positions = initial_positions, # None, 'area', 'fixed' or positions array
                                     seed = SEED,
                                     movement_length_by_team =  (movement_length_explorers, movement_length_cleaners),
@@ -523,12 +462,14 @@ if __name__ == '__main__':
             
             if selected_algorithm == "LawnMower":
                 lawn_mower_rng = np.random.default_rng(seed=100)
-                selected_algorithm_agents = [LawnMowerAgent(world=scenario_map, number_of_actions=8, movement_length=movement_length, forward_direction=int(lawn_mower_rng.uniform(0,8)), seed=SEED) for _ in range(n_agents)]
+                selected_algorithm_agents = [LawnMowerAgent(world=scenario_map, number_of_actions=8, movement_length=movement_length_of_each_agent[i], forward_direction=int(lawn_mower_rng.uniform(0,8)), seed=SEED) for i in range(n_agents)]
             elif selected_algorithm == "WanderingAgent":
-                selected_algorithm_agents = [WanderingAgent(world=scenario_map, number_of_actions=8, movement_length=movement_length, seed=SEED+i) for i in range(n_agents)]
+                selected_algorithm_agents = [WanderingAgent(world=scenario_map, number_of_actions=8, movement_length=movement_length_of_each_agent[i], seed=SEED+i) for i in range(n_agents)]
             elif selected_algorithm == "PSO":
-                selected_algorithm_agents = [ParticleSwarmOptimizationAgent(world=scenario_map, number_of_actions=8, movement_length=movement_length, seed=SEED+i) for i in range(n_agents)]
+                selected_algorithm_agents = [ParticleSwarmOptimizationAgent(world=scenario_map, number_of_actions=8, movement_length=movement_length_of_each_agent[i], seed=SEED+i) for i in range(n_agents)]
                 consensus_safe_masking_module = ConsensusSafeActionMasking(navigation_map = scenario_map, angle_set_of_each_agent=env.angle_set_of_each_agent, movement_length_of_each_agent = env.movement_length)
+            elif selected_algorithm == "Greedy":
+                selected_algorithm_agents = OneStepGreedyFleet(env)
 
         else:
             # Load env config #
@@ -540,7 +481,8 @@ if __name__ == '__main__':
                                     number_of_agents_by_team=env_config['number_of_agents_by_team'],
                                     n_actions_by_team=env_config['n_actions'],
                                     max_distance_travelled_by_team = env_config['max_distance_travelled_by_team'],
-                                    fleet_initial_positions = np.array(env_config['fleet_initial_positions']), #env_config['fleet_initial_positions'], #
+                                    max_steps_per_episode=env_config['max_steps_per_episode'],
+                                    fleet_initial_positions = env_config['fleet_initial_positions'], # np.array(env_config['fleet_initial_positions']), #
                                     seed = SEED,
                                     movement_length_by_team =  env_config['movement_length_by_team'],
                                     vision_length_by_team = env_config['vision_length_by_team'],
@@ -582,72 +524,71 @@ if __name__ == '__main__':
             network.load_model(path_to_training_folder + 'BestPolicy.pth')
             network.epsilon = 0.05
 
+        if SAVE_DATA:
+            # Reward function and create path to save #
+            relative_path = f'Evaluation/Results/{EXTRA_NAME}' + selected_algorithm.split('_')[0] + '.' + str(n_agents) + '.' + reward_function.split('_')[0] + '_' + '_'.join(map(str, reward_weights))
+            if not(os.path.exists(relative_path)): # create the directory if not exists
+                os.mkdir(relative_path)
+                os.mkdir(f'{relative_path}/Paths')
+                os.mkdir(f'{relative_path}/Paths_svg')
+                os.mkdir(f'{relative_path}/Models')
+                os.mkdir(f'{relative_path}/Models_svg')
+            saving_paths.append(relative_path)
 
-        # Reward function and create path to save #
-        relative_path = f'Experiments/Results/{EXTRA_NAME}' + selected_algorithm.split('_')[0] + '.' + str(n_agents) + '.' + reward_function.split('_')[0] + '_' + '_'.join(map(str, reward_weights))
-        if not(os.path.exists(relative_path)): # create the directory if not exists
-            os.mkdir(relative_path)
-            os.mkdir(f'{relative_path}/Paths')
-            os.mkdir(f'{relative_path}/Paths_svg')
-            os.mkdir(f'{relative_path}/Models')
-            os.mkdir(f'{relative_path}/Models_svg')
-        saving_paths.append(relative_path)
+            # algorithm_analizer = AlgorithmRecorderAndAnalizer(env, scenario_map, n_agents, relative_path, selected_algorithm, reward_function, reward_weights)
+            algorithm_analizer = AlgorithmRecorderAndAnalizer(env, scenario_map, n_agents, relative_path, selected_algorithm, f'{EXTRA_NAME}{reward_function}', reward_weights, RUNS)
+            algorithm_analizer.save_scenario_map()
+            env.save_environment_configuration(relative_path)
 
-        # algorithm_analizer = AlgorithmRecorderAndAnalizer(env, scenario_map, n_agents, relative_path, selected_algorithm, reward_function, reward_weights)
-        algorithm_analizer = AlgorithmRecorderAndAnalizer(env, scenario_map, n_agents, relative_path, selected_algorithm, f'{EXTRA_NAME}{reward_function}', reward_weights, RUNS)
-        algorithm_analizer.save_scenario_map()
-        env.save_environment_configuration(relative_path)
-
-        # Initialize metrics saving class #
-        if n_agents > 1:
-            metrics_names = [*[f'AccRw{id}' for id in range(n_agents)], 'R_acc', 'MSE', 'MSE_peaks', 'MSE_non_peaks', 'R2_error', 'Uncert_mean', 'Uncert_max',
+            # Initialize metrics saving class #
+            metrics_names = [*[f'AccRw{id}' for id in range(n_agents)], 'R_acc', 'MSE', 'R2_error', 
                             'Traveled_distance', 'Max_Redundancy', *[f'TravelDist{id}' for id in range(n_agents)], *env.fleet.get_distances_between_agents().keys()]
-        else:
-            metrics_names = [*[f'AccRw{id}' for id in range(n_agents)], 'R_acc', 'MSE', 'MSE_peaks', 'MSE_non_peaks', 'R2_error', 'Uncert_mean', 'Uncert_max',
-                            'Traveled_distance', 'Max_Redundancy', *[f'TravelDist{id}' for id in range(n_agents)]]
-        metrics = MetricsDataCreator(metrics_names=metrics_names,
-                                    algorithm_name=selected_algorithm + '.' + str(n_agents) + '.' + reward_function + '.' + '_'.join(map(str, reward_weights)),
-                                    experiment_name= 'metrics',
-                                    directory=relative_path )
+            metrics = MetricsDataCreator(metrics_names=metrics_names,
+                                        algorithm_name=selected_algorithm + '.' + str(n_agents) + '.' + reward_function + '.' + '_'.join(map(str, reward_weights)),
+                                        experiment_name= 'metrics',
+                                        directory=relative_path )
 
-        waypoints = MetricsDataCreator(metrics_names=['vehicle', 'x', 'y', 'Done'],
-                                    algorithm_name=selected_algorithm + '.' + str(n_agents) + '.' + reward_function + '.' + '_'.join(map(str, reward_weights)),
-                                    experiment_name= 'waypoints',
-                                    directory=relative_path)
-        
-        ground_truths_to_save = []
-        episodes_reward_acc = []
-        heatmaps = None
-        
+            waypoints = MetricsDataCreator(metrics_names=['vehicle', 'x', 'y', 'Done'],
+                                        algorithm_name=selected_algorithm + '.' + str(n_agents) + '.' + reward_function + '.' + '_'.join(map(str, reward_weights)),
+                                        experiment_name= 'waypoints',
+                                        directory=relative_path)
+            
+            ground_truths_to_save = []
+            heatmaps = None
+
         # Start episodes #
         for run in trange(RUNS):
             
             done = {i: False for i in range(n_agents)}
             states = env.reset_env()
-            if SHOW_PLOT_GRAPHICS:
-                env.render()
+            env.render()
 
             # runtime = 0
             step = 0
 
             # Save data #
-            algorithm_analizer.save_registers(reset=True)
-            ground_truths_to_save.append(env.ground_truth.read())
+            if SAVE_DATA:
+                algorithm_analizer.save_registers(reset=True)
+                ground_truths_to_save.append(env.real_trash_map)
             
             if selected_algorithm in ['LawnMower', 'PSO']:
                 for i in range(n_agents):
                     # selected_algorithm_agents[i].reset(0)
                     selected_algorithm_agents[i].reset(int(lawn_mower_rng.uniform(0,8)) if selected_algorithm == 'LawnMower' else None)
+            elif selected_algorithm == 'Greedy':
+                selected_algorithm_agents.reset()
 
             # Take first actions #
-            if selected_algorithm  in ['Network_With_SensorNoises', 'Independent_Networks_By_Sensors_Type', 'Network']:
+            if selected_algorithm  in ['Independent_Networks_Per_Team', 'Network']:
                 network.nogobackfleet_masking_module.reset()
-                actions = network.select_concensus_actions(states=states, sensor_error=env.std_sensormeasure, positions=env.get_active_agents_positions_dict(), n_actions_of_each_agent=env.n_actions_by_team, done = done)
+                actions = network.select_concensus_actions(states=states, positions=env.get_active_agents_positions_dict(), n_actions_of_each_agent=env.n_actions_of_each_agent, done = done, deterministic=True)
             elif selected_algorithm  in ['WanderingAgent', 'LawnMower']:
                 actions = {i: selected_algorithm_agents[i].move(env.fleet.vehicles[i].actual_agent_position) for i in env.get_active_agents_positions_dict().keys()}
             elif selected_algorithm == 'PSO':
                 q_values = {i: selected_algorithm_agents[i].move(env.model_trash_map, env.model_uncertainty_map, env.new_measures, env.fleet.vehicles[i].distance_traveled, env.fleet.vehicles[i].actual_agent_position, env.position_new_measures) for i in env.get_active_agents_positions_dict().keys()}
                 actions = consensus_safe_masking_module.query_actions(q_values=q_values, positions=env.get_active_agents_positions_dict())
+            elif selected_algorithm == 'Greedy':
+                actions = selected_algorithm_agents.get_agents_actions()
 
             while any([not value for value in done.values()]):  # while at least 1 active
                 
@@ -658,101 +599,103 @@ if __name__ == '__main__':
                 # t1 = time.time()
                 # runtime += t1-t0
 
-                # print("Actions: " + str(actions))
-                # print("Rewards: " + str(new_reward))
+                print(f"Step {env.steps} Actions: {actions}")
+                print(f"Step {env.steps} Rewards: {new_reward}")
+                print(f"Step {env.steps} Trashes removed: {env.trashes_removed_per_agent}")
+                print(f"Step {env.steps} Trashes remaining: {len(env.trash_positions_yx)}")
+                print()
 
                 # Save data #
-                algorithm_analizer.save_registers(new_reward, reset=False)
+                if SAVE_DATA:
+                    algorithm_analizer.save_registers(new_reward, reset=False)
 
                 # Take new actions #
-                if selected_algorithm  in ['Network_With_SensorNoises', 'Independent_Networks_By_Sensors_Type', 'Network']:
-                    actions = network.select_concensus_actions(states=states, sensor_error=env.std_sensormeasure, positions=env.get_active_agents_positions_dict(), n_actions_of_each_agent=env.n_actions_by_team, done = done)
+                if selected_algorithm  in ['Network_With_SensorNoises', 'Independent_Networks_Per_Team', 'Network']:
+                    actions = network.select_concensus_actions(states=states, positions=env.get_active_agents_positions_dict(), n_actions_of_each_agent=env.n_actions_of_each_agent, done = done, deterministic=True)
                 elif selected_algorithm  in ['WanderingAgent', 'LawnMower']:
                     actions = {i: selected_algorithm_agents[i].move(env.fleet.vehicles[i].actual_agent_position) for i in env.get_active_agents_positions_dict().keys()}
                 elif selected_algorithm == 'PSO':
                     q_values = {i: selected_algorithm_agents[i].move(env.model_trash_map, env.model_uncertainty_map, env.new_measures, env.fleet.vehicles[i].distance_traveled, env.fleet.vehicles[i].actual_agent_position, env.position_new_measures) for i in env.get_active_agents_positions_dict().keys()}
                     actions = consensus_safe_masking_module.query_actions(q_values=q_values, positions=env.get_active_agents_positions_dict())
-
-                #print(env.gaussian_process.model.covar_module.base_kernel.lengthscale.item())
+                elif selected_algorithm == 'Greedy':
+                    actions = selected_algorithm_agents.get_agents_actions()
 
             # print('Total runtime: ', runtime)
             
-
-            if SHOW_PLOT_GRAPHICS:
+            if SAVE_DATA:
                 algorithm_analizer.plot_all_figs(run)
             
             if SAVE_PLOTS and run%1 == 0:
                 algorithm_analizer.plot_paths(run, save_plot=SAVE_PLOTS)
-                algorithm_analizer.save_gp_model(run)
+            
+            if SAVE_DATA:
+                heatmaps = algorithm_analizer.get_heatmap(heatmaps)
 
-            heatmaps = algorithm_analizer.get_heatmap(heatmaps)
-
-            episodes_reward_acc.append(algorithm_analizer.reward_acc[-1])
-
-        print(f'Average reward {RUNS} episodes: {np.mean(episodes_reward_acc)}')
-        
-        algorithm_analizer.save_ground_truths(ground_truths_to_save)
-        algorithm_analizer.get_heatmap(heatmaps, only_save=True)
-        metrics.save_data_as_csv()
-        waypoints.save_data_as_csv()
+        if SAVE_DATA:
+            algorithm_analizer.save_ground_truths(ground_truths_to_save)
+            algorithm_analizer.get_heatmap(heatmaps, only_save=True)
+            metrics.save_data_as_csv()
+            waypoints.save_data_as_csv()
 
         data_table_average, wilcoxon_dict = algorithm_analizer.plot_and_tables_metrics_average(metrics_path=relative_path + '/metrics.csv', table=data_table_average, wilcoxon_dict=wilcoxon_dict, show_plot=SHOW_FINAL_PLOT_GRAPHICS,save_plot=SAVE_PLOTS)
-
-    with open(f'Experiments/Results/{EXTRA_NAME}LatexTableAverage{RUNS}eps_{n_agents}A.txt', "w") as f:
-        f.write(data_table_average.style.to_latex())
-    with open(f'Experiments/Results/{EXTRA_NAME}TableAverage{RUNS}eps_{n_agents}A.txt', "w") as f:
-        print(data_table_average.to_markdown(), file=f)
-
-    # Test de Wilcoxon # 
-    results = wilcoxon_test(wilcoxon_dict)
-    file = open(f'Experiments/Results/{EXTRA_NAME}Wilcoxon{RUNS}eps_{n_agents}A.txt', "w")
-    for key, result in results.items():
-        info = f"Test de Wilcoxon para {key}: Estadístico = {result['Statistic']}, Valor p = {result['P-Value']}, Significativo = {result['Significant']}"
-        print(info)
-        file.write(info + '\n')
-    file.close()
     
+    if SAVE_DATA:
+        with open(f'Evaluation/Results/{EXTRA_NAME}LatexTableAverage{RUNS}eps_{n_agents}A.txt', "w") as f:
+            f.write(data_table_average.style.to_latex())
+        with open(f'Evaluation/Results/{EXTRA_NAME}TableAverage{RUNS}eps_{n_agents}A.txt', "w") as f:
+            print(data_table_average.to_markdown(), file=f)
 
-    if SAVE_COLLAGES:
-        from shutil import rmtree
-        import cv2
-
-        # Function to crop an image
-        def crop_image(image, x, y, width, high):
-            return image[y:y+high, x:x+width]
+        # Test de Wilcoxon # 
+        if SAVE_WILCOX:
+            results = wilcoxon_test(wilcoxon_dict)
+            file = open(f'Evaluation/Results/{EXTRA_NAME}Wilcoxon{RUNS}eps_{n_agents}A.txt', "w")
+            for key, result in results.items():
+                info = f"Test de Wilcoxon para {key}: Estadístico = {result['Statistic']}, Valor p = {result['P-Value']}, Significativo = {result['Significant']}"
+                print(info)
+                file.write(info + '\n')
+            file.close()
         
-        # Collage agents paths #
-        images_paths = [sorted([os.path.join(f'{path}/Paths/', file) for file in os.listdir(f'{path}/Paths/')], key=lambda x: int(x.split('/')[-1].replace('Ep', '').replace('.png', ''))) for path in saving_paths]
-        collage = np.hstack([np.vstack([crop_image(cv2.imread(img), 70, 20, 580, 485) for img in algorithm]) for algorithm in images_paths])
-        cv2.imwrite(f'Experiments/Results/{EXTRA_NAME}Paths{RUNS}eps_{n_agents}A.png', collage)
-        
-        # collage GP models #
-        images_paths = [sorted([os.path.join(f'{path}/Models/', file) for file in os.listdir(f'{path}/Models/')], key=lambda x: int(x.split('/')[-1].replace('Ep', '').replace('.png', ''))) for path in saving_paths]
-        gt_collage = np.vstack([crop_image(cv2.imread(img), 0, 0, 500, 2000) for img in images_paths[-1]])
-        collage = np.hstack([np.vstack([crop_image(cv2.imread(img), 500, 0, 700, 2000) for img in algorithm]) for algorithm in images_paths])
-        collage = np.hstack([gt_collage, collage])
-        cv2.imwrite(f'Experiments/Results/{EXTRA_NAME}Models{RUNS}eps_{n_agents}A.png', collage)
 
-        # Collage average metrics #
-        networks = set([path.split('/')[-2].split('.')[0] for path in saving_paths])
-        collage = []
-        for net in networks:
-            algorithms_paths = [path for path in saving_paths if net in path]
-            images_paths = [next(os.path.join(path, file) for file in os.listdir(path) if file.startswith('AverageMetrics') and file.endswith('png')) for path in algorithms_paths]
-            collage.append(np.hstack([crop_image(cv2.imread(img), 100, 0, 1580, 880) for img in images_paths]))
-        collage = np.vstack(collage)
-        cv2.imwrite(f'Experiments/Results/{EXTRA_NAME}MetricsAverage{RUNS}eps_{n_agents}A.png', collage)
+        if SAVE_COLLAGES:
+            from shutil import rmtree
+            import cv2
 
-        # Collage average heatmaps #
-        collage = []
-        for net in networks:
-            algorithms_paths = [path for path in saving_paths if net in path]
-            images_paths = [next(os.path.join(path, file) for file in os.listdir(path) if file.startswith('Heatmap') and file.endswith('png')) for path in algorithms_paths]
-            collage.append(np.hstack([crop_image(cv2.imread(img), 0, 0, 2000, 2000) for img in images_paths]))
-        collage = np.vstack(collage)
-        cv2.imwrite(f'Experiments/Results/{EXTRA_NAME}HeatmapsAverage{RUNS}eps_{n_agents}A.png', collage)
+            # Function to crop an image
+            def crop_image(image, x, y, width, high):
+                return image[y:y+high, x:x+width]
+            
+            # Collage agents paths #
+            images_paths = [sorted([os.path.join(f'{path}/Paths/', file) for file in os.listdir(f'{path}/Paths/')], key=lambda x: int(x.split('/')[-1].replace('Ep', '').replace('.png', ''))) for path in saving_paths]
+            collage = np.hstack([np.vstack([crop_image(cv2.imread(img), 70, 20, 580, 485) for img in algorithm]) for algorithm in images_paths])
+            cv2.imwrite(f'Evaluation/Results/{EXTRA_NAME}Paths{RUNS}eps_{n_agents}A.png', collage)
+            
+            # collage GP models #
+            images_paths = [sorted([os.path.join(f'{path}/Models/', file) for file in os.listdir(f'{path}/Models/')], key=lambda x: int(x.split('/')[-1].replace('Ep', '').replace('.png', ''))) for path in saving_paths]
+            gt_collage = np.vstack([crop_image(cv2.imread(img), 0, 0, 500, 2000) for img in images_paths[-1]])
+            collage = np.hstack([np.vstack([crop_image(cv2.imread(img), 500, 0, 700, 2000) for img in algorithm]) for algorithm in images_paths])
+            collage = np.hstack([gt_collage, collage])
+            cv2.imwrite(f'Evaluation/Results/{EXTRA_NAME}Models{RUNS}eps_{n_agents}A.png', collage)
 
-    # Remove Paths and Models folders #
-    for path in saving_paths:
-        rmtree(f'{path}/Paths')
-        rmtree(f'{path}/Models')
+            # Collage average metrics #
+            networks = set([path.split('/')[-2].split('.')[0] for path in saving_paths])
+            collage = []
+            for net in networks:
+                algorithms_paths = [path for path in saving_paths if net in path]
+                images_paths = [next(os.path.join(path, file) for file in os.listdir(path) if file.startswith('AverageMetrics') and file.endswith('png')) for path in algorithms_paths]
+                collage.append(np.hstack([crop_image(cv2.imread(img), 100, 0, 1580, 880) for img in images_paths]))
+            collage = np.vstack(collage)
+            cv2.imwrite(f'Evaluation/Results/{EXTRA_NAME}MetricsAverage{RUNS}eps_{n_agents}A.png', collage)
+
+            # Collage average heatmaps #
+            collage = []
+            for net in networks:
+                algorithms_paths = [path for path in saving_paths if net in path]
+                images_paths = [next(os.path.join(path, file) for file in os.listdir(path) if file.startswith('Heatmap') and file.endswith('png')) for path in algorithms_paths]
+                collage.append(np.hstack([crop_image(cv2.imread(img), 0, 0, 2000, 2000) for img in images_paths]))
+            collage = np.vstack(collage)
+            cv2.imwrite(f'Evaluation/Results/{EXTRA_NAME}HeatmapsAverage{RUNS}eps_{n_agents}A.png', collage)
+
+            # Remove Paths and Models folders #
+            for path in saving_paths:
+                rmtree(f'{path}/Paths')
+                rmtree(f'{path}/Models')

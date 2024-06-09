@@ -14,11 +14,13 @@ f.close()
 
 SEED = 3
 SHOW_PLOT_GRAPHICS = True
+RUNS = 1
 
 env = MultiAgentCleanupEnvironment(scenario_map = np.array(env_config['scenario_map']),
 						number_of_agents_by_team=env_config['number_of_agents_by_team'],
 						n_actions_by_team=env_config['n_actions'],
 						max_distance_travelled_by_team = env_config['max_distance_travelled_by_team'],
+						max_steps_per_episode = env_config['max_steps_per_episode'],
 						fleet_initial_positions = env_config['fleet_initial_positions'], #np.array(env_config['fleet_initial_positions']), #
 						seed = SEED,
 						movement_length_by_team =  env_config['movement_length_by_team'],
@@ -48,7 +50,10 @@ network = MultiAgentDuelingDQNAgent(env=env,
 
 network.load_model(path_to_training_folder + 'BestPolicy.pth')
 
-results = network.evaluate_env(1, render=True)
+average_reward, average_episode_length = network.evaluate_env(RUNS, render=True)
 
-print(results)
-
+if exp_config['independent_networks_per_team']:
+	for team in range(len(average_reward)):
+		print(f'Average reward for team {team}: {average_reward[team]}, with an episode average length of {average_episode_length[team]}')
+else:
+	print(f'Average reward: {average_reward}, with an episode average length of {average_episode_length}')

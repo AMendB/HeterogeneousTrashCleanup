@@ -9,11 +9,11 @@ class ReplayBuffer:
 
 	def __init__(self, obs_dim: Union[tuple, int, list], size: int, batch_size: int = 32, n_step: int = 1, gamma: float = 0.99):
 
-		self.obs_buf = np.zeros([size] + list(obs_dim), dtype=np.float32)
-		self.next_obs_buf = np.zeros([size] + list(obs_dim), dtype=np.float32)
-		self.acts_buf = np.zeros([size], dtype=np.float32)
+		self.obs_buf = np.zeros([size] + list(obs_dim), dtype=np.float16)
+		self.next_obs_buf = np.zeros([size] + list(obs_dim), dtype=np.float16)
+		self.acts_buf = np.zeros([size], dtype=np.uint8)
 		self.rews_buf = np.zeros([size], dtype=np.float32)
-		self.done_buf = np.zeros(size, dtype=np.float32)
+		self.done_buf = np.zeros(size, dtype=np.uint8)
 		self.info_buf = np.empty([size], dtype=dict)
 		self.max_size, self.batch_size = size, batch_size
 		self.ptr, self.size, = 0, 0
@@ -130,9 +130,12 @@ class PrioritizedReplayBuffer(ReplayBuffer):
 			info: dict,
 	) -> Tuple[np.ndarray, np.ndarray, float, np.ndarray, bool, dict]:
 		"""Store experience and priority."""
-		# Convert observations to uint16 to save memory
-		obs = np.uint16(obs*65535) 
-		next_obs = np.uint16(obs*65535)  
+
+		# Convert observations to uint16 to save memory #
+		# obs = np.uint16(obs*65535) 
+		# next_obs = np.uint16(obs*65535)  
+
+		# Store transition to replay buffer #
 		transition = super().store(obs, act, rew, next_obs, done, info)
 
 		if transition:
@@ -158,8 +161,8 @@ class PrioritizedReplayBuffer(ReplayBuffer):
 		weights = np.array([self._calculate_weight(i, beta) for i in indices])
 
 		# Reconverting observations to float64
-		obs = np.float64(obs/65535)
-		next_obs = np.float64(next_obs/65535)
+		# obs = np.float64(obs/65535)
+		# next_obs = np.float64(next_obs/65535)
 
 		return dict(
 			obs=obs,

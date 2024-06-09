@@ -89,7 +89,7 @@ class DiscreteVehicle: # class for single vehicle
 		return self.check_agent_collision_with_obstacle(next_position) 
 	
 	def compute_influence_mask(self): 
-		""" Compute influence area (circular mask over the scenario map) around actual position. It is what the agent can see."""
+		""" Compute influence area around actual position. It is what the agent can see. """
 
 		influence_mask = np.zeros_like(self.navigation_map) 
 
@@ -304,8 +304,8 @@ class MultiAgentCleanupEnvironment:
 		elif fleet_initial_positions == 'fixed': # Random choose between 4 fixed deployment positions #
 			self.random_inititial_positions = 'fixed'
 			self.deployment_positions = np.zeros_like(self.scenario_map)
-			self.deployment_positions[[46,46,49,49], [28,31,28,31]] = 1 # Ypacarai map
-			# self.deployment_positions[[32,30,28,26], [7,7,7,7]] = 1 # A Coruna port
+			# self.deployment_positions[[46,46,49,49], [28,31,28,31]] = 1 # Ypacarai map
+			self.deployment_positions[[32,30,28,26], [7,7,7,7]] = 1 # A Coruna port
 			self.initial_positions = np.argwhere(self.deployment_positions == 1)[self.rng_initial_agents_positions.choice(len(np.argwhere(self.deployment_positions == 1)), self.n_agents, replace=False)]
 		elif fleet_initial_positions == 'area': # Random deployment positions inside an area #
 			self.random_inititial_positions = 'area'
@@ -492,8 +492,8 @@ class MultiAgentCleanupEnvironment:
 			# Saturate trash positions #
 			self.saturate_trash_positions()
 
-			# Discretize the trash map #
-			self.real_trash_map = self.get_discretized_real_trash_map()
+		# Discretize the updated real trash map #
+		self.real_trash_map = self.get_discretized_real_trash_map()
 
 	def saturate_trash_positions(self):
 		""" Saturate trash positions outside of the navigable map to the closest navigable position. """
@@ -802,6 +802,7 @@ class MultiAgentCleanupEnvironment:
 			'number_of_agents_by_team': self.number_of_agents_by_team,
 			'n_actions': self.n_actions_by_team,
 			'max_distance_travelled_by_team': self.max_distance_travelled_by_team,
+			'max_steps_per_episode': self.max_steps_per_episode,
 			'fleet_initial_positions': self.backup_fleet_initial_positions_entry if isinstance(self.backup_fleet_initial_positions_entry, str) else self.backup_fleet_initial_positions_entry.tolist(),
 			'seed': self.seed,
 			'movement_length_by_team': self.movement_length_by_team,
