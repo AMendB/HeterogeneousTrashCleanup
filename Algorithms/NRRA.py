@@ -2,7 +2,7 @@ import numpy as np
 
 class WanderingAgent:
 
-    def __init__(self, world: np.ndarray, movement_length: float, number_of_actions: int, consecutive_movements = None, seed = 0):
+    def __init__(self, world: np.ndarray, movement_length: float, number_of_actions: int, consecutive_movements = None, seed = 0, agent_is_cleaner: bool = False):
         
         self.world = world
         self.move_length = movement_length
@@ -12,25 +12,30 @@ class WanderingAgent:
         self.action = None
         self.seed = seed
         self.rng = np.random.default_rng(seed=self.seed)
+        self.agent_is_cleaner = agent_is_cleaner
     
-    def move(self, actual_position):
-
-        if self.action is None:
-            self.action = self.select_action_without_collision(actual_position)
+    def move(self, actual_position, trash_in_pixel: bool):
         
-        # Compute if there is an obstacle or reached the border #
-        OBS = self.check_collision(self.action, actual_position)
-
-        if OBS:
-            self.action = self.select_action_without_collision(actual_position)
-
-        if self.consecutive_movements is not None:
-            if self.t == self.consecutive_movements:
+        if trash_in_pixel and self.agent_is_cleaner:
+            return 9
+        else: 
+            if self.action is None:
                 self.action = self.select_action_without_collision(actual_position)
-                self.t = 0
+            
+            # Compute if there is an obstacle or reached the border #
+            OBS = self.check_collision(self.action, actual_position)
 
-        self.t += 1
-        return self.action
+            if OBS:
+                self.action = self.select_action_without_collision(actual_position)
+
+            if self.consecutive_movements is not None:
+                if self.t == self.consecutive_movements:
+                    self.action = self.select_action_without_collision(actual_position)
+                    self.t = 0
+
+            self.t += 1
+
+            return self.action
     
     
     def action_to_vector(self, action):

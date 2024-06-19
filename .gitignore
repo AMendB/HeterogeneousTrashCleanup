@@ -6,5 +6,5 @@ __pycache__/
 *.py[cod]
 nohup.out
 DoneTrainings/
-Experiments/Results/
+Evaluation/Results/
 Environment/Deprecated

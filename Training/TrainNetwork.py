@@ -6,12 +6,12 @@ from Algorithms.DRL.Agent.DuelingDQNAgent import MultiAgentDuelingDQNAgent
 import numpy as np
 
 # Selection of PARAMETERS TO TRAIN #
-reward_function = 'basic_reward' # basic_reward
-reward_weights = (10, 10, 0) 
-memory_size = int(1E6/2)
+reward_function = 'extended_reward' # basic_reward, extended_reward
+reward_weights = (10, 50, 0) 
+memory_size = int(1E6)
 network_type = 'independent_networks_per_team'
 device = 'cuda:0'
-episodes = 50000
+episodes = 60000
 n_agents = 4  # max 4
 
 
@@ -20,7 +20,7 @@ n_agents = 4  # max 4
 
 
 
-SHOW_PLOT_GRAPHICS = False
+SHOW_PLOT_GRAPHICS = True
 seed = 0
 
 # Agents info #

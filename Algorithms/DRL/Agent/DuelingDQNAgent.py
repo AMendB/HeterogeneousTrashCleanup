@@ -243,7 +243,7 @@ class MultiAgentDuelingDQNAgent:
 
 		# Masking q's and take actions #
 		q_values = self.nogobackfleet_masking_module.mask_actions(q_values=q_values)
-		permanent_actions = self.consensus_safe_masking_module.query_actions(q_values=q_values, positions=positions)
+		permanent_actions = self.consensus_safe_masking_module.query_actions(q_values=q_values, agents_positions=positions)
 		self.nogobackfleet_masking_module.update_previous_actions(permanent_actions)
 		
 		return permanent_actions
@@ -778,7 +778,7 @@ class MultiAgentDuelingDQNAgent:
 				except:
 					print('Definitely not saved :(')
 
-	def evaluate_env(self, eval_episodes, render=False):
+	def evaluate_env(self, eval_episodes):
 		""" Evaluate the agent on the environment for a given number of episodes with a deterministic policy """
 		if self.independent_networks_per_team:
 			total_reward = np.array([0]*self.env.n_teams)
@@ -792,8 +792,6 @@ class MultiAgentDuelingDQNAgent:
 
 				# Reset the environment #
 				states = self.env.reset_env()
-				if render:
-					self.env.render()
 				done = {agent_id: False for agent_id in range(self.env.n_agents)}
 				
 
@@ -810,14 +808,8 @@ class MultiAgentDuelingDQNAgent:
 						actions = {agent_id: action for agent_id, action in actions.items() if not done[agent_id]} # only active agents
 
 					# Process the agent step #
-					next_state, reward, done = self.step(actions)
+					states, reward, done = self.step(actions)
 
-					if render:
-						self.env.render()
-
-					# Update the state #
-					state = next_state
-					
 					reward_array = np.array([*reward.values()])
 
 					for team_id in self.env.teams_ids:
@@ -842,8 +834,6 @@ class MultiAgentDuelingDQNAgent:
 
 				# Reset the environment #
 				states = self.env.reset_env()
-				if render:
-					self.env.render()
 				done = {agent_id: False for agent_id in range(self.env.n_agents)}
 				
 
@@ -861,13 +851,7 @@ class MultiAgentDuelingDQNAgent:
 						actions = {agent_id: action for agent_id, action in actions.items() if not done[agent_id]} # only active agents
 
 					# Process the agent step #
-					next_state, reward, done = self.step(actions)
-
-					if render:
-						self.env.render()
-
-					# Update the state #
-					state = next_state
+					states, reward, done = self.step(actions)
 					
 					total_reward += np.sum(list(reward.values()))
 				

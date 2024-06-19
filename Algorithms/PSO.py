@@ -2,7 +2,7 @@ import numpy as np
 
 class ParticleSwarmOptimizationAgent:
 
-    def __init__(self, world: np.ndarray, number_of_actions: int, movement_length: int, seed=0):
+    def __init__(self, world: np.ndarray, number_of_actions: int, movement_length: int, seed=0, agent_is_cleaner: bool = False):
 
         self.world = world
         self.action = None
@@ -10,6 +10,7 @@ class ParticleSwarmOptimizationAgent:
         self.movement_length = movement_length
         self.seed = seed
         self.rng = np.random.default_rng(seed=self.seed)
+        self.agent_is_cleaner = agent_is_cleaner
     
         self.max_local_measure = [0, 0]
         self.max_global_measure = 0
