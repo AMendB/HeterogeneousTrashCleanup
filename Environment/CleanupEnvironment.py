@@ -789,6 +789,8 @@ class MultiAgentCleanupEnvironment:
 				r_for_taking_action_that_approaches_to_trash = np.array([1 if np.linalg.norm(agent.actual_agent_position - self.get_closest_known_trash_to_position(agent.actual_agent_position)) 
 													< np.linalg.norm(agent.previous_agent_position - self.get_closest_known_trash_to_position(agent.previous_agent_position)) and self.active_agents[idx] 
 													else 0 for idx, agent in enumerate(self.fleet.vehicles)])
+			else:
+				r_for_taking_action_that_approaches_to_trash = np.zeros(self.n_agents)
 
 			# CLEANERS TEAM #
 			cleaners_alive = [idx for idx, agent_id in enumerate(self.team_id_of_each_agent) if agent_id == self.cleaners_team_id and self.active_agents[idx]]
