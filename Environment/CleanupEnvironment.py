@@ -782,7 +782,7 @@ class MultiAgentCleanupEnvironment:
 					changes_in_whole_model[agent.influence_mask.astype(bool)] / self.redundancy_mask[agent.influence_mask.astype(bool)] * (1-self.team_id_of_each_agent[idx]*2/3)
 					) if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles) # All active agents will get reward for finding trash, not only explorers. But cleaners will get 1/3 of the reward that would get an explorer.
 				])
-			r_for_discover_new_area = np.array([*self.new_discovered_area_per_agent.values()])/5
+			r_for_discover_new_area = np.array([*self.new_discovered_area_per_agent.values()])#/5
 			
 			# If there is known trash, reward for taking action that approaches to trash #
 			if np.any(self.model_trash_map):
@@ -793,7 +793,7 @@ class MultiAgentCleanupEnvironment:
 				r_for_taking_action_that_approaches_to_trash = np.zeros(self.n_agents)
 
 			# CLEANERS TEAM #
-			cleaners_alive = [idx for idx, agent_id in enumerate(self.team_id_of_each_agent) if agent_id == self.cleaners_team_id and self.active_agents[idx]]
+			cleaners_alive = [idx for idx, agent_team in enumerate(self.team_id_of_each_agent) if agent_team == self.cleaners_team_id and self.active_agents[idx]]
 			r_agent_for_cleaned_trash = np.array([len(self.trashes_removed_per_agent[idx]) if idx in cleaners_alive and idx in self.trashes_removed_per_agent else 0 for idx in range(self.n_agents)])
 			penalization_for_cleaning_when_no_trash = np.array([-10 if idx in cleaners_alive and actions[idx] == 9 and not idx in self.trashes_removed_per_agent else 0 for idx in range(self.n_agents)])
 			penalization_for_not_cleaning_when_trash = np.array([-10 if idx in cleaners_alive and actions[idx] != 9 and self.model_trash_map[agent.actual_agent_position[0], agent.actual_agent_position[1]] > 0 else 0 for idx, agent in enumerate(self.fleet.vehicles)])

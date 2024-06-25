@@ -7,7 +7,7 @@ import numpy as np
 
 # Selection of PARAMETERS TO TRAIN #
 reward_function = 'extended_reward' # basic_reward, extended_reward
-reward_weights = (10, 50, 0) 
+reward_weights = (5, 100, 0) 
 memory_size = int(1E6)
 network_type = 'independent_networks_per_team'
 device = 'cuda:0'
@@ -20,7 +20,7 @@ n_agents = 4  # max 4
 
 
 
-SHOW_PLOT_GRAPHICS = True
+SHOW_PLOT_GRAPHICS = False
 seed = 0
 
 # Agents info #

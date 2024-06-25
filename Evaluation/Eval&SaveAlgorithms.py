@@ -313,10 +313,18 @@ class AlgorithmRecorderAndAnalizer:
         mse = {f'{percentage}%': np.array(numeric_columns[numeric_columns['Step']==round(self.env.max_steps_per_episode*percentage/100)]['MSE']) for percentage in [33, 66, 100]}
         smc = {f'{percentage}%': np.array(numeric_columns[numeric_columns['Step']==round(self.env.max_steps_per_episode*percentage/100)]['Sum_model_changes']) for percentage in [33, 66, 100]}
         ptc = {f'{percentage}%': np.array(numeric_columns[numeric_columns['Step']==round(self.env.max_steps_per_episode*percentage/100)]['Percentage_of_trash_collected']) for percentage in [33, 66, 100]}
+        accrw0 = {f'{percentage}%': np.array(numeric_columns[numeric_columns['Step']==round(self.env.max_steps_per_episode*percentage/100)]['AccRw0']) for percentage in [33, 66, 100]}
+        accrw1 = {f'{percentage}%': np.array(numeric_columns[numeric_columns['Step']==round(self.env.max_steps_per_episode*percentage/100)]['AccRw1']) for percentage in [33, 66, 100]}
+        accrw2 = {f'{percentage}%': np.array(numeric_columns[numeric_columns['Step']==round(self.env.max_steps_per_episode*percentage/100)]['AccRw2']) for percentage in [33, 66, 100]}
+        accrw3 = {f'{percentage}%': np.array(numeric_columns[numeric_columns['Step']==round(self.env.max_steps_per_episode*percentage/100)]['AccRw3']) for percentage in [33, 66, 100]}
 
         table.loc['MSE-'+name_rw, name_alg] = [np.mean(mse['33%']), 1.96*np.std(mse['33%'])/np.sqrt(len(self.runs)), np.mean(mse['66%']),1.96*np.std(mse['66%'])/np.sqrt(len(self.runs)), np.mean(mse['100%']), 1.96*np.std(mse['100%'])/np.sqrt(len(self.runs))]
         table.loc['SumModelChanges-'+name_rw, name_alg] = [np.mean(smc['33%']), 1.96*np.std(smc['33%'])/np.sqrt(len(self.runs)), np.mean(smc['66%']),1.96*np.std(smc['66%'])/np.sqrt(len(self.runs)), np.mean(smc['100%']), 1.96*np.std(smc['100%'])/np.sqrt(len(self.runs))]
         table.loc['PercentageOfTrashCollected-'+name_rw, name_alg] = [np.mean(ptc['33%']), 1.96*np.std(ptc['33%'])/np.sqrt(len(self.runs)), np.mean(ptc['66%']),1.96*np.std(ptc['66%'])/np.sqrt(len(self.runs)), np.mean(ptc['100%']), 1.96*np.std(ptc['100%'])/np.sqrt(len(self.runs))]
+        table.loc['AccumulatedReward0-'+name_rw, name_alg] = [np.mean(accrw0['33%']), 1.96*np.std(accrw0['33%'])/np.sqrt(len(self.runs)), np.mean(accrw0['66%']),1.96*np.std(accrw0['66%'])/np.sqrt(len(self.runs)), np.mean(accrw0['100%']), 1.96*np.std(accrw0['100%'])/np.sqrt(len(self.runs))]
+        table.loc['AccumulatedReward1-'+name_rw, name_alg] = [np.mean(accrw1['33%']), 1.96*np.std(accrw1['33%'])/np.sqrt(len(self.runs)), np.mean(accrw1['66%']),1.96*np.std(accrw1['66%'])/np.sqrt(len(self.runs)), np.mean(accrw1['100%']), 1.96*np.std(accrw1['100%'])/np.sqrt(len(self.runs))]
+        table.loc['AccumulatedReward2-'+name_rw, name_alg] = [np.mean(accrw2['33%']), 1.96*np.std(accrw2['33%'])/np.sqrt(len(self.runs)), np.mean(accrw2['66%']),1.96*np.std(accrw2['66%'])/np.sqrt(len(self.runs)), np.mean(accrw2['100%']), 1.96*np.std(accrw2['100%'])/np.sqrt(len(self.runs))]
+        table.loc['AccumulatedReward3-'+name_rw, name_alg] = [np.mean(accrw3['33%']), 1.96*np.std(accrw3['33%'])/np.sqrt(len(self.runs)), np.mean(accrw3['66%']),1.96*np.std(accrw3['66%'])/np.sqrt(len(self.runs)), np.mean(accrw3['100%']), 1.96*np.std(accrw3['100%'])/np.sqrt(len(self.runs))]
         
 
         # To do WILCOXON TEST, extract the MSE vector of len(vector)=runs from df at steps 33%, 66% and 100% of n_steps_per_episode for each episode #
@@ -373,7 +381,8 @@ if __name__ == '__main__':
         # 'Greedy',
         # 'Training/Trning_RW_basic_10_10_0/',
         # 'DoneTrainings/Trning_RW_basic_10_10_0 (buffer float16)/',
-        'DoneTrainings/Trning_RW_basic_10_10_0 (sin penalización)/',
+        # 'DoneTrainings/Trning_RW_basic_10_10_0 (sin penalización)/',
+        'DoneTrainings/Trning_RW_extended_10_50_0/',
         ]
 
     SHOW_RENDER = True
@@ -633,10 +642,16 @@ if __name__ == '__main__':
                                                                                                show_plot=SHOW_FINAL_EVALUATION_PLOT,save_plot=SAVE_PLOTS_OF_METRICS_AND_PATHS)
     
     if SAVE_DATA:
-        with open(f'Evaluation/Results/{EXTRA_NAME}LatexTableAverage{RUNS}eps_{n_agents}A.txt', "w") as f:
-            f.write(data_table_average.style.to_latex())
-        with open(f'Evaluation/Results/{EXTRA_NAME}TableAverage{RUNS}eps_{n_agents}A.txt', "w") as f:
-            print(data_table_average.to_markdown(), file=f)
+        if len(algorithms) > 1:
+            with open(f'Evaluation/Results/{EXTRA_NAME}LatexTableAverage{RUNS}eps_{n_agents}A.txt', "w") as f:
+                f.write(data_table_average.style.to_latex())
+            with open(f'Evaluation/Results/{EXTRA_NAME}TableAverage{RUNS}eps_{n_agents}A.txt', "w") as f:
+                print(data_table_average.to_markdown(), file=f)
+        else:
+            with open(f'{relative_path}/{EXTRA_NAME}LatexTableAverage{RUNS}eps_{n_agents}A.txt', "w") as f:
+                f.write(data_table_average.style.to_latex())
+            with open(f'{relative_path}/{EXTRA_NAME}TableAverage{RUNS}eps_{n_agents}A.txt', "w") as f:
+                print(data_table_average.to_markdown(), file=f)
 
         # Test de Wilcoxon # 
         if SAVE_WILCOX:

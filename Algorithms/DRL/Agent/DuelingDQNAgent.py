@@ -243,6 +243,13 @@ class MultiAgentDuelingDQNAgent:
 
 		# Masking q's and take actions #
 		q_values = self.nogobackfleet_masking_module.mask_actions(q_values=q_values)
+
+		# Add a probability to clean if a cleaner is in a pixel with trash # 
+		if self.epsilon > np.random.rand() and not self.noisy and not deterministic:
+			for agent_id in q_values.keys():
+				if self.env.team_id_of_each_agent[agent_id] == self.env.cleaners_team_id and self.env.active_agents[agent_id] and self.env.model_trash_map[positions[agent_id][0], positions[agent_id][1]] > 0:
+					q_values[agent_id][9] = 10000
+		
 		permanent_actions = self.consensus_safe_masking_module.query_actions(q_values=q_values, agents_positions=positions)
 		self.nogobackfleet_masking_module.update_previous_actions(permanent_actions)
 		
