@@ -6,8 +6,8 @@ from Algorithms.DRL.Agent.DuelingDQNAgent import MultiAgentDuelingDQNAgent
 import numpy as np
 
 # Selection of PARAMETERS TO TRAIN #
-reward_function = 'extended_reward' # basic_reward, extended_reward
-reward_weights = (5, 100, 0) 
+reward_function = 'backtosimple' # basic_reward, extended_reward, backtosimple
+reward_weights = (1, 10, 2) 
 memory_size = int(1E6)
 network_type = 'independent_networks_per_team'
 device = 'cuda:0'

@@ -26,7 +26,7 @@ class AlgorithmRecorderAndAnalizer:
 
     def plot_all_figs(self, run):
         self.env.render()
-        plt.show()
+        plt.show(block=True)
         self.plot_paths(run=run, save_plot=False)
         self.plot_metrics(show_plot=True, run=run, save_plot = False)
 
@@ -145,7 +145,7 @@ class AlgorithmRecorderAndAnalizer:
             plt.close()
         else:
             plt.title(f"Real Importance (GT) with agents path, EP {run}")
-            plt.show()  # Mostrar el gráfico resultante
+            plt.show(block=True)  # Mostrar el gráfico resultante
 
     def plot_metrics(self, show_plot=False, run = None, save_plot = False, plot_std=False):
             # Reward and Error final graphs #
@@ -214,7 +214,7 @@ class AlgorithmRecorderAndAnalizer:
                 fig.savefig(fname=f"{self.relative_path}/AverageMetrics_{len(self.runs)}eps.svg")
 
             if show_plot:
-                plt.show()
+                plt.show(block=True)
 
     # def save_ground_truths(self, ground_truths_to_save):
 
@@ -369,7 +369,7 @@ if __name__ == '__main__':
     import time
     from Algorithms.LawnMower import LawnMowerAgent
     from Algorithms.NRRA import WanderingAgent
-    from Algorithms.PSO import ParticleSwarmOptimizationAgent
+    from Algorithms.PSO import ParticleSwarmOptimizationFleet
     from Algorithms.Greedy import OneStepGreedyFleet
     from Algorithms.DRL.Agent.DuelingDQNAgent import MultiAgentDuelingDQNAgent
     from Algorithms.DRL.ActionMasking.ActionMaskingUtils import ConsensusSafeActionMasking
@@ -382,7 +382,8 @@ if __name__ == '__main__':
         # 'Training/Trning_RW_basic_10_10_0/',
         # 'DoneTrainings/Trning_RW_basic_10_10_0 (buffer float16)/',
         # 'DoneTrainings/Trning_RW_basic_10_10_0 (sin penalización)/',
-        'DoneTrainings/Trning_RW_extended_10_50_0/',
+        # 'DoneTrainings/Trning_RW_extended_10_50_0/',
+        'Training/Trning_RW_extended_5_100_0/',
         ]
 
     SHOW_RENDER = True
@@ -465,8 +466,8 @@ if __name__ == '__main__':
             elif selected_algorithm == "WanderingAgent":
                 selected_algorithm_agents = [WanderingAgent(world=scenario_map, number_of_actions=8, movement_length=movement_length_of_each_agent[i], seed=SEED+i, agent_is_cleaner=env.team_id_of_each_agent[i]==env.cleaners_team_id) for i in range(n_agents)]
             elif selected_algorithm == "PSO":
-                selected_algorithm_agents = [ParticleSwarmOptimizationAgent(world=scenario_map, number_of_actions=8, movement_length=movement_length_of_each_agent[i], seed=SEED+i, agent_is_cleaner=env.team_id_of_each_agent[i]==env.cleaners_team_id) for i in range(n_agents)]
-                consensus_safe_masking_module = ConsensusSafeActionMasking(navigation_map = scenario_map, angle_set_of_each_agent=env.angle_set_of_each_agent, movement_length_of_each_agent = env.movement_length)
+                selected_algorithm_agents = ParticleSwarmOptimizationFleet(env)
+                consensus_safe_masking_module = ConsensusSafeActionMasking(navigation_map = scenario_map, angle_set_of_each_agent=env.angle_set_of_each_agent, movement_length_of_each_agent = env.movement_length_of_each_agent)
             elif selected_algorithm == "Greedy":
                 selected_algorithm_agents = OneStepGreedyFleet(env)
 
@@ -568,11 +569,11 @@ if __name__ == '__main__':
                 algorithm_analizer.save_registers(reset=True)
                 # ground_truths_to_save.append(env.real_trash_map)
             
-            if selected_algorithm in ['LawnMower', 'PSO']:
+            if selected_algorithm in ['LawnMower']:
                 for i in range(n_agents):
                     # selected_algorithm_agents[i].reset(0)
                     selected_algorithm_agents[i].reset(int(lawn_mower_rng.uniform(0,8)) if selected_algorithm == 'LawnMower' else None)
-            elif selected_algorithm == 'Greedy':
+            elif selected_algorithm in ['PSO','Greedy']:
                 selected_algorithm_agents.reset()
 
             # Take first actions #
@@ -582,8 +583,8 @@ if __name__ == '__main__':
             elif selected_algorithm  in ['WanderingAgent', 'LawnMower']:
                 actions = {agent_id: selected_algorithm_agents[agent_id].move(actual_position=position, trash_in_pixel=env.model_trash_map[position[0], position[1]]) for agent_id, position in env.get_active_agents_positions_dict().items()}
             elif selected_algorithm == 'PSO':
-                q_values = {i: selected_algorithm_agents[i].move(env.model_trash_map, env.model_uncertainty_map, env.new_measures, env.fleet.vehicles[i].distance_traveled, env.fleet.vehicles[i].actual_agent_position, env.position_new_measures) for i in env.get_active_agents_positions_dict().keys()}
-                actions = consensus_safe_masking_module.query_actions(q_values=q_values, agents_positions=env.get_active_agents_positions_dict())
+                q_values = selected_algorithm_agents.get_agents_actions()
+                actions = consensus_safe_masking_module.query_actions(q_values=q_values, agents_positions=env.get_active_agents_positions_dict(), model_trash_map=env.model_trash_map)
             elif selected_algorithm == 'Greedy':
                 actions = selected_algorithm_agents.get_agents_actions()
             
@@ -598,10 +599,13 @@ if __name__ == '__main__':
                 # t1 = time.time()
                 # runtime += t1-t0
 
-                print(f"Step {env.steps} Actions: {actions}")
-                print(f"Step {env.steps} Rewards: {new_reward}")
-                print(f"Step {env.steps} Trashes removed: {env.trashes_removed_per_agent}")
-                print(f"Step {env.steps} Trashes remaining: {len(env.trash_positions_yx)}")
+                print(f"Step {env.steps}")
+                print(f"Actions: {actions}")
+                print(f"Rewards: {new_reward}")
+                trashes_agents_pixels = {agent_id: env.model_trash_map[position[0], position[1]] for agent_id, position in env.get_active_agents_positions_dict().items()}
+                print(f"Trashes in agents pixels: {trashes_agents_pixels}")
+                print(f"Trashes removed: {env.trashes_removed_per_agent}")
+                print(f"Trashes remaining: {len(env.trash_positions_yx)}")
                 print()
 
                 # Save data #
@@ -614,8 +618,8 @@ if __name__ == '__main__':
                 elif selected_algorithm  in ['WanderingAgent', 'LawnMower']:
                     actions = {agent_id: selected_algorithm_agents[agent_id].move(actual_position=position, trash_in_pixel=env.model_trash_map[position[0], position[1]]) for agent_id, position in env.get_active_agents_positions_dict().items()}
                 elif selected_algorithm == 'PSO':
-                    q_values = {i: selected_algorithm_agents[i].move(env.model_trash_map, env.model_uncertainty_map, env.new_measures, env.fleet.vehicles[i].distance_traveled, env.fleet.vehicles[i].actual_agent_position, env.position_new_measures) for i in env.get_active_agents_positions_dict().keys()}
-                    actions = consensus_safe_masking_module.query_actions(q_values=q_values, agents_positions=env.get_active_agents_positions_dict())
+                    q_values = selected_algorithm_agents.get_agents_actions()
+                    actions = consensus_safe_masking_module.query_actions(q_values=q_values, agents_positions=env.get_active_agents_positions_dict(), model_trash_map=env.model_trash_map)
                 elif selected_algorithm == 'Greedy':
                     actions = selected_algorithm_agents.get_agents_actions()
 

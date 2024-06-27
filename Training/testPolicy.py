@@ -9,7 +9,7 @@ import numpy as np
 # path_to_training_folder = 'DoneTrainings/Trning_RW_basic_10_10_0 (buffer float16)/'
 # path_to_training_folder = 'DoneTrainings/Trning_RW_basic_10_10_0 (sin penalización)/'
 # path_to_training_folder = 'Training/Trning_RW_basic_10_10_0/'
-path_to_training_folder = 'Training/Trning_RW_extended_10_50_0/'
+path_to_training_folder = 'Training/Trning_RW_extended_5_100_0/'
 
 f = open(path_to_training_folder + 'environment_config.json',)
 env_config = json.load(f)

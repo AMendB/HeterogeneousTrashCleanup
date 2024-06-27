@@ -99,7 +99,7 @@ class ConsensusSafeActionMasking:
 
 		self.navigation_map = new_navigation_map.copy()
 
-	def query_actions(self, q_values: dict, agents_positions: dict, ):
+	def query_actions(self, q_values: dict, agents_positions: dict, model_trash_map:np.array):
 
 		# 1) The largest q-value agent decides first
 		# 2) If there are multiple agents with the same q-value, the agent is selected randomly
@@ -122,6 +122,10 @@ class ConsensusSafeActionMasking:
 
 			# Censor the impossible actions in the Q-values
 			q_values[agent_id][actions_mask] = -np.inf
+
+			# Censor clean action if there is no trash in the current position of the cleaner
+			if model_trash_map[agents_positions[agent_id][0], agents_positions[agent_id][1]] == 0 and len(q_values[agent_id]) == 10:
+				q_values[agent_id][9] = -np.inf
 
 			# Select the action
 			action = np.argmax(q_values[agent_id])

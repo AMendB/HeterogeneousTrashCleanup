@@ -250,7 +250,7 @@ class MultiAgentDuelingDQNAgent:
 				if self.env.team_id_of_each_agent[agent_id] == self.env.cleaners_team_id and self.env.active_agents[agent_id] and self.env.model_trash_map[positions[agent_id][0], positions[agent_id][1]] > 0:
 					q_values[agent_id][9] = 10000
 		
-		permanent_actions = self.consensus_safe_masking_module.query_actions(q_values=q_values, agents_positions=positions)
+		permanent_actions = self.consensus_safe_masking_module.query_actions(q_values=q_values, agents_positions=positions, model_trash_map=self.env.model_trash_map)
 		self.nogobackfleet_masking_module.update_previous_actions(permanent_actions)
 		
 		return permanent_actions
