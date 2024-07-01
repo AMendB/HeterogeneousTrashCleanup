@@ -9,8 +9,8 @@ class ReplayBuffer:
 
 	def __init__(self, obs_dim: Union[tuple, int, list], size: int, batch_size: int = 32, n_step: int = 1, gamma: float = 0.99):
 
-		self.obs_buf = np.zeros([size] + list(obs_dim), dtype=np.float16)
-		self.next_obs_buf = np.zeros([size] + list(obs_dim), dtype=np.float16)
+		self.obs_buf = np.zeros([size] + list(obs_dim), dtype=np.uint8)
+		self.next_obs_buf = np.zeros([size] + list(obs_dim), dtype=np.uint8)
 		self.acts_buf = np.zeros([size], dtype=np.uint8)
 		self.rews_buf = np.zeros([size], dtype=np.float16)
 		self.done_buf = np.zeros(size, dtype=np.uint8)
@@ -135,6 +135,12 @@ class PrioritizedReplayBuffer(ReplayBuffer):
 		# obs = np.uint16(obs*65535) 
 		# next_obs = np.uint16(obs*65535)  
 
+		# Convert observation to uint8 to save memory. Transform first observations with decimals, others just convert to uint8 directly #
+		# Transform channels 0, 4 and 5 to uint8, which are the float channels #
+		obs[[0, 4, 5]] *= 255
+		obs = np.uint8(obs)
+		next_obs = np.uint8(next_obs)
+
 		# Store transition to replay buffer #
 		transition = super().store(obs, act, rew, next_obs, done, info)
 
@@ -163,6 +169,12 @@ class PrioritizedReplayBuffer(ReplayBuffer):
 		# Reconverting observations to float64
 		# obs = np.float64(obs/65535)
 		# next_obs = np.float64(next_obs/65535)
+
+		# Reconverting observations to float16
+		obs = np.float16(obs)
+		next_obs = np.float16(next_obs)
+		obs[[0, 4, 5]] /= 255
+		next_obs[[0, 4, 5]] /= 255
 
 		return dict(
 			obs=obs,

@@ -369,7 +369,8 @@ if __name__ == '__main__':
     import time
     from Algorithms.LawnMower import LawnMowerAgent
     from Algorithms.NRRA import WanderingAgent
-    from Algorithms.PSO import ParticleSwarmOptimizationFleet
+    # from Algorithms.PSO import ParticleSwarmOptimizationFleet
+    from Algorithms.PSO_no_GP import ParticleSwarmOptimizationFleet
     from Algorithms.Greedy import OneStepGreedyFleet
     from Algorithms.DRL.Agent.DuelingDQNAgent import MultiAgentDuelingDQNAgent
     from Algorithms.DRL.ActionMasking.ActionMaskingUtils import ConsensusSafeActionMasking
@@ -383,7 +384,8 @@ if __name__ == '__main__':
         # 'DoneTrainings/Trning_RW_basic_10_10_0 (buffer float16)/',
         # 'DoneTrainings/Trning_RW_basic_10_10_0 (sin penalización)/',
         # 'DoneTrainings/Trning_RW_extended_10_50_0/',
-        'Training/Trning_RW_extended_5_100_0/',
+        # 'Training/Trning_RW_extended_5_100_0/',
+        'Training/Trning_RW_backtosimple_1_10_2/',
         ]
 
     SHOW_RENDER = True
@@ -429,11 +431,11 @@ if __name__ == '__main__':
             max_distance_travelled_cleaners = 200
             max_steps_per_episode = 150
 
-            reward_function = 'basic_reward' # 
-            reward_weights=(10, 10, 0)
+            reward_function = 'backtosimple' # 'basic_reward', 'extended_reward', 'backtosimple'
+            reward_weights=(1, 10, 2)
 
             # Set initial positions #
-            random_initial_positions = False #coruna_port
+            random_initial_positions = True #coruna_port
             if random_initial_positions:
                 initial_positions = 'fixed'
             else:
@@ -522,7 +524,7 @@ if __name__ == '__main__':
                                     independent_networks_per_team = independent_networks_per_team,
                                     )
             network.load_model(path_to_training_folder + 'BestPolicy.pth')
-            network.epsilon = 0.05
+            network.epsilon = 0
 
         if SAVE_DATA:
             # Reward function and create path to save #
@@ -600,7 +602,7 @@ if __name__ == '__main__':
                 # runtime += t1-t0
 
                 print(f"Step {env.steps}")
-                print(f"Actions: {actions}")
+                print(f"Actions: {dict(sorted(actions.items()))}")
                 print(f"Rewards: {new_reward}")
                 trashes_agents_pixels = {agent_id: env.model_trash_map[position[0], position[1]] for agent_id, position in env.get_active_agents_positions_dict().items()}
                 print(f"Trashes in agents pixels: {trashes_agents_pixels}")

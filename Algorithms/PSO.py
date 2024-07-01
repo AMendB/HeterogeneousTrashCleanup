@@ -19,8 +19,10 @@ class ParticleSwarmOptimizationFleet:
         self.n_actions_of_each_agent = self.env.n_actions_of_each_agent
     
         # Constant ponderation values [c1, c2, c3, c4] https://arxiv.org/pdf/2211.15217.pdf #
+        # c1 = best_local_locations, c2 = best_global_location, c3 = max_uncertainty, c4 = max_mean
         self.c_exploration = (2.0187, 0, 3.2697, 0) 
         self.c_explotation = (3.6845, 1.5614, 0, 3.6703) 
+        self.c_cleaning = (0, 2, 0, 3)
         self.potential_movements_of_each_agent = {agent_id: np.array([(0,0) if angle < 0 else np.round([np.cos(angle), np.sin(angle)]) * self.movement_length_of_each_agent[agent_id] 
 													 for angle in self.angle_set_of_each_agent[agent_id]]).astype(int) for agent_id in self.angle_set_of_each_agent.keys()}
         
@@ -36,8 +38,8 @@ class ParticleSwarmOptimizationFleet:
         self.model_mean_map = np.zeros_like(self.scenario_map) 
         self.model_uncertainty_map = np.zeros_like(self.scenario_map) 
         self.gaussian_process = GaussianProcessGPyTorch(scenario_map = self.scenario_map, 
-                                                        initial_lengthscale = 1, kernel_bounds = (0.1, 3), 
-                                                        training_iterations = 50, scale_kernel=True, 
+                                                        initial_lengthscale = 1, kernel_bounds = (0.01, 3), 
+                                                        training_iterations = 50, scale_kernel=False, 
                                                         device = 'cuda' if torch.cuda.is_available() else 'cpu')
         
         # Initialize the dictionaries that will store the vectors #
@@ -70,13 +72,18 @@ class ParticleSwarmOptimizationFleet:
         """ Update information and move the agent """
         self.model_mean_map, self.model_uncertainty_map = self.update_gaussian_process()
 
-        self.axs[0].imshow(self.model_mean_map)
-        self.axs[1].imshow(self.model_uncertainty_map)
+        # self.axs[0].imshow(self.model_mean_map)
+        # self.axs[1].imshow(self.model_uncertainty_map)
 
-        if self.env.steps > self.env.max_steps_per_episode:
-            self.c_values = self.c_explotation
+        # Cleaners go for the trash since discovered, explorers explore the first half of the episode and then exploit #
+        if self.env.steps > self.env.max_steps_per_episode/2 and self.model_mean_map.max() > 0.2:
+            self.c_values_of_each_agent = {agent_id: self.c_explotation if self.team_id_of_each_agent[agent_id] == self.explorers_team_id 
+                                           else self.c_cleaning for agent_id in range(self.n_agents)}
+        elif self.env.steps <= self.env.max_steps_per_episode/2 and self.model_mean_map.max() > 0.2:
+            self.c_values_of_each_agent = {agent_id: self.c_exploration if self.team_id_of_each_agent[agent_id] == self.explorers_team_id 
+                                           else self.c_cleaning for agent_id in range(self.n_agents)}
         else:
-            self.c_values = self.c_exploration
+            self.c_values_of_each_agent = {agent_id: self.c_exploration for agent_id in range(self.n_agents)}
 
 
         q_values = self.update_vectors()
@@ -112,21 +119,26 @@ class ParticleSwarmOptimizationFleet:
 
             # Get final ponderated vector c*u #
             u_values = np.random.uniform(0, 1, 4) # random ponderation values
-            vector = self.c_values[0] * u_values[0] * self.vectors_to_best_local_location[agent_id] + \
-                        self.c_values[1] * u_values[1] * self.vectors_to_best_global_location[agent_id] + \
-                        self.c_values[2] * u_values[2] * self.vectors_to_max_uncertainty[agent_id] + \
-                        self.c_values[3] * u_values[3] * self.vectors_to_max_mean[agent_id]
+            vector = self.c_values_of_each_agent[agent_id][0] * u_values[0] * self.vectors_to_best_local_location[agent_id] + \
+                        self.c_values_of_each_agent[agent_id][1] * u_values[1] * self.vectors_to_best_global_location[agent_id] + \
+                        self.c_values_of_each_agent[agent_id][2] * u_values[2] * self.vectors_to_max_uncertainty[agent_id] + \
+                        self.c_values_of_each_agent[agent_id][3] * u_values[3] * self.vectors_to_max_mean[agent_id]
             
             # Update the velocity of the agent #
             self.velocities[agent_id] = self.velocities[agent_id] + vector
-            self.velocities[agent_id] = np.clip(self.velocities[agent_id], -self.movement_length_of_each_agent[agent_id], self.movement_length_of_each_agent[agent_id])
 
-            # Normalize the vector #
-            # movement = self.velocities[agent_id] / np.linalg.norm(self.velocities[agent_id])
+            # Normalize the vector and get the movement direction #
+            self.velocities[agent_id] = (self.velocities[agent_id] / np.linalg.norm(self.velocities[agent_id])) * self.movement_length_of_each_agent[agent_id]
 
             # Get Q-values in term of nearness to action #
-            # q_values[agent_id] = 1/np.linalg.norm(self.potential_movements_of_each_agent[agent_id] - movement, axis=1)
-            q_values[agent_id] = 1/np.linalg.norm(self.potential_movements_of_each_agent[agent_id] - self.velocities[agent_id], axis=1)
+            q_values[agent_id] = 1/(np.linalg.norm(self.potential_movements_of_each_agent[agent_id] - self.velocities[agent_id], axis=1) + 0.01) # 0.01 to avoid division by zero
+            q_values[agent_id][8] = -10 # avoid staying in the same position
+
+            # If cleaner and trash in pixel, q of the clean action is very high #
+            if self.team_id_of_each_agent[agent_id] == self.cleaners_team_id and self.env.model_trash_map[agent_position[0], agent_position[1]] > 0:
+                q_values[agent_id][9] = 100000
+            elif self.team_id_of_each_agent[agent_id] == self.cleaners_team_id:
+                q_values[agent_id][9] = -10 # avoid cleaning if there is no trash
 
         return q_values
     

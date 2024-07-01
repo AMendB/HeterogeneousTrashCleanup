@@ -440,11 +440,12 @@ class MultiAgentCleanupEnvironment:
 		
 		return self.states
 	
-	def generate_trash_positions(self, max_number_of_trash_elements_per_spot = 40, max_number_of_pollution_spots = 4):
+	def generate_trash_positions(self, max_number_of_trash_elements_per_spot = 60, max_number_of_pollution_spots = 4):
 		""" Generate the positions of the trash elements with a MVN distribution. """
 
 		# Random position of pollution spots inside of the navigable map #
-		pollution_spots_number = self.rng_pollution_spots_number.integers(1, max_number_of_pollution_spots+1)
+		# pollution_spots_number = self.rng_pollution_spots_number.integers(1, max_number_of_pollution_spots+1)
+		pollution_spots_number = 1
 		pollution_spots_indexes = self.rng_pollution_spots_locations_indexes.choice(np.arange(0, len(self.visitable_locations)), pollution_spots_number, replace=False)
 		number_of_trash_elements_in_each_spot = self.rng_trash_elements_number.normal(loc=max_number_of_trash_elements_per_spot, scale=10, size=pollution_spots_number).round().astype(int)
 		number_of_trash_elements_in_each_spot[number_of_trash_elements_in_each_spot <= 0] = 10 # minimum number of trash elements in a spot
@@ -452,7 +453,7 @@ class MultiAgentCleanupEnvironment:
 		# Generate the trash positions #
 		trash_positions_yx = np.array([])
 		for j, index in enumerate(pollution_spots_indexes):
-			trash_positions_yx_to_add = self.rng_trash_positions_MVN.multivariate_normal(mean=self.visitable_locations[index], cov=[[10,0],[0,10]], size = number_of_trash_elements_in_each_spot[j])
+			trash_positions_yx_to_add = self.rng_trash_positions_MVN.multivariate_normal(mean=self.visitable_locations[index], cov=[[20,0],[0,20]], size = number_of_trash_elements_in_each_spot[j])
 			trash_positions_yx = np.vstack((trash_positions_yx, trash_positions_yx_to_add)) if trash_positions_yx.size else trash_positions_yx_to_add
 
 		return trash_positions_yx
@@ -538,11 +539,11 @@ class MultiAgentCleanupEnvironment:
 		# Update the steps #
 		self.steps += 1
 
-		# Update trash map if dynamic and execute cleaning process #
-		self.update_real_trash_map(actions)
-
 		# Process movement actions. There are actions only for active agents #
 		collisions_mask_dict = self.fleet.move_fleet(actions)
+
+		# Update trash map if dynamic and execute cleaning process #
+		self.update_real_trash_map(actions)
 
 		if self.fleet.fleet_collisions > 0 and any(collisions_mask_dict.values()):
 			print("Nº collision:" + str(self.fleet.fleet_collisions))
@@ -550,8 +551,9 @@ class MultiAgentCleanupEnvironment:
 		# Update the redundancy mask after movements #
 		self.redundancy_mask = np.sum([agent.influence_mask for idx, agent in enumerate(self.fleet.vehicles) if self.active_agents[idx]], axis = 0)
 
-		# Update visited map and discovered areas #
-		self.new_discovered_area_per_agent = {idx: (self.visited_areas_map[agent.influence_mask.astype(bool)] == 1).sum() if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles)}
+		# Update visited map and new discovered areas divided by overlapping agents #
+		self.new_discovered_area_per_agent = {idx: ((self.visited_areas_map[agent.influence_mask.astype(bool)] == 1).astype(int) / self.redundancy_mask[agent.influence_mask.astype(bool)] ).sum() 
+										if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles)}
 		self.visited_areas_map[self.redundancy_mask.astype(bool) * np.invert(self.non_water_mask)] = 0.5 # 0 non visitable, 1 not visited yet, 0.5 visited
 
 		# Detect trash from cameras and update model #
@@ -687,6 +689,7 @@ class MultiAgentCleanupEnvironment:
 				# AXIS 3: Active colored agents positions #
 				self.state_to_render_first_active_agent[3][self.non_water_mask] = 1/self.n_colors_agents_render + 0.01
 				self.im3 = self.axs[3].imshow(self.state_to_render_first_active_agent[3], cmap = self.agents_colormap, vmin = 0.0, vmax = 1.0)
+				self.im3_scatter = self.axs[3].scatter(self.trash_positions_yx[:,1], self.trash_positions_yx[:,0], c = 'white', s = 1)
 				self.axs[3].set_title("Agents position")
 
 				# AXIS 4: Redundancy mask #
@@ -725,6 +728,7 @@ class MultiAgentCleanupEnvironment:
 				# AXIS 3: Active colored agents positions #
 				self.state_to_render_first_active_agent[3][self.non_water_mask] = 1/self.n_colors_agents_render + 0.01
 				self.im3.set_data(self.state_to_render_first_active_agent[3])
+				self.im3_scatter.set_offsets(self.trash_positions_yx[:, [1, 0]]) # update scatter plot of trash
 
 				# AXIS 4: Redundancy mask #
 				self.state_to_render_first_active_agent[4][self.non_water_mask] = np.nan
@@ -818,7 +822,7 @@ class MultiAgentCleanupEnvironment:
 			# CLEANERS TEAM #
 			cleaners_alive = [idx for idx, agent_team in enumerate(self.team_id_of_each_agent) if agent_team == self.cleaners_team_id and self.active_agents[idx]]
 			r_for_cleaned_trash = np.array([len(self.trashes_removed_per_agent[idx]) if idx in cleaners_alive and idx in self.trashes_removed_per_agent else 0 for idx in range(self.n_agents)])
-			r_cleaners_for_being_with_the_trash = np.array([1 if self.model_trash_map[agent.influence_mask.astype(bool)].sum() > 0 and idx in cleaners_alive else 0 for idx, agent in enumerate(self.fleet.vehicles)])
+			r_cleaners_for_being_with_the_trash = np.array([10 if self.model_trash_map[agent.influence_mask.astype(bool)].sum() > 0 and idx in cleaners_alive else 0 for idx, agent in enumerate(self.fleet.vehicles)])
 			penalization_for_not_cleaning_when_trash = np.array([-10 if idx in cleaners_alive and actions[idx] != 9 and self.model_trash_map[agent.previous_agent_position[0], agent.previous_agent_position[1]] > 0 else 0 for idx, agent in enumerate(self.fleet.vehicles)])
 
 			rewards = r_for_discovered_trash * self.reward_weights[self.explorers_team_id] \
@@ -937,8 +941,8 @@ if __name__ == '__main__':
 							   vision_length_by_team = (vision_length_explorers, vision_length_cleaners),
 							   flag_to_check_collisions_within = True,
 							   max_collisions = 1000,
-							   reward_function = 'extended_reward',  # basic_reward, extended_reward
-							   reward_weights = (10, 50, 0),
+							   reward_function = 'backtosimple',  # basic_reward, extended_reward
+							   reward_weights = (1, 10, 2),
 							   dynamic = True,
 							   obstacles = False,
 							   show_plot_graphics = True,
