@@ -369,8 +369,7 @@ if __name__ == '__main__':
     import time
     from Algorithms.LawnMower import LawnMowerAgent
     from Algorithms.NRRA import WanderingAgent
-    # from Algorithms.PSO import ParticleSwarmOptimizationFleet
-    from Algorithms.PSO_no_GP import ParticleSwarmOptimizationFleet
+    from Algorithms.PSO import ParticleSwarmOptimizationFleet
     from Algorithms.Greedy import OneStepGreedyFleet
     from Algorithms.DRL.Agent.DuelingDQNAgent import MultiAgentDuelingDQNAgent
     from Algorithms.DRL.ActionMasking.ActionMaskingUtils import ConsensusSafeActionMasking
@@ -378,14 +377,14 @@ if __name__ == '__main__':
     algorithms = [
         # 'WanderingAgent', 
         # 'LawnMower', 
-        # 'PSO', 
+        'PSO', 
         # 'Greedy',
         # 'Training/Trning_RW_basic_10_10_0/',
         # 'DoneTrainings/Trning_RW_basic_10_10_0 (buffer float16)/',
         # 'DoneTrainings/Trning_RW_basic_10_10_0 (sin penalización)/',
         # 'DoneTrainings/Trning_RW_extended_10_50_0/',
-        # 'Training/Trning_RW_extended_5_100_0/',
-        'Training/Trning_RW_backtosimple_1_10_2/',
+        # 'DoneTrainings/Trning_RW_extended_5_100_0/',
+        # 'DoneTrainings/Trning_RW_backtosimple_1_10_2/',
         ]
 
     SHOW_RENDER = True
@@ -523,7 +522,7 @@ if __name__ == '__main__':
                                     device='cuda:0',
                                     independent_networks_per_team = independent_networks_per_team,
                                     )
-            network.load_model(path_to_training_folder + 'BestPolicy.pth')
+            network.load_model(path_to_training_folder + 'Last_Policy.pth')
             network.epsilon = 0
 
         if SAVE_DATA:
