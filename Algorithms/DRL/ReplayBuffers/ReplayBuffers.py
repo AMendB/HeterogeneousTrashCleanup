@@ -173,8 +173,10 @@ class PrioritizedReplayBuffer(ReplayBuffer):
 		# Reconverting observations to float16
 		obs = np.float16(obs)
 		next_obs = np.float16(next_obs)
-		obs[[0, 4, 5]] /= 255
-		next_obs[[0, 4, 5]] /= 255
+		obs[:, [0, 4, 5], :, :] /= 255
+		obs[:, [0, 4, 5], :, :] = np.where(obs[:, [0, 4, 5], :, :] == 0.498, 0.5, obs[:, [0, 4, 5], :, :])
+		next_obs[:, [0, 4, 5], :, :] /= 255
+		next_obs[:, [0, 4, 5], :, :] = np.where(next_obs[:, [0, 4, 5], :, :] == 0.498, 0.5, next_obs[:, [0, 4, 5], :, :])
 
 		return dict(
 			obs=obs,

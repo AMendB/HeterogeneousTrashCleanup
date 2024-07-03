@@ -89,14 +89,14 @@ network = MultiAgentDuelingDQNAgent(env=env,
 									learning_starts=100, 
 									gamma=0.99,
 									lr=1e-4,
-									save_every=5000, # 5000
+									save_every=10000, # 5000
 									train_every=20, #15
 									masked_actions=False,
 									concensus_actions=True,
 									device=device,
 									logdir=logdir,
-									eval_episodes=10, # 10
-									eval_every=1000, #1000
+									eval_episodes=25, # 10
+									eval_every=500, #1000
 									noisy=False,
 									distributional=False,
 									independent_networks_per_team = independent_networks_per_team,

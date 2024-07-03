@@ -10,14 +10,16 @@ import numpy as np
 # path_to_training_folder = 'DoneTrainings/Trning_RW_basic_10_10_0 (sin penalización)/'
 # path_to_training_folder = 'DoneTrainings/Trning_RW_basic_10_10_0/'
 # path_to_training_folder = 'DoneTrainings/Trning_RW_extended_5_100_0/'
-path_to_training_folder = 'DoneTrainings/Trning_RW_backtosimple_1_10_2/'
+# path_to_training_folder = 'DoneTrainings/Trning_RW_backtosimple_1_10_2/'
+# path_to_training_folder = 'Training/Trning_RW_backtosimple_1_100_2/'
+path_to_training_folder = 'Training/Trning_RW_backtosimple_1_10_2/'
 
 f = open(path_to_training_folder + 'environment_config.json',)
 env_config = json.load(f)
 f.close()
 
-SEED = 30
-SHOW_PLOT_GRAPHICS = True
+SEED = 3
+SHOW_PLOT_GRAPHICS = False
 RUNS = 10
 
 env = MultiAgentCleanupEnvironment(scenario_map = np.array(env_config['scenario_map']),
@@ -52,7 +54,8 @@ network = MultiAgentDuelingDQNAgent(env=env,
 						independent_networks_per_team = exp_config['independent_networks_per_team'],
 						)
 
-network.load_model(path_to_training_folder + 'Final_Policy.pth')
+# network.load_model(path_to_training_folder + 'Final_Policy.pth')
+network.load_model(path_to_training_folder + 'BestPolicy.pth')
 
 average_reward, average_episode_length = network.evaluate_env(RUNS)
 

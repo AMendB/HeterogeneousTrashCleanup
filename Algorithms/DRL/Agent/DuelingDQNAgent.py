@@ -364,6 +364,7 @@ class MultiAgentDuelingDQNAgent:
 			# Reset metrics #
 			episodic_reward_vector = [[]]*self.env.n_teams
 			record = [-np.inf]*self.env.n_teams
+			eval_record = [-np.inf]*self.env.n_teams
 
 			for episode in trange(1, int(episodes) + 1):
 
@@ -422,8 +423,7 @@ class MultiAgentDuelingDQNAgent:
 					for team_id in self.env.teams_ids:
 						if not(finished_episode_by_teams[team_id]):
 							# Accumulate indicators
-							team_id_reward_array = reward_array[self.env.masks_by_team[team_id]]
-							score[team_id] += np.mean(team_id_reward_array)  # The mean reward among teams
+							score[team_id] += np.mean(reward_array[self.env.masks_by_team[team_id]])  # The mean reward among the team
 							length[team_id] += 1
 
 						
@@ -444,7 +444,7 @@ class MultiAgentDuelingDQNAgent:
 								self.log_data(team_id_index=team_id)
 
 								# Save policy if is better on average
-								mean_episodic_reward = np.mean(episodic_reward_vector[team_id][-50:])
+								mean_episodic_reward = np.mean(episodic_reward_vector[team_id])
 								if mean_episodic_reward > record[team_id]:
 									print(f"\nNew best policy with mean reward of {mean_episodic_reward} for network nº {team_id}")
 									print("Saving model in " + self.logdir)
@@ -481,10 +481,15 @@ class MultiAgentDuelingDQNAgent:
 				# Evaluation #
 				if self.eval_every is not None:
 					if episode % self.eval_every == 0:
+						mean_eval_reward, mean_eval_length = self.evaluate_env(self.eval_episodes)
 						for team_id in self.env.teams_ids:
-							mean_reward, mean_length = self.evaluate_env(self.eval_episodes)
-							self.writer[team_id].add_scalar('test/accumulated_reward', mean_reward[team_id], self.episode[team_id])
-							self.writer[team_id].add_scalar('test/accumulated_length', mean_length[team_id], self.episode[team_id])
+							self.writer[team_id].add_scalar('test/accumulated_reward', mean_eval_reward[team_id], self.episode[team_id])
+							self.writer[team_id].add_scalar('test/accumulated_length', mean_eval_length[team_id], self.episode[team_id])
+							if mean_eval_reward[team_id] > eval_record[team_id]:
+									print(f"\nNew best policy IN EVAL with mean reward of {mean_eval_reward[team_id]} for network nº {team_id}")
+									print("Saving model in " + self.logdir)
+									eval_record[team_id] = mean_eval_reward[team_id]
+									self.save_model(name=f'BestEvalPolicy_network{team_id}.pth', team_id_index=team_id)
 
 			# Save the final policys #
 			for team_id in self.env.teams_ids:
@@ -511,6 +516,7 @@ class MultiAgentDuelingDQNAgent:
 			# Reset metrics #
 			episodic_reward_vector = []
 			record = -np.inf
+			eval_record = -np.inf
 
 			for episode in trange(1, int(episodes) + 1):
 
@@ -587,7 +593,7 @@ class MultiAgentDuelingDQNAgent:
 						self.log_data()
 
 						# Save policy if is better on average
-						mean_episodic_reward = np.mean(episodic_reward_vector[-50:])
+						mean_episodic_reward = np.mean(episodic_reward_vector)
 						if mean_episodic_reward > record:
 							print(f"\nNew best policy with mean reward of {mean_episodic_reward}")
 							print("Saving model in " + self.writer.log_dir)
@@ -620,9 +626,14 @@ class MultiAgentDuelingDQNAgent:
 				# Evaluation #
 				if self.eval_every is not None:
 					if episode % self.eval_every == 0:
-						mean_reward, mean_length = self.evaluate_env(self.eval_episodes)
-						self.writer.add_scalar('test/accumulated_reward', mean_reward, self.episode)
-						self.writer.add_scalar('test/accumulated_length', mean_length, self.episode)
+						mean_eval_reward, mean_eval_length = self.evaluate_env(self.eval_episodes)
+						self.writer.add_scalar('test/accumulated_reward', mean_eval_reward, self.episode)
+						self.writer.add_scalar('test/accumulated_length', mean_eval_length, self.episode)
+						if mean_eval_reward > eval_record:
+								print(f"\nNew best policy IN EVAL with mean reward of {mean_eval_reward}")
+								print("Saving model in " + self.logdir)
+								eval_record = mean_eval_reward
+								self.save_model(name='BestEvalPolicy.pth')	
 
 			# Save the final policy #
 			self.save_model(name='Final_Policy.pth')
@@ -822,8 +833,7 @@ class MultiAgentDuelingDQNAgent:
 					for team_id in self.env.teams_ids:
 						if not(self.env.dones_by_teams[team_id]):
 							total_length[team_id] += 1
-							team_id_reward_array = reward_array[self.env.masks_by_team[team_id]]
-							total_reward[team_id] += np.sum(team_id_reward_array)
+							total_reward[team_id] += np.sum(reward_array[self.env.masks_by_team[team_id]])
 				
 				# Reset previous actions of NoGoBack #
 				self.nogobackfleet_masking_module.reset()
