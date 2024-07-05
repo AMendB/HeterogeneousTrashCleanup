@@ -25,7 +25,8 @@ class OneStepGreedyFleet:
 
             - Case 0: If there is trash in the actual pixel, clean it.
             - Case 1: If there is trash in a accessible pixel, move to that pixel to clean it.
-            - Case 2: If there is no trash in a accessible pixel, take a random action and continue until collision or detection of trash.
+            - Case 2: If there is an unexplored area in next position, move to the most unexplored area.
+            - Case 3: If there is no trash in a accessible pixel, take a random action and continue until collision or detection of trash.
         
         If more than one trash pixel is at the same distance, select the one with more trash. """
 
@@ -33,8 +34,10 @@ class OneStepGreedyFleet:
         next_positions = agent_coords + next_movements
         next_positions = np.clip(next_positions, (0,0), np.array(self.navigable_map.shape)-1) # saturate movement if out of indexes values (map edges)
         number_of_trashes_in_each_next_position = np.array([self.model_trash_map[next_position[0], next_position[1]] if self.navigable_map[next_position[0], next_position[1]] == 1 
-                                                            else -1 
-                                                            for next_position in next_positions])
+                                                            else -1 for next_position in next_positions])
+        unexplored_pixels_in_each_next_position = np.array([np.sum(self.visited_areas_map[self.compute_influence_mask(next_position, self.vision_length_of_each_agent[agent_id]).astype(bool)] == 1) 
+                                                            if self.navigable_map[next_position[0], next_position[1]] == 1 
+                                                            else -1 for next_position in next_positions])
 
         if self.model_trash_map[agent_coords[0], agent_coords[1]] > 0: # Case 0
             action = 9
@@ -42,23 +45,9 @@ class OneStepGreedyFleet:
         elif np.any(number_of_trashes_in_each_next_position > 0): # Case 1
             action = np.argmax(number_of_trashes_in_each_next_position) # Move to the pixel with more trash
             self.fixed_action[agent_id] = None
-        # elif np.any(self.model_trash_map > 0): # Case 2
-        #     # Get coords where there is trash
-        #     trash_rows_cols = np.where(self.model_trash_map > 0)
-        #     trash_coords = np.column_stack(trash_rows_cols)
-
-        #     # Calculate distances to each trash pixel
-        #     distances = np.linalg.norm(trash_coords - agent_coords, axis=0)
-
-        #     # Get the closer pixel with more trash to the agent
-        #     number_of_trashes_in_each_coord = self.model_trash_map[trash_coords]
-        #     coord_to_clean =  np.lexsort((-number_of_trashes_in_each_coord, distances))[0]
-
-        #     # Get the direction to move to the closer pixel with trash
-        #     direction = trash_coords[coord_to_clean] - agent_coords
-        #     desired_movement = np.round(direction / np.linalg.norm(direction)).astype(int) * self.movement_length_of_each_agent[agent_id]
-        #     desired_next_position = agent_coords + desired_movement
-        #     action = np.argmin(np.linalg.norm(possible_next_positions - desired_next_position, axis=1))
+        elif np.any(unexplored_pixels_in_each_next_position > 0): # Case 2
+            action = np.argmax(unexplored_pixels_in_each_next_position) # Move to the pixel with more unexplored area
+            self.fixed_action[agent_id] = None
         else: # Case 3
             possible_actions = np.array([action_id for action_id, next_position in enumerate(next_positions) if self.navigable_map[next_position[0], next_position[1]] == 1 and np.any(next_position != agent_coords) ])
             
@@ -75,8 +64,9 @@ class OneStepGreedyFleet:
     def get_explorer_action(self, agent_coords, agent_id):
         """ See the posibilities of the agent:
 
-            - Case 0: There is trash inside of its actual or next vision area. Then move to the area with more trash.
-            - Case 1: There is no trash inside of its vision area. Then take an action that implies a movement and keep it until collision or detection of trash. """
+            - Case 0: If there is an unexplored area in next position, move to the most unexplored area.
+            - Case 1: There is trash inside of its actual or next vision area. Then move to the area with more trash.
+            - Case 2: There is no trash inside of its vision area. Then take an action that implies a movement and keep it until collision or detection of trash. """
             
         next_movements = np.array([(0,0) if angle < 0 else np.round([np.cos(angle), np.sin(angle)]) * self.movement_length_of_each_agent[agent_id] for angle in self.angle_set_of_each_agent[agent_id]]).astype(int)
         next_positions = agent_coords + next_movements
@@ -86,10 +76,17 @@ class OneStepGreedyFleet:
         number_of_trashes_in_each_area = np.array([np.sum(self.model_trash_map[self.compute_influence_mask(next_position, self.vision_length_of_each_agent[agent_id]).astype(bool)]) 
                                                    if self.navigable_map[next_position[0], next_position[1]] == 1 
                                                    else -1 for next_position in next_positions])
+        unexplored_pixels_in_each_next_position = np.array([np.sum(self.visited_areas_map[self.compute_influence_mask(next_position, self.vision_length_of_each_agent[agent_id]).astype(bool)] == 1) 
+                                                            if self.navigable_map[next_position[0], next_position[1]] == 1 
+                                                            else -1 for next_position in next_positions])        
 
-        if np.any(number_of_trashes_in_each_area > 0): # Case 0
+        if np.any(unexplored_pixels_in_each_next_position > 0): # Case 1
+            action = np.argmax(unexplored_pixels_in_each_next_position)
+            self.fixed_action[agent_id] = None        
+        elif np.any(number_of_trashes_in_each_area > 0): # Case 0
             action = np.argmax(number_of_trashes_in_each_area)
-        else: # Case 1
+            self.fixed_action[agent_id] = None
+        else: # Case 2
             possible_actions = np.array([action_id for action_id, next_position in enumerate(next_positions) if self.navigable_map[next_position[0], next_position[1]] == 1 and np.any(next_position != agent_coords) ])
             
             if self.fixed_action[agent_id] in possible_actions:
@@ -124,6 +121,7 @@ class OneStepGreedyFleet:
         """ Get the actions for each agent given the conditions of the environment. """
         
         self.navigable_map = self.scenario_map.copy() # 1 where navigable, 0 where not navigable
+        self.visited_areas_map = self.env.visited_areas_map.copy()
         self.model_trash_map = self.env.model_trash_map 
         active_agents_positions = self.env.get_active_agents_positions_dict()
 

@@ -811,6 +811,7 @@ class MultiAgentDuelingDQNAgent:
 				# Reset the environment #
 				states = self.env.reset_env()
 				done = {agent_id: False for agent_id in range(self.env.n_agents)}
+				# acc_r = np.array([0]*self.env.n_agents)
 				
 
 				while not all(done.values()):
@@ -834,6 +835,8 @@ class MultiAgentDuelingDQNAgent:
 						if not(self.env.dones_by_teams[team_id]):
 							total_length[team_id] += 1
 							total_reward[team_id] += np.sum(reward_array[self.env.masks_by_team[team_id]])
+					# acc_r = acc_r + reward_array
+				# print(f"Accumulated reward (EP: {_}: {acc_r}")
 				
 				# Reset previous actions of NoGoBack #
 				self.nogobackfleet_masking_module.reset()

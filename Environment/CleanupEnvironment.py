@@ -361,9 +361,14 @@ class MultiAgentCleanupEnvironment:
 	def set_agents_id_info(self):
 
 		# Save the team id of each agent #
-		self.explorers_team_id = np.argmax(self.movement_length_by_team) # explorers are the ones with highest movement length
-		self.cleaners_team_id =	np.argmin(self.movement_length_by_team) # cleaners are the ones with lower movement length
-
+		self.explorers_team_id = None
+		self.cleaners_team_id = None
+		for team_id, n_actions in enumerate(self.n_actions_by_team):
+			if n_actions == 9: 
+				self.explorers_team_id = team_id
+			elif n_actions == 10: # cleaners have one more action, the clean action
+				self.cleaners_team_id = team_id
+			
 		# Differentiate between agents by their teams #
 		self.team_id_of_each_agent = np.repeat(np.arange(self.n_teams), self.number_of_agents_by_team)
 		self.team_id_normalized_of_each_agent = (self.team_id_of_each_agent+1)/self.n_teams # decimal id between 0 and 1
@@ -446,13 +451,13 @@ class MultiAgentCleanupEnvironment:
 		# Random position of pollution spots inside of the navigable map #
 		# pollution_spots_number = self.rng_pollution_spots_number.integers(1, max_number_of_pollution_spots+1)
 		pollution_spots_number = 1
-		pollution_spots_indexes = self.rng_pollution_spots_locations_indexes.choice(np.arange(0, len(self.visitable_locations)), pollution_spots_number, replace=False)
+		pollution_spots_locations_indexes = self.rng_pollution_spots_locations_indexes.choice(np.arange(0, len(self.visitable_locations)), pollution_spots_number, replace=False)
 		number_of_trash_elements_in_each_spot = self.rng_trash_elements_number.normal(loc=max_number_of_trash_elements_per_spot, scale=10, size=pollution_spots_number).round().astype(int)
 		number_of_trash_elements_in_each_spot[number_of_trash_elements_in_each_spot <= 0] = 10 # minimum number of trash elements in a spot
 		
 		# Generate the trash positions #
 		trash_positions_yx = np.array([])
-		for j, index in enumerate(pollution_spots_indexes):
+		for j, index in enumerate(pollution_spots_locations_indexes):
 			trash_positions_yx_to_add = self.rng_trash_positions_MVN.multivariate_normal(mean=self.visitable_locations[index], cov=[[20,0],[0,20]], size = number_of_trash_elements_in_each_spot[j])
 			trash_positions_yx = np.vstack((trash_positions_yx, trash_positions_yx_to_add)) if trash_positions_yx.size else trash_positions_yx_to_add
 
@@ -555,6 +560,7 @@ class MultiAgentCleanupEnvironment:
 		self.new_discovered_area_per_agent = {idx: ((self.visited_areas_map[agent.influence_mask.astype(bool)] == 1).astype(int) / self.redundancy_mask[agent.influence_mask.astype(bool)] ).sum() 
 										if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles)}
 		self.visited_areas_map[self.redundancy_mask.astype(bool) * np.invert(self.non_water_mask)] = 0.5 # 0 non visitable, 1 not visited yet, 0.5 visited
+		self.percentage_visited = (self.visited_areas_map == 0.5).sum() / (self.visited_areas_map != 0).sum()
 
 		# Detect trash from cameras and update model #
 		self.update_model_trash_map()
@@ -762,7 +768,7 @@ class MultiAgentCleanupEnvironment:
 			# EXPLORERS TEAM #
 			changes_in_whole_model = np.abs(self.model_trash_map - self.previous_model_trash_map)
 			# explorers_alive = [idx for idx, agent_id in enumerate(self.team_id_of_each_agent) if agent_id == self.explorers_team_id and self.active_agents[idx]]
-			r_for_discovered_trash = np.array(
+			r_for_discover_trash = np.array(
 				[np.sum(
 					# changes_in_whole_model[agent.influence_mask.astype(bool)] / self.redundancy_mask[agent.influence_mask.astype(bool)]
 					# ) if idx in explorers_alive else 0 for idx, agent in enumerate(self.fleet.vehicles) # only explorers will get reward for finding trash
@@ -775,13 +781,13 @@ class MultiAgentCleanupEnvironment:
 			r_for_cleaned_trash = np.array([len(self.trashes_removed_per_agent[idx]) if idx in cleaners_alive and idx in self.trashes_removed_per_agent else 0 for idx in range(self.n_agents)])
 			penalization_for_cleaning_when_no_trash = np.array([-10 if idx in cleaners_alive and actions[idx] == 9 and not idx in self.trashes_removed_per_agent else 0 for idx in range(self.n_agents)])
 
-			rewards = r_for_discovered_trash * self.reward_weights[self.explorers_team_id] + r_for_cleaned_trash * self.reward_weights[self.cleaners_team_id] + penalization_for_cleaning_when_no_trash
+			rewards = r_for_discover_trash * self.reward_weights[self.explorers_team_id] + r_for_cleaned_trash * self.reward_weights[self.cleaners_team_id] + penalization_for_cleaning_when_no_trash
 		
 		elif self.reward_function == 'extended_reward':
 			# ALL TEAMS #
 			changes_in_whole_model = np.abs(self.model_trash_map - self.previous_model_trash_map)
 			# explorers_alive = [idx for idx, agent_id in enumerate(self.team_id_of_each_agent) if agent_id == self.explorers_team_id and self.active_agents[idx]]
-			r_for_discovered_trash = np.array(
+			r_for_discover_trash = np.array(
 				[np.sum(
 					changes_in_whole_model[agent.influence_mask.astype(bool)] / self.redundancy_mask[agent.influence_mask.astype(bool)] * (1-self.team_id_of_each_agent[idx]*2/3)
 					) if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles) # All active agents will get reward for finding trash, not only explorers. But cleaners will get 1/3 of the reward that would get an explorer.
@@ -802,7 +808,7 @@ class MultiAgentCleanupEnvironment:
 			penalization_for_cleaning_when_no_trash = np.array([-10 if idx in cleaners_alive and actions[idx] == 9 and not idx in self.trashes_removed_per_agent else 0 for idx in range(self.n_agents)])
 			penalization_for_not_cleaning_when_trash = np.array([-10 if idx in cleaners_alive and actions[idx] != 9 and self.model_trash_map[agent.previous_agent_position[0], agent.previous_agent_position[1]] > 0 else 0 for idx, agent in enumerate(self.fleet.vehicles)])
 
-			rewards = r_for_discovered_trash * self.reward_weights[self.explorers_team_id] \
+			rewards = r_for_discover_trash * self.reward_weights[self.explorers_team_id] \
 					  + r_for_cleaned_trash * self.reward_weights[self.cleaners_team_id] \
 					  + r_for_discover_new_area \
 					  + r_for_taking_action_that_approaches_to_trash \
@@ -812,7 +818,7 @@ class MultiAgentCleanupEnvironment:
 		elif self.reward_function == 'backtosimple':
 			# ALL TEAMS #
 			changes_in_whole_model = np.abs(self.model_trash_map - self.previous_model_trash_map)
-			r_for_discovered_trash = np.array(
+			r_for_discover_trash = np.array(
 				[np.sum(
 					changes_in_whole_model[agent.influence_mask.astype(bool)] / self.redundancy_mask[agent.influence_mask.astype(bool)]
 					) if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles)
@@ -822,13 +828,23 @@ class MultiAgentCleanupEnvironment:
 			# CLEANERS TEAM #
 			cleaners_alive = [idx for idx, agent_team in enumerate(self.team_id_of_each_agent) if agent_team == self.cleaners_team_id and self.active_agents[idx]]
 			r_for_cleaned_trash = np.array([len(self.trashes_removed_per_agent[idx]) if idx in cleaners_alive and idx in self.trashes_removed_per_agent else 0 for idx in range(self.n_agents)])
-			r_cleaners_for_being_with_the_trash = np.array([10 if self.model_trash_map[agent.influence_mask.astype(bool)].sum() > 0 and idx in cleaners_alive else 0 for idx, agent in enumerate(self.fleet.vehicles)])
+			r_cleaners_for_being_with_the_trash = np.array([1 if self.model_trash_map[agent.influence_mask.astype(bool)].sum() > 0 and idx in cleaners_alive else 0 for idx, agent in enumerate(self.fleet.vehicles)])
 			penalization_for_not_cleaning_when_trash = np.array([-10 if idx in cleaners_alive and actions[idx] != 9 and self.model_trash_map[agent.previous_agent_position[0], agent.previous_agent_position[1]] > 0 else 0 for idx, agent in enumerate(self.fleet.vehicles)])
 
-			rewards = r_for_discovered_trash * self.reward_weights[self.explorers_team_id] \
-					  + r_for_discover_new_area * self.reward_weights[2] \
+			# Exchange ponderation between exploration/exploitation when the 80% of the map is visited #
+			if self.percentage_visited > 0.8:
+				ponderation_for_discover_trash = self.reward_weights[2]
+				ponderation_for_discover_new_area = self.reward_weights[self.explorers_team_id]
+			else:
+				ponderation_for_discover_trash = self.reward_weights[self.explorers_team_id]
+				ponderation_for_discover_new_area = self.reward_weights[2]
+			# ponderation_for_discover_trash = self.reward_weights[self.explorers_team_id]
+			# ponderation_for_discover_new_area = self.reward_weights[2]
+
+			rewards = r_for_discover_trash * ponderation_for_discover_trash \
+					  + r_for_discover_new_area * ponderation_for_discover_new_area \
 					  + r_for_cleaned_trash * self.reward_weights[self.cleaners_team_id] \
-					  + r_cleaners_for_being_with_the_trash \
+					  + r_cleaners_for_being_with_the_trash * self.reward_weights[3]\
 					  + penalization_for_not_cleaning_when_trash
 		
 

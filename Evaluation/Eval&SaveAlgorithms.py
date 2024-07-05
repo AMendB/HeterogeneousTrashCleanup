@@ -384,23 +384,26 @@ if __name__ == '__main__':
         # 'DoneTrainings/Trning_RW_basic_10_10_0 (sin penalización)/',
         # 'DoneTrainings/Trning_RW_extended_10_50_0/',
         # 'DoneTrainings/Trning_RW_extended_5_100_0/',
-        'DoneTrainings/Trning_RW_backtosimple_1_10_2/',
-        # 'Training/Trning_RW_backtosimple_1_100_2/',
+        # 'DoneTrainings/Trning_RW_backtosimple_1_10_2/',
+        'DoneTrainings/Trning_RW_backtosimple_1_10_2_10/',
+        'DoneTrainings/Trning_RW_backtosimple_1_100_2_10/',
         ]
 
-    SHOW_RENDER = True
-    SHOW_FINAL_EP_PLOT = True
-    SHOW_FINAL_EVALUATION_PLOT = True
+    SHOW_RENDER = False
+    SHOW_FINAL_EP_PLOT = False
+    SHOW_FINAL_EVALUATION_PLOT = False
 
     SAVE_PLOTS_OF_METRICS_AND_PATHS = False
     SAVE_COLLAGES = False
     SAVE_DATA = True
     SAVE_WILCOX = False
 
-    RUNS = 10
+    RUNS = 100
     SEED = 3
 
-    EXTRA_NAME = ''
+    EXTRA_NAME = 'Final_Policy'
+    # EXTRA_NAME = 'BestPolicy'
+    EXTRA_NAME = 'BestEvalPolicy'
 
 
 
@@ -523,7 +526,7 @@ if __name__ == '__main__':
                                     device='cuda:0',
                                     independent_networks_per_team = independent_networks_per_team,
                                     )
-            network.load_model(path_to_training_folder + 'Final_Policy.pth')
+            network.load_model(path_to_training_folder + f'{EXTRA_NAME}.pth')
             network.epsilon = 0
 
         if SAVE_DATA:
