@@ -7,11 +7,11 @@ import numpy as np
 
 # Selection of PARAMETERS TO TRAIN #
 reward_function = 'backtosimple' # basic_reward, extended_reward, backtosimple
-reward_weights = (1, 100, 2) 
+reward_weights = (1, 20, 2, 10) 
 memory_size = int(1E6)
 network_type = 'independent_networks_per_team'
 device = 'cuda:0'
-episodes = 60000
+episodes = 20000
 n_agents = 4  # max 4
 
 
@@ -82,15 +82,15 @@ network = MultiAgentDuelingDQNAgent(env=env,
 									memory_size=memory_size, 
 									batch_size=128,
 									target_update=1000,
-									soft_update=True,
+									soft_update=False,
 									tau=0.001,
 									epsilon_values=[1.0, 0.05],
-									epsilon_interval=[0.0, 0.33], #0.5
+									epsilon_interval=[0.0, 0.5], #0.5
 									learning_starts=100, 
 									gamma=0.99,
 									lr=1e-4,
 									save_every=10000, # 5000
-									train_every=20, #15
+									train_every=25, #15
 									masked_actions=False,
 									concensus_actions=True,
 									device=device,

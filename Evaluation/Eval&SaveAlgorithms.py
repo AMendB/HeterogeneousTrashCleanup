@@ -375,35 +375,38 @@ if __name__ == '__main__':
     from Algorithms.DRL.ActionMasking.ActionMaskingUtils import ConsensusSafeActionMasking
 
     algorithms = [
-        # 'WanderingAgent', 
-        # 'LawnMower', 
-        # 'PSO', 
-        # 'Greedy',
+        'WanderingAgent', 
+        'LawnMower', 
+        'PSO', 
+        'Greedy',
         # 'Training/Trning_RW_basic_10_10_0/',
         # 'DoneTrainings/Trning_RW_basic_10_10_0 (buffer float16)/',
         # 'DoneTrainings/Trning_RW_basic_10_10_0 (sin penalización)/',
         # 'DoneTrainings/Trning_RW_extended_10_50_0/',
         # 'DoneTrainings/Trning_RW_extended_5_100_0/',
         # 'DoneTrainings/Trning_RW_backtosimple_1_10_2/',
-        'DoneTrainings/Trning_RW_backtosimple_1_10_2_10/',
-        'DoneTrainings/Trning_RW_backtosimple_1_100_2_10/',
+        # 'DoneTrainings/Trning_RW_backtosimple_1_10_2_10/',
+        # 'DoneTrainings/Trning_RW_backtosimple_1_100_2_10/',
+        # 'Training/Trning_RW_backtosimple_1_10_2_1/',
+        # 'Training/Trning_RW_backtosimple_1_20_2_10/',
         ]
 
     SHOW_RENDER = False
     SHOW_FINAL_EP_PLOT = False
     SHOW_FINAL_EVALUATION_PLOT = False
 
-    SAVE_PLOTS_OF_METRICS_AND_PATHS = False
-    SAVE_COLLAGES = False
+    SAVE_PLOTS_OF_METRICS_AND_PATHS = True
+    SAVE_COLLAGES = True
     SAVE_DATA = True
     SAVE_WILCOX = False
 
     RUNS = 100
     SEED = 3
 
-    EXTRA_NAME = 'Final_Policy'
+    EXTRA_NAME = ''
+    # EXTRA_NAME = 'Final_Policy'
     # EXTRA_NAME = 'BestPolicy'
-    EXTRA_NAME = 'BestEvalPolicy'
+    # EXTRA_NAME = 'BestEvalPolicy'
 
 
 
@@ -435,7 +438,7 @@ if __name__ == '__main__':
             max_steps_per_episode = 150
 
             reward_function = 'backtosimple' # 'basic_reward', 'extended_reward', 'backtosimple'
-            reward_weights=(1, 10, 2)
+            reward_weights=(1, 20, 2, 10)
 
             # Set initial positions #
             random_initial_positions = True #coruna_port

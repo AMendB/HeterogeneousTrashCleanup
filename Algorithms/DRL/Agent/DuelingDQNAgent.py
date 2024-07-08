@@ -403,9 +403,9 @@ class MultiAgentDuelingDQNAgent:
 					# Process the agent step #
 					next_states, reward, done = self.step(actions)
 
-					if np.random.rand() < 0.8: # Store only 80% of the transitions to have more diversity in experiences
-						# Store every observation for every agent #
-						for agent_id in next_states.keys():
+					# Store every observation for every agent #
+					for agent_id in next_states.keys():
+						if np.random.rand() < 0.10: # Store only 10% of the transitions to have more diversity in experiences
 							self.transition = [states[agent_id],
 												actions[agent_id],
 												reward[agent_id],
@@ -427,7 +427,7 @@ class MultiAgentDuelingDQNAgent:
 							length[team_id] += 1
 
 						
-							# If episode ends for all agents of the team
+							# If episode is ended for all agents of the team
 							if self.env.dones_by_teams[team_id] == True:
 								self.episodic_reward = score[team_id]
 								self.episodic_length = length[team_id]
@@ -467,7 +467,7 @@ class MultiAgentDuelingDQNAgent:
 								# Update target soft/hard #
 								if self.soft_update:
 									self._target_soft_update(team_id_index=team_id)
-								elif episode % self.target_update == 0 and all(done.values()):
+								elif episode % self.target_update == 0 and finished_episode_by_teams[team_id]:
 									self._target_hard_update(team_id_index=team_id)
 
 				if self.save_every is not None:
@@ -559,9 +559,9 @@ class MultiAgentDuelingDQNAgent:
 					# Process the agent step #
 					next_states, reward, done = self.step(actions)
 
-					if np.random.rand() < 0.8: # Store only 80% of the transitions to have more diversity in experiences
-						# Store every observation for every agent #
-						for agent_id in next_states.keys():
+					# Store every observation for every agent #
+					for agent_id in next_states.keys():
+						if np.random.rand() < 0.10: # Store only 10% of the transitions to have more diversity in experiences
 							self.transition = [states[agent_id],
 												actions[agent_id],
 												reward[agent_id],
