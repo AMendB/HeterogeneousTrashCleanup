@@ -78,8 +78,10 @@ class ParticleSwarmOptimizationFleet:
             else:
                 max_trash_location = agent_position
             
-            if non_visited_locations:
+            if len(non_visited_locations) > 0:
                 closer_unexplored_location = non_visited_locations[np.linalg.norm(np.array(agent_position) - non_visited_locations, axis=1).argmin()]
+            else:
+                closer_unexplored_location = agent_position
             if len(self.trash_locations) > 0:
                 closer_trash_location = self.trash_locations[np.linalg.norm(np.array(agent_position) - self.trash_locations, axis=1).argmin()]
             else:

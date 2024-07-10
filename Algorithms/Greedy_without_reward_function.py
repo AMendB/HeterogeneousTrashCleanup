@@ -1,6 +1,6 @@
 import numpy as np
 
-class OneStepGreedyFleet:
+class OneStepGreedyFleetWithoutRewardFunction:
     """ Class to implement a 1-step greedy agent for the CleanupEnvironment. """
 
     def __init__(self, env) -> None:
@@ -116,39 +116,6 @@ class OneStepGreedyFleet:
         influence_mask[mask.T] = 1.0 # converts True values to 1 and False values to 0
 
         return influence_mask
-    
-    def compute_future_rewards(self, agent_position, vision_length):
-        # ALL TEAMS #
-        # changes_in_whole_model = np.abs(self.model_trash_map - self.previous_model_trash_map)
-        # r_for_discover_trash = np.array(
-        #     [np.sum(
-        #         changes_in_whole_model[agent.influence_mask.astype(bool)] / self.redundancy_mask[agent.influence_mask.astype(bool)]
-        #         ) if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles)
-        #     ])
-        r_for_discover_new_area = np.array([*self.new_discovered_area_per_agent.values()])
-        
-        # CLEANERS TEAM #
-        cleaners_alive = [idx for idx, agent_team in enumerate(self.team_id_of_each_agent) if agent_team == self.cleaners_team_id and self.active_agents[idx]]
-        r_for_cleaned_trash = np.array([len(self.trashes_removed_per_agent[idx]) if idx in cleaners_alive and idx in self.trashes_removed_per_agent else 0 for idx in range(self.n_agents)])
-        r_cleaners_for_being_with_the_trash = np.array([1 if self.model_trash_map[agent.influence_mask.astype(bool)].sum() > 0 and idx in cleaners_alive else 0 for idx, agent in enumerate(self.fleet.vehicles)])
-        penalization_for_not_cleaning_when_trash = np.array([-10 if idx in cleaners_alive and actions[idx] != 9 and self.model_trash_map[agent.previous_agent_position[0], agent.previous_agent_position[1]] > 0 else 0 for idx, agent in enumerate(self.fleet.vehicles)])
-
-        # Exchange ponderation between exploration/exploitation when the 80% of the map is visited #
-        if self.percentage_visited > 0.8:
-            ponderation_for_discover_trash = self.reward_weights[2]
-            ponderation_for_discover_new_area = self.reward_weights[self.explorers_team_id]
-        else:
-            ponderation_for_discover_trash = self.reward_weights[self.explorers_team_id]
-            ponderation_for_discover_new_area = self.reward_weights[2]
-
-        rewards = r_for_discover_trash * ponderation_for_discover_trash \
-                    + r_for_discover_new_area * ponderation_for_discover_new_area \
-                    + r_for_cleaned_trash * self.reward_weights[self.cleaners_team_id] \
-                    + r_cleaners_for_being_with_the_trash * self.reward_weights[3]\
-                    + penalization_for_not_cleaning_when_trash
-    
-
-        return {agent_id: rewards[agent_id] if self.active_agents[agent_id] else 0 for agent_id in range(self.n_agents)}
 
     def get_agents_actions(self):
         """ Get the actions for each agent given the conditions of the environment. """

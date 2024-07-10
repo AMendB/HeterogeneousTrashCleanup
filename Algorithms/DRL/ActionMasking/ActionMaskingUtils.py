@@ -63,6 +63,7 @@ class NoGoBackFleetMasking:
 	def __init__(self) -> None:
 
 		self.reset()
+		self.n_movement_actions = 8
 		
 	def reset(self):
 
@@ -73,11 +74,11 @@ class NoGoBackFleetMasking:
 		if self.previous_actions is None:
 			self.previous_actions = {idx: np.argmax(q_values[idx]) for idx in q_values.keys()}
 		else:
-			# Find the action that would make the agent go back
-			return_actions = {idx: (self.previous_actions[idx] + len(q_values[idx]) // 2) % len(q_values[idx]) for idx in q_values.keys()}
 			for idx in q_values.keys():
-				if self.previous_actions[idx] < 8: # if the previous action induced a movement, i.e., it was not to stay in the same position, then mask the action that would make the agent go back
-					q_values[idx][return_actions[idx]] = -1000 # a very low value instead of -np.inf to not have probability of collide with obstacle in random select in case of no alternative way out
+				if self.previous_actions[idx] < self.n_movement_actions: # if the previous action induced a movement, i.e., it was not to stay in the same position, then mask the action that would make the agent go back
+					# Find the action that would make the agent go back
+					return_action = (self.previous_actions[idx] + self.n_movement_actions // 2) % self.n_movement_actions
+					q_values[idx][return_action] = -1000 # a very low value instead of -np.inf to not have probability of collide with obstacle in random select in case of no alternative way out
 
 		return q_values
 

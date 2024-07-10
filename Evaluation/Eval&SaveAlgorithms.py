@@ -375,13 +375,11 @@ if __name__ == '__main__':
     from Algorithms.DRL.ActionMasking.ActionMaskingUtils import ConsensusSafeActionMasking
 
     algorithms = [
-        'WanderingAgent', 
-        'LawnMower', 
-        'PSO', 
-        'Greedy',
+        # 'WanderingAgent', 
+        # 'LawnMower', 
+        # 'PSO', 
+        # 'Greedy',
         # 'Training/Trning_RW_basic_10_10_0/',
-        # 'DoneTrainings/Trning_RW_basic_10_10_0 (buffer float16)/',
-        # 'DoneTrainings/Trning_RW_basic_10_10_0 (sin penalización)/',
         # 'DoneTrainings/Trning_RW_extended_10_50_0/',
         # 'DoneTrainings/Trning_RW_extended_5_100_0/',
         # 'DoneTrainings/Trning_RW_backtosimple_1_10_2/',
@@ -389,6 +387,9 @@ if __name__ == '__main__':
         # 'DoneTrainings/Trning_RW_backtosimple_1_100_2_10/',
         # 'Training/Trning_RW_backtosimple_1_10_2_1/',
         # 'Training/Trning_RW_backtosimple_1_20_2_10/',
+        # 'DoneTrainings/Trning_RW_backtosimple_1_10_2_10_exchange/',
+        # 'DoneTrainings/Trning_RW_backtosimple_1_20_2_10_exchange/',
+        'Training/Trning_RW_backtosimple_1_20_2_10_exchange_20k/',
         ]
 
     SHOW_RENDER = False
@@ -403,10 +404,10 @@ if __name__ == '__main__':
     RUNS = 100
     SEED = 3
 
-    EXTRA_NAME = ''
+    # EXTRA_NAME = ''
     # EXTRA_NAME = 'Final_Policy'
     # EXTRA_NAME = 'BestPolicy'
-    # EXTRA_NAME = 'BestEvalPolicy'
+    EXTRA_NAME = 'BestEvalPolicy'
 
 
 
@@ -437,7 +438,8 @@ if __name__ == '__main__':
             max_distance_travelled_cleaners = 200
             max_steps_per_episode = 150
 
-            reward_function = 'backtosimple' # 'basic_reward', 'extended_reward', 'backtosimple'
+            # reward_function = 'backtosimple' # 'basic_reward', 'extended_reward', 'backtosimple'
+            reward_function = selected_algorithm
             reward_weights=(1, 20, 2, 10)
 
             # Set initial positions #
@@ -461,7 +463,7 @@ if __name__ == '__main__':
                                     vision_length_by_team = (vision_length_explorers, vision_length_cleaners),
                                     flag_to_check_collisions_within = False,
                                     max_collisions = 1000,
-                                    reward_function = reward_function,
+                                    reward_function = 'backtosimple', #reward_function,
                                     reward_weights = reward_weights,
                                     dynamic = True,
                                     obstacles = False,
@@ -577,29 +579,32 @@ if __name__ == '__main__':
                 algorithm_analizer.save_registers(reset=True)
                 # ground_truths_to_save.append(env.real_trash_map)
             
+            # Reset algorithms #
             if selected_algorithm in ['LawnMower']:
                 for i in range(n_agents):
-                    # selected_algorithm_agents[i].reset(0)
                     selected_algorithm_agents[i].reset(int(lawn_mower_rng.uniform(0,8)) if selected_algorithm == 'LawnMower' else None)
             elif selected_algorithm in ['PSO','Greedy']:
                 selected_algorithm_agents.reset()
-
-            # Take first actions #
-            if selected_algorithm  in ['Independent_Networks_Per_Team', 'Network']:
+            elif selected_algorithm in ['Independent_Networks_Per_Team', 'Network']:
                 network.nogobackfleet_masking_module.reset()
-                actions = network.select_concensus_actions(states=states, positions=env.get_active_agents_positions_dict(), n_actions_of_each_agent=env.n_actions_of_each_agent, done = done, deterministic=True)
-            elif selected_algorithm  in ['WanderingAgent', 'LawnMower']:
-                actions = {agent_id: selected_algorithm_agents[agent_id].move(actual_position=position, trash_in_pixel=env.model_trash_map[position[0], position[1]]) for agent_id, position in env.get_active_agents_positions_dict().items()}
-            elif selected_algorithm == 'PSO':
-                q_values = selected_algorithm_agents.get_agents_actions()
-                actions = consensus_safe_masking_module.query_actions(q_values=q_values, agents_positions=env.get_active_agents_positions_dict(), model_trash_map=env.model_trash_map)
-            elif selected_algorithm == 'Greedy':
-                actions = selected_algorithm_agents.get_agents_actions()
             
             acc_rw_episode = [0 for _ in range(n_agents)]
+
             while any([not value for value in done.values()]):  # while at least 1 active
-                
+
+                # Add step #
                 step += 1
+                
+                # Take new actions #
+                if selected_algorithm  in ['Independent_Networks_Per_Team', 'Network']:
+                    actions = network.select_concensus_actions(states=states, positions=env.get_active_agents_positions_dict(), n_actions_of_each_agent=env.n_actions_of_each_agent, done = done, deterministic=True)
+                elif selected_algorithm  in ['WanderingAgent', 'LawnMower']:
+                    actions = {agent_id: selected_algorithm_agents[agent_id].move(actual_position=position, trash_in_pixel=env.model_trash_map[position[0], position[1]]) for agent_id, position in env.get_active_agents_positions_dict().items()}
+                elif selected_algorithm == 'PSO':
+                    q_values = selected_algorithm_agents.get_agents_actions()
+                    actions = consensus_safe_masking_module.query_actions(q_values=q_values, agents_positions=env.get_active_agents_positions_dict(), model_trash_map=env.model_trash_map)
+                elif selected_algorithm == 'Greedy':
+                    actions = selected_algorithm_agents.get_agents_actions()
 
                 # t0 = time.time()
                 states, new_reward, done = env.step(actions)
@@ -619,17 +624,6 @@ if __name__ == '__main__':
                 # Save data #
                 if SAVE_DATA:
                     algorithm_analizer.save_registers(new_reward, reset=False)
-
-                # Take new actions #
-                if selected_algorithm  in ['Independent_Networks_Per_Team', 'Network']:
-                    actions = network.select_concensus_actions(states=states, positions=env.get_active_agents_positions_dict(), n_actions_of_each_agent=env.n_actions_of_each_agent, done = done, deterministic=True)
-                elif selected_algorithm  in ['WanderingAgent', 'LawnMower']:
-                    actions = {agent_id: selected_algorithm_agents[agent_id].move(actual_position=position, trash_in_pixel=env.model_trash_map[position[0], position[1]]) for agent_id, position in env.get_active_agents_positions_dict().items()}
-                elif selected_algorithm == 'PSO':
-                    q_values = selected_algorithm_agents.get_agents_actions()
-                    actions = consensus_safe_masking_module.query_actions(q_values=q_values, agents_positions=env.get_active_agents_positions_dict(), model_trash_map=env.model_trash_map)
-                elif selected_algorithm == 'Greedy':
-                    actions = selected_algorithm_agents.get_agents_actions()
 
             # print('Total runtime: ', runtime)
             print('Total reward: ', acc_rw_episode)
