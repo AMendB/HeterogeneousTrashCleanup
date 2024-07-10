@@ -347,9 +347,12 @@ class MultiAgentCleanupEnvironment:
 		self.real_trash_map = self.init_real_trash_map()
 
 		# Initialize model trash map #
-		self.model_trash_map = np.zeros_like(self.scenario_map) 
-		self.previous_model_trash_map = self.model_trash_map.copy()
-		self.previousprevious_model_trash_map = self.previous_model_trash_map.copy()
+		# self.model_trash_map = np.zeros_like(self.scenario_map) 
+		# self.previous_model_trash_map = self.model_trash_map.copy()
+		# self.previousprevious_model_trash_map = self.previous_model_trash_map.copy()
+		self.model_trash_map = self.real_trash_map.copy() # oracle model
+		self.previous_model_trash_map = np.zeros_like(self.scenario_map) # oracle model
+		self.previousprevious_model_trash_map = np.zeros_like(self.scenario_map) # oracle model
 
 		# Init the redundancy mask #
 		self.redundancy_mask = np.sum([agent.influence_mask for idx, agent in enumerate(self.fleet.vehicles) if self.active_agents[idx]], axis = 0)
@@ -372,7 +375,7 @@ class MultiAgentCleanupEnvironment:
 		# Differentiate between agents by their teams #
 		self.team_id_of_each_agent = np.repeat(np.arange(self.n_teams), self.number_of_agents_by_team)
 		self.team_id_normalized_of_each_agent = (self.team_id_of_each_agent+1)/self.n_teams # decimal id between 0 and 1
-		self.teams_ids = np.unique(self.team_id_of_each_agent)
+		self.teams_ids = np.repeat(np.arange(self.n_teams), 1)
 		self.masks_by_team = [self.team_id_of_each_agent == team for team in self.teams_ids]
 
 		# Colors for visualization #
@@ -407,9 +410,12 @@ class MultiAgentCleanupEnvironment:
 		self.non_water_mask = self.scenario_map != 1 - self.inside_obstacles_map # mask with True where no water
 
 		# Create an empty model after reset #
-		self.model_trash_map = np.zeros_like(self.scenario_map) 
-		self.previous_model_trash_map = self.model_trash_map.copy()
-		self.previousprevious_model_trash_map = self.previous_model_trash_map.copy()
+		# self.model_trash_map = np.zeros_like(self.scenario_map) 
+		# self.previous_model_trash_map = self.model_trash_map.copy()
+		# self.previousprevious_model_trash_map = self.previous_model_trash_map.copy()
+		self.model_trash_map = self.real_trash_map.copy() # oracle model
+		self.previous_model_trash_map = np.zeros_like(self.scenario_map) # oracle model
+		self.previousprevious_model_trash_map = np.zeros_like(self.scenario_map) # oracle model
 
 		# Get the N random initial positions #
 		if self.random_inititial_positions == 'area' or self.random_inititial_positions == 'fixed':
@@ -535,7 +541,8 @@ class MultiAgentCleanupEnvironment:
 		
 		self.previousprevious_model_trash_map = self.previous_model_trash_map.copy()
 		self.previous_model_trash_map = self.model_trash_map.copy()
-		self.model_trash_map[self.redundancy_mask.astype(bool)] = self.real_trash_map[self.redundancy_mask.astype(bool)]
+		# self.model_trash_map[self.redundancy_mask.astype(bool)] = self.real_trash_map[self.redundancy_mask.astype(bool)]
+		self.model_trash_map = self.real_trash_map.copy() # oracle model
 
 
 	def step(self, actions: dict):
@@ -558,7 +565,7 @@ class MultiAgentCleanupEnvironment:
 
 		# Update visited map and new discovered areas divided by overlapping agents #
 		self.new_discovered_area_per_agent = {idx: ((self.visited_areas_map[agent.influence_mask.astype(bool)] == 1).astype(int) / self.redundancy_mask[agent.influence_mask.astype(bool)] ).sum() 
-										if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles)}
+										if self.active_agents[idx] and agent.team_id == self.explorers_team_id else 0 for idx, agent in enumerate(self.fleet.vehicles)}
 		self.visited_areas_map[self.redundancy_mask.astype(bool) * np.invert(self.non_water_mask)] = 0.5 # 0 non visitable, 1 not visited yet, 0.5 visited
 		self.percentage_visited = (self.visited_areas_map == 0.5).sum() / (self.visited_areas_map != 0).sum()
 
@@ -823,6 +830,8 @@ class MultiAgentCleanupEnvironment:
 					changes_in_whole_model[agent.influence_mask.astype(bool)] / self.redundancy_mask[agent.influence_mask.astype(bool)]
 					) if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles)
 				])
+			
+			# EXPLORERS TEAM #
 			r_for_discover_new_area = np.array([*self.new_discovered_area_per_agent.values()])
 			
 			# CLEANERS TEAM #
@@ -841,7 +850,8 @@ class MultiAgentCleanupEnvironment:
 			# ponderation_for_discover_trash = self.reward_weights[self.explorers_team_id]
 			# ponderation_for_discover_new_area = self.reward_weights[2]
 
-			rewards = r_for_discover_trash * ponderation_for_discover_trash \
+			rewards = np.zeros(self.n_agents) \
+					  + r_for_discover_trash * ponderation_for_discover_trash \
 					  + r_for_discover_new_area * ponderation_for_discover_new_area \
 					  + r_for_cleaned_trash * self.reward_weights[self.cleaners_team_id] \
 					  + r_cleaners_for_being_with_the_trash * self.reward_weights[3]\
@@ -923,7 +933,7 @@ if __name__ == '__main__':
 	# Agents info #
 	n_actions_explorers = 9
 	n_actions_cleaners = 10
-	n_explorers = 2
+	n_explorers = 0
 	n_cleaners = 2
 	n_agents = n_explorers + n_cleaners
 	movement_length_explorers = 2
@@ -958,7 +968,7 @@ if __name__ == '__main__':
 							   flag_to_check_collisions_within = True,
 							   max_collisions = 1000,
 							   reward_function = 'backtosimple',  # basic_reward, extended_reward
-							   reward_weights = (1, 10, 2),
+							   reward_weights = (1, 20, 2, 10),
 							   dynamic = True,
 							   obstacles = False,
 							   show_plot_graphics = True,

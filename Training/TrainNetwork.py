@@ -26,7 +26,7 @@ seed = 0
 # Agents info #
 n_actions_explorers = 9
 n_actions_cleaners = 10
-n_explorers = 2
+n_explorers = 0
 n_cleaners = 2
 n_agents = n_explorers + n_cleaners
 movement_length_explorers = 2

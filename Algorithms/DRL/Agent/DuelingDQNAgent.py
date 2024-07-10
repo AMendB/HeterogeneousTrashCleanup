@@ -114,7 +114,7 @@ class MultiAgentDuelingDQNAgent:
 
 		""" Prioritized Experience Replay """
 		if self.independent_networks_per_team:
-			self.memory = [PrioritizedReplayBuffer(self.obs_dim, memory_size, batch_size, alpha=alpha) for _ in range(self.env.n_teams)]
+			self.memory = [PrioritizedReplayBuffer(self.obs_dim, memory_size, batch_size, alpha=alpha) if self.env.number_of_agents_by_team[team_id] > 0 else 0 for team_id in range(self.env.n_teams)]
 		else:
 			self.memory = PrioritizedReplayBuffer(self.obs_dim, memory_size, batch_size, alpha=alpha)
 		self.beta = beta
@@ -123,8 +123,8 @@ class MultiAgentDuelingDQNAgent:
 
 		""" Create the DQN and the DQN-Target (noisy if selected) """
 		if self.independent_networks_per_team:
-			self.dqn = [DuelingVisualNetwork(self.obs_dim, self.action_dim_by_team[team_id], number_of_features).to(self.device) for team_id in range(self.env.n_teams)]
-			self.dqn_target = [DuelingVisualNetwork(self.obs_dim, self.action_dim_by_team[team_id], number_of_features).to(self.device) for team_id in range(self.env.n_teams)]
+			self.dqn = [DuelingVisualNetwork(self.obs_dim, self.action_dim_by_team[team_id], number_of_features).to(self.device) if self.env.number_of_agents_by_team[team_id] > 0 else 0 for team_id in range(self.env.n_teams)]
+			self.dqn_target = [DuelingVisualNetwork(self.obs_dim, self.action_dim_by_team[team_id], number_of_features).to(self.device) if self.env.number_of_agents_by_team[team_id] > 0 else 0 for team_id in range(self.env.n_teams)]
 		elif self.noisy:
 			self.dqn = NoisyDuelingVisualNetwork(self.obs_dim, action_dim, number_of_features).to(self.device)
 			self.dqn_target = NoisyDuelingVisualNetwork(self.obs_dim, action_dim, number_of_features).to(self.device)
@@ -139,10 +139,11 @@ class MultiAgentDuelingDQNAgent:
 		if self.independent_networks_per_team:
 			# Load weights from dqn to dqn_target to be equal at the begining, and eval #
 			for team_id in self.env.teams_ids:
-				self.dqn_target[team_id].load_state_dict(self.dqn[team_id].state_dict())
-				self.dqn_target[team_id].eval()
+				if self.env.number_of_agents_by_team[team_id] > 0:
+					self.dqn_target[team_id].load_state_dict(self.dqn[team_id].state_dict())
+					self.dqn_target[team_id].eval()
 			""" Optimizers """
-			self.optimizer = [optim.Adam(self.dqn[team_id].parameters(), lr=self.learning_rate) for team_id in self.env.teams_ids]
+			self.optimizer = [optim.Adam(self.dqn[team_id].parameters(), lr=self.learning_rate) if self.env.number_of_agents_by_team[team_id] > 0 else 0 for team_id in self.env.teams_ids]
 		else:
 			# Load weights from dqn to dqn_target to be equal at the begining, and eval #
 			self.dqn_target.load_state_dict(self.dqn.state_dict())
@@ -396,7 +397,7 @@ class MultiAgentDuelingDQNAgent:
 				assert not os.path.exists(self.logdir), "El directorio ya existe. He evitado que se sobrescriba"
 				if os.path.exists(self.logdir):
 					self.logdir = self.logdir
-				self.writer = [SummaryWriter(log_dir=self.logdir+f"/log{team_id}/", filename_suffix=f"_network{team_id}") for team_id in self.env.teams_ids]
+				self.writer = [SummaryWriter(log_dir=self.logdir+f"/log{team_id}/", filename_suffix=f"_network{team_id}") if self.env.number_of_agents_by_team[team_id] > 0 else 0 for team_id in self.env.teams_ids]
 				self.write_experiment_config()
 				self.env.save_environment_configuration(self.logdir if self.logdir is not None else './')
 
@@ -416,13 +417,14 @@ class MultiAgentDuelingDQNAgent:
 				score = [0]*self.env.n_teams
 				length = [0]*self.env.n_teams
 				losses = [[]]*self.env.n_teams
-				stop_metrics_per_teams = {i:False for i in self.env.teams_ids}
+				stop_metrics_per_teams = {i:False if self.env.number_of_agents_by_team[i] > 0 else True for i in self.env.teams_ids}
 
 				# Initially sample noisy policy #
 				if self.noisy:
 					for team_id in self.env.teams_ids:
-						self.dqn[team_id].reset_noise()
-						self.dqn_target[team_id].reset_noise()
+						if self.env.number_of_agents_by_team[team_id] > 0:
+							self.dqn[team_id].reset_noise()
+							self.dqn_target[team_id].reset_noise()
 
 				# PER: Increase beta temperature
 				self.beta = self.anneal_beta(p=episode / episodes, p_init=0, p_fin=0.9, b_init=0.4, b_end=1.0)
@@ -464,7 +466,7 @@ class MultiAgentDuelingDQNAgent:
 					reward_array = np.array([*reward.values()])
 
 					for team_id in self.env.teams_ids:
-						if not(stop_metrics_per_teams[team_id]):
+						if self.env.number_of_agents_by_team[team_id] > 0 and not(stop_metrics_per_teams[team_id]):
 							# Accumulate indicators
 							score[team_id] += np.mean(reward_array[self.env.masks_by_team[team_id]])  # The mean reward among the team
 							length[team_id] += 1
@@ -516,7 +518,8 @@ class MultiAgentDuelingDQNAgent:
 				if self.save_every is not None:
 					if episode % self.save_every == 0:
 						for team_id in self.env.teams_ids:
-							self.save_model(name=f'Episode_{episode}_Policy_network{team_id}.pth', team_id_index=team_id)
+							if self.env.number_of_agents_by_team[team_id] > 0:
+								self.save_model(name=f'Episode_{episode}_Policy_network{team_id}.pth', team_id_index=team_id)
 
 				# Reset previous actions of NoGoBack #
 				self.nogobackfleet_masking_module.reset()
@@ -525,17 +528,19 @@ class MultiAgentDuelingDQNAgent:
 				if self.eval_every is not None and episode % self.eval_every == 0:
 					mean_eval_reward, mean_eval_length = self.evaluate_env(self.eval_episodes)
 					for team_id in self.env.teams_ids:
-						self.writer[team_id].add_scalar('test/accumulated_reward', mean_eval_reward[team_id], self.episode[team_id])
-						self.writer[team_id].add_scalar('test/accumulated_length', mean_eval_length[team_id], self.episode[team_id])
-						if mean_eval_reward[team_id] > eval_record[team_id]:
-								print(f"\nNew best policy IN EVAL with mean reward of {mean_eval_reward[team_id]} for network nº {team_id}")
-								print("Saving model in " + self.logdir)
-								eval_record[team_id] = mean_eval_reward[team_id]
-								self.save_model(name=f'BestEvalPolicy_network{team_id}.pth', team_id_index=team_id)
+						if self.env.number_of_agents_by_team[team_id] > 0:
+							self.writer[team_id].add_scalar('test/accumulated_reward', mean_eval_reward[team_id], self.episode[team_id])
+							self.writer[team_id].add_scalar('test/accumulated_length', mean_eval_length[team_id], self.episode[team_id])
+							if mean_eval_reward[team_id] > eval_record[team_id]:
+									print(f"\nNew best policy IN EVAL with mean reward of {mean_eval_reward[team_id]} for network nº {team_id}")
+									print("Saving model in " + self.logdir)
+									eval_record[team_id] = mean_eval_reward[team_id]
+									self.save_model(name=f'BestEvalPolicy_network{team_id}.pth', team_id_index=team_id)
 
 			# Save the final policys #
 			for team_id in self.env.teams_ids:
-				self.save_model(name=f'Final_Policy_network{team_id}.pth', team_id_index=team_id)
+				if self.env.number_of_agents_by_team[team_id] > 0:
+					self.save_model(name=f'Final_Policy_network{team_id}.pth', team_id_index=team_id)
 
 		else:
 
@@ -809,7 +814,8 @@ class MultiAgentDuelingDQNAgent:
 		
 		if self.independent_networks_per_team:
 			for team_id in self.env.teams_ids:
-				self.dqn[team_id].load_state_dict(torch.load(path_to_file[:-4] + f'_network{team_id}.pth', map_location=self.device))
+				if self.env.number_of_agents_by_team[team_id] > 0:
+					self.dqn[team_id].load_state_dict(torch.load(path_to_file[:-4] + f'_network{team_id}.pth', map_location=self.device))
 		else:
 			self.dqn.load_state_dict(torch.load(path_to_file, map_location=self.device))
 
@@ -846,7 +852,8 @@ class MultiAgentDuelingDQNAgent:
 			
 			# Set networks to eval #
 			for team_id in self.env.teams_ids:
-				self.dqn[team_id].eval()
+				if self.env.number_of_agents_by_team[team_id] > 0:
+					self.dqn[team_id].eval()
 
 			for _ in trange(eval_episodes):
 
@@ -874,9 +881,10 @@ class MultiAgentDuelingDQNAgent:
 					reward_array = np.array([*reward.values()])
 
 					for team_id in self.env.teams_ids:
-						if not(self.env.dones_by_teams[team_id]):
-							total_length[team_id] += 1
-							total_reward[team_id] += np.sum(reward_array[self.env.masks_by_team[team_id]])
+						if self.env.number_of_agents_by_team[team_id] > 0:
+							if not(self.env.dones_by_teams[team_id]):
+								total_length[team_id] += 1
+								total_reward[team_id] += np.sum(reward_array[self.env.masks_by_team[team_id]])
 					# acc_r = acc_r + reward_array
 				# print(f"Accumulated reward (EP: {_}: {acc_r}")
 				
@@ -885,7 +893,8 @@ class MultiAgentDuelingDQNAgent:
 
 			# Set networks to train #
 			for team_id in self.env.teams_ids:
-				self.dqn[team_id].train()
+				if self.env.number_of_agents_by_team[team_id] > 0:
+					self.dqn[team_id].train()
 
 		else:
 			self.dqn.eval()
