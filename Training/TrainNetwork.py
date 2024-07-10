@@ -8,7 +8,7 @@ import numpy as np
 # Selection of PARAMETERS TO TRAIN #
 reward_function = 'backtosimple' # basic_reward, extended_reward, backtosimple
 reward_weights = (1, 20, 2, 10) 
-memory_size = int(1E3)
+memory_size = int(1E6)
 network_type = 'independent_networks_per_team'
 device = 'cuda:0'
 episodes = 20000
