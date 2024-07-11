@@ -329,6 +329,7 @@ class MultiAgentCleanupEnvironment:
 		self.dones_by_teams = {teams: False for teams in range(self.n_teams)}  
 		self.active_agents = {key: not value for key, value in self.done.items()}
 		self.n_active_agents = sum(self.active_agents.values())
+		self.percentage_visited = 0.0
  
 		# Load agents identification info #
 		self.set_agents_id_info()
@@ -434,6 +435,7 @@ class MultiAgentCleanupEnvironment:
 		self.dones_by_teams = {team: False for team in range(self.n_teams)}  
 		self.active_agents = {agent_id: True for agent_id in range(self.n_agents)}
 		self.n_active_agents = sum(self.active_agents.values())
+		self.percentage_visited = 0.0
 
 		# Compute the redundancy mask after reset #
 		self.redundancy_mask = np.sum([agent.influence_mask for idx, agent in enumerate(self.fleet.vehicles) if self.active_agents[idx]], axis = 0)

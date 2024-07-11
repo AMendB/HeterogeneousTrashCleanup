@@ -344,7 +344,7 @@ class MultiAgentDuelingDQNAgent:
 	def prewarm_memory(self):
 		"""Fill the memory with One Step Greedy experiences."""
 
-		from Algorithms.Greedy_without_reward_function import OneStepGreedyFleetWithoutRewardFunction as OneStepGreedyFleet
+		from Algorithms.Greedy import OneStepGreedyFleet as OneStepGreedyFleet
 
 		algorithm = OneStepGreedyFleet(env=self.env)
 
@@ -877,7 +877,7 @@ class MultiAgentDuelingDQNAgent:
 
 					# Process the agent step #
 					states, reward, done = self.step(actions)
-					print(f"Reward: {reward}")
+					# print(f"Reward: {reward}")
 
 					reward_array = np.array([*reward.values()])
 

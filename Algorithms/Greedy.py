@@ -16,88 +16,8 @@ class OneStepGreedyFleet:
         self.angle_set_of_each_agent = self.env.angle_set_of_each_agent
         self.vision_length_of_each_agent = self.env.vision_length_of_each_agent
         self.n_actions_of_each_agent = self.env.n_actions_of_each_agent
-
-        # Initialize variables #
-        self.fixed_action = {agent_id: None for agent_id in range(self.n_agents)}
-
-    def get_cleaner_action(self, agent_coords, agent_id):
-        """ See the posibilities of the agent:
-
-            - Case 0: If there is trash in the actual pixel, clean it.
-            - Case 1: If there is trash in a accessible pixel, move to that pixel to clean it.
-            - Case 2: If there is an unexplored area in next position, move to the most unexplored area.
-            - Case 3: If there is no trash in a accessible pixel, take a random action and continue until collision or detection of trash.
-        
-        If more than one trash pixel is at the same distance, select the one with more trash. """
-
-        next_movements = np.array([(0,0) if angle < 0 else np.round([np.cos(angle), np.sin(angle)]) * self.movement_length_of_each_agent[agent_id] for angle in self.angle_set_of_each_agent[agent_id]]).astype(int)
-        next_positions = agent_coords + next_movements
-        next_positions = np.clip(next_positions, (0,0), np.array(self.navigable_map.shape)-1) # saturate movement if out of indexes values (map edges)
-        number_of_trashes_in_each_next_position = np.array([self.model_trash_map[next_position[0], next_position[1]] if self.navigable_map[next_position[0], next_position[1]] == 1 
-                                                            else -1 for next_position in next_positions])
-        unexplored_pixels_in_each_next_position = np.array([np.sum(self.visited_areas_map[self.compute_influence_mask(next_position, self.vision_length_of_each_agent[agent_id]).astype(bool)] == 1) 
-                                                            if self.navigable_map[next_position[0], next_position[1]] == 1 
-                                                            else -1 for next_position in next_positions])
-
-        if self.model_trash_map[agent_coords[0], agent_coords[1]] > 0: # Case 0
-            action = 9
-            self.fixed_action[agent_id] = None
-        elif np.any(number_of_trashes_in_each_next_position > 0): # Case 1
-            action = np.argmax(number_of_trashes_in_each_next_position) # Move to the pixel with more trash
-            self.fixed_action[agent_id] = None
-        elif np.any(unexplored_pixels_in_each_next_position > 0): # Case 2
-            action = np.argmax(unexplored_pixels_in_each_next_position) # Move to the pixel with more unexplored area
-            self.fixed_action[agent_id] = None
-        else: # Case 3
-            possible_actions = np.array([action_id for action_id, next_position in enumerate(next_positions) if self.navigable_map[next_position[0], next_position[1]] == 1 and np.any(next_position != agent_coords) ])
-            
-            if self.fixed_action[agent_id] in possible_actions:
-                action = self.fixed_action[agent_id]
-            else:
-                action = np.random.choice(possible_actions)
-                self.fixed_action[agent_id] = action
-            
-        self.navigable_map[next_positions[action][0], next_positions[action][1]] = 0 # to avoid collisions between agents
-
-        return action
-
-    def get_explorer_action(self, agent_coords, agent_id):
-        """ See the posibilities of the agent:
-
-            - Case 0: If there is an unexplored area in next position, move to the most unexplored area.
-            - Case 1: There is trash inside of its actual or next vision area. Then move to the area with more trash.
-            - Case 2: There is no trash inside of its vision area. Then take an action that implies a movement and keep it until collision or detection of trash. """
-            
-        next_movements = np.array([(0,0) if angle < 0 else np.round([np.cos(angle), np.sin(angle)]) * self.movement_length_of_each_agent[agent_id] for angle in self.angle_set_of_each_agent[agent_id]]).astype(int)
-        next_positions = agent_coords + next_movements
-        next_positions = np.clip(next_positions, (0,0), np.array(self.navigable_map.shape)-1)
-
-        # Calculate number of trashes in each next position influence area
-        number_of_trashes_in_each_area = np.array([np.sum(self.model_trash_map[self.compute_influence_mask(next_position, self.vision_length_of_each_agent[agent_id]).astype(bool)]) 
-                                                   if self.navigable_map[next_position[0], next_position[1]] == 1 
-                                                   else -1 for next_position in next_positions])
-        unexplored_pixels_in_each_next_position = np.array([np.sum(self.visited_areas_map[self.compute_influence_mask(next_position, self.vision_length_of_each_agent[agent_id]).astype(bool)] == 1) 
-                                                            if self.navigable_map[next_position[0], next_position[1]] == 1 
-                                                            else -1 for next_position in next_positions])        
-
-        if np.any(unexplored_pixels_in_each_next_position > 0): # Case 1
-            action = np.argmax(unexplored_pixels_in_each_next_position)
-            self.fixed_action[agent_id] = None        
-        elif np.any(number_of_trashes_in_each_area > 0): # Case 0
-            action = np.argmax(number_of_trashes_in_each_area)
-            self.fixed_action[agent_id] = None
-        else: # Case 2
-            possible_actions = np.array([action_id for action_id, next_position in enumerate(next_positions) if self.navigable_map[next_position[0], next_position[1]] == 1 and np.any(next_position != agent_coords) ])
-            
-            if self.fixed_action[agent_id] in possible_actions:
-                action = self.fixed_action[agent_id]
-            else:
-                action = np.random.choice(possible_actions)
-                self.fixed_action[agent_id] = action
-            
-        self.navigable_map[next_positions[action][0], next_positions[action][1]] = 0 # to avoid collisions between agents
-        
-        return action
+        self.fleet = self.env.fleet
+        self.reward_weights = self.env.reward_weights
 
     def compute_influence_mask(self, agent_position, vision_length): 
         """ Compute influence area around actual position. It is what the agent can see. """
@@ -117,38 +37,66 @@ class OneStepGreedyFleet:
 
         return influence_mask
     
-    def compute_future_rewards(self, agent_position, vision_length):
-        # ALL TEAMS #
-        # changes_in_whole_model = np.abs(self.model_trash_map - self.previous_model_trash_map)
-        # r_for_discover_trash = np.array(
-        #     [np.sum(
-        #         changes_in_whole_model[agent.influence_mask.astype(bool)] / self.redundancy_mask[agent.influence_mask.astype(bool)]
-        #         ) if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles)
-        #     ])
-        r_for_discover_new_area = np.array([*self.new_discovered_area_per_agent.values()])
+    def get_agent_action_with_best_future_reward(self, agent_position, agent_id):
         
-        # CLEANERS TEAM #
-        cleaners_alive = [idx for idx, agent_team in enumerate(self.team_id_of_each_agent) if agent_team == self.cleaners_team_id and self.active_agents[idx]]
-        r_for_cleaned_trash = np.array([len(self.trashes_removed_per_agent[idx]) if idx in cleaners_alive and idx in self.trashes_removed_per_agent else 0 for idx in range(self.n_agents)])
-        r_cleaners_for_being_with_the_trash = np.array([1 if self.model_trash_map[agent.influence_mask.astype(bool)].sum() > 0 and idx in cleaners_alive else 0 for idx, agent in enumerate(self.fleet.vehicles)])
-        penalization_for_not_cleaning_when_trash = np.array([-10 if idx in cleaners_alive and actions[idx] != 9 and self.model_trash_map[agent.previous_agent_position[0], agent.previous_agent_position[1]] > 0 else 0 for idx, agent in enumerate(self.fleet.vehicles)])
+        agent = self.fleet.vehicles[agent_id]
 
-        # Exchange ponderation between exploration/exploitation when the 80% of the map is visited #
-        if self.percentage_visited > 0.8:
-            ponderation_for_discover_trash = self.reward_weights[2]
-            ponderation_for_discover_new_area = self.reward_weights[self.explorers_team_id]
-        else:
-            ponderation_for_discover_trash = self.reward_weights[self.explorers_team_id]
-            ponderation_for_discover_new_area = self.reward_weights[2]
+        next_movements = np.array([(0,0) if angle < 0 else np.round([np.cos(angle), np.sin(angle)]) * agent.movement_length for angle in agent.angle_set]).astype(int)
+        next_positions = agent_position + next_movements
+        next_positions = np.clip(next_positions, (0,0), np.array(self.navigable_map.shape)-1) # saturate movement if out of indexes values (map edges)
+        next_allowed_actionpose_dict = {action: next_position for action, next_position in enumerate(next_positions) if self.navigable_map[next_position[0], next_position[1]] == 1} # remove next positions that leads to a non-navigable area 
 
-        rewards = r_for_discover_trash * ponderation_for_discover_trash \
-                    + r_for_discover_new_area * ponderation_for_discover_new_area \
-                    + r_for_cleaned_trash * self.reward_weights[self.cleaners_team_id] \
-                    + r_cleaners_for_being_with_the_trash * self.reward_weights[3]\
-                    + penalization_for_not_cleaning_when_trash
+        best_action = None
+        best_reward = -np.inf
+        for action, next_position in next_allowed_actionpose_dict.items():
+            # ALL TEAMS #
+            future_influence_mask = self.compute_influence_mask(next_position, agent.vision_length)
+            r_for_being_with_the_trash = 1 if self.model_trash_map[future_influence_mask.astype(bool)].sum() > 0 else 0
+            
+            if np.any(self.model_trash_map):
+                closest_trash_position = self.env.get_closest_known_trash_to_position(agent_position)
+                r_for_taking_action_that_approaches_to_trash = 1 if np.linalg.norm(next_position - closest_trash_position) \
+                                                    < np.linalg.norm(agent_position - closest_trash_position) else 0 
+            else:
+                r_for_taking_action_that_approaches_to_trash = 0
+
+            # EXPLORERS TEAM #
+            if agent.team_id == self.explorers_team_id:
+                r_for_discover_new_area = (self.visited_areas_map[future_influence_mask.astype(bool)] == 1).sum()
+            else:  
+                r_for_discover_new_area = 0
+            
+            # CLEANERS TEAM #
+            if agent.team_id == self.cleaners_team_id:
+                self.model_trash_map[agent_position[0], agent_position[1]]
+                r_for_cleaned_trash = self.model_trash_map[agent_position[0], agent_position[1]] if action == 9 else 0
+                penalization_for_not_cleaning_when_trash = -10 if action != 9 and self.model_trash_map[agent_position[0], agent_position[1]] > 0 else 0
+            else:
+                r_for_cleaned_trash = 0
+                penalization_for_not_cleaning_when_trash = 0
+
+            # Exchange ponderation between exploration/exploitation when the 80% of the map is visited #
+            if self.percentage_visited > 0.8:
+                ponderation_for_discover_new_area = self.reward_weights[self.explorers_team_id]
+            else:
+                ponderation_for_discover_new_area = self.reward_weights[2]
+
+            reward = r_for_taking_action_that_approaches_to_trash \
+                        + r_for_discover_new_area * ponderation_for_discover_new_area \
+                        + r_for_cleaned_trash * self.reward_weights[self.cleaners_team_id] \
+                        + r_for_being_with_the_trash * self.reward_weights[3]\
+                        + penalization_for_not_cleaning_when_trash
+            
+            if reward > best_reward:
+                best_reward = reward
+                best_action = action
     
+        if best_reward == 0:
+            best_action = np.random.choice(list(next_allowed_actionpose_dict.keys()))
 
-        return {agent_id: rewards[agent_id] if self.active_agents[agent_id] else 0 for agent_id in range(self.n_agents)}
+        self.navigable_map[next_allowed_actionpose_dict[action][0], next_allowed_actionpose_dict[action][1]] = 0 # to avoid collisions between agents
+
+        return best_action
 
     def get_agents_actions(self):
         """ Get the actions for each agent given the conditions of the environment. """
@@ -156,19 +104,12 @@ class OneStepGreedyFleet:
         self.navigable_map = self.scenario_map.copy() # 1 where navigable, 0 where not navigable
         self.visited_areas_map = self.env.visited_areas_map.copy()
         self.model_trash_map = self.env.model_trash_map 
+        self.percentage_visited = self.env.percentage_visited
         active_agents_positions = self.env.get_active_agents_positions_dict()
 
         actions = {}
 
-        for agent_id, agent_coords in active_agents_positions.items():
-            if self.team_id_of_each_agent[agent_id] == self.cleaners_team_id:
-                actions[agent_id] = self.get_cleaner_action(agent_coords, agent_id)
-            elif self.team_id_of_each_agent[agent_id] == self.explorers_team_id:
-                actions[agent_id] = self.get_explorer_action(agent_coords, agent_id)
+        for agent_id, agent_position in active_agents_positions.items():
+            actions[agent_id] = self.get_agent_action_with_best_future_reward(agent_position, agent_id)
         
         return actions
-        
-    def reset(self):
-        """ Reset the variables associated to the decision making process. """
-
-        self.fixed_action = {agent_id: None for agent_id in range(self.n_agents)}
