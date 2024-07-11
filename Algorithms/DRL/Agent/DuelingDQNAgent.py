@@ -450,7 +450,7 @@ class MultiAgentDuelingDQNAgent:
 
 					# Store every observation for every agent #
 					for agent_id in next_states.keys():
-						if np.random.rand() < 0.10: # Store only 10% of the transitions to have more diversity in experiences
+						if np.random.rand() < 0.5: # Store only 5% of the transitions to have more diversity in experiences
 							self.transition = [states[agent_id],
 												actions[agent_id],
 												reward[agent_id],
@@ -767,7 +767,7 @@ class MultiAgentDuelingDQNAgent:
 		"""Hard update: target <- local."""
 
 		if self.independent_networks_per_team:
-			print(f"Hard update performed at episode {self.episode[team_id_index]}!")
+			print(f"Hard update performed at episode {self.episode[team_id_index]} for network {team_id_index}!")
 			self.dqn_target[team_id_index].load_state_dict(self.dqn[team_id_index].state_dict())
 		else:
 			print(f"Hard update performed at episode {self.episode}!")
@@ -877,6 +877,7 @@ class MultiAgentDuelingDQNAgent:
 
 					# Process the agent step #
 					states, reward, done = self.step(actions)
+					print(f"Reward: {reward}")
 
 					reward_array = np.array([*reward.values()])
 

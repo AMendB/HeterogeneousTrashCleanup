@@ -11,7 +11,7 @@ reward_weights = (1, 20, 2, 10)
 memory_size = int(1E6)
 network_type = 'independent_networks_per_team'
 device = 'cuda:0'
-episodes = 20000
+episodes = 60000
 n_agents = 4  # max 4
 
 
