@@ -378,7 +378,7 @@ if __name__ == '__main__':
         # 'WanderingAgent', 
         # 'LawnMower', 
         # 'PSO', 
-        # 'Greedy',
+        'Greedy',
         # 'Training/Trning_RW_basic_10_10_0/',
         # 'DoneTrainings/Trning_RW_extended_10_50_0/',
         # 'DoneTrainings/Trning_RW_extended_5_100_0/',
@@ -389,10 +389,10 @@ if __name__ == '__main__':
         # 'Training/Trning_RW_backtosimple_1_20_2_10/',
         # 'DoneTrainings/Trning_RW_backtosimple_1_10_2_10_exchange/',
         # 'DoneTrainings/Trning_RW_backtosimple_1_20_2_10_exchange/',
-        'Training/Trning_RW_backtosimple_1_20_2_10_exchange_20k/',
+        # 'Training/Trning_RW_backtosimple_1_20_2_10_exchange_20k/',
         ]
 
-    SHOW_RENDER = False
+    SHOW_RENDER = True
     SHOW_FINAL_EP_PLOT = False
     SHOW_FINAL_EVALUATION_PLOT = False
 
@@ -583,7 +583,7 @@ if __name__ == '__main__':
             if selected_algorithm in ['LawnMower']:
                 for i in range(n_agents):
                     selected_algorithm_agents[i].reset(int(lawn_mower_rng.uniform(0,8)) if selected_algorithm == 'LawnMower' else None)
-            elif selected_algorithm in ['PSO','Greedy']:
+            elif selected_algorithm in ['PSO']:
                 selected_algorithm_agents.reset()
             elif selected_algorithm in ['Independent_Networks_Per_Team', 'Network']:
                 network.nogobackfleet_masking_module.reset()
@@ -605,6 +605,8 @@ if __name__ == '__main__':
                     actions = consensus_safe_masking_module.query_actions(q_values=q_values, agents_positions=env.get_active_agents_positions_dict(), model_trash_map=env.model_trash_map)
                 elif selected_algorithm == 'Greedy':
                     actions = selected_algorithm_agents.get_agents_actions()
+                    # q_values = selected_algorithm_agents.get_agents_q_values()
+                    # actions_qs = {agent_id: max(q_values[agent_id], key=q_values[agent_id].get) for agent_id in q_values.keys()}
 
                 # t0 = time.time()
                 states, new_reward, done = env.step(actions)

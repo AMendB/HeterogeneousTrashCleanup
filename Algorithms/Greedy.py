@@ -94,7 +94,7 @@ class OneStepGreedyFleet:
         if best_reward == 0:
             best_action = np.random.choice(list(next_allowed_actionpose_dict.keys()))
 
-        self.navigable_map[next_allowed_actionpose_dict[action][0], next_allowed_actionpose_dict[action][1]] = 0 # to avoid collisions between agents
+        self.navigable_map[next_allowed_actionpose_dict[best_action][0], next_allowed_actionpose_dict[best_action][1]] = 0 # to avoid collisions between agents
 
         return best_action
 
@@ -113,3 +113,73 @@ class OneStepGreedyFleet:
             actions[agent_id] = self.get_agent_action_with_best_future_reward(agent_position, agent_id)
         
         return actions
+    
+    def get_agent_potential_rewards(self, agent_position, agent_id):
+        
+        agent = self.fleet.vehicles[agent_id]
+
+        next_movements = np.array([(0,0) if angle < 0 else np.round([np.cos(angle), np.sin(angle)]) * agent.movement_length for angle in agent.angle_set]).astype(int)
+        next_positions = agent_position + next_movements
+        next_positions = np.clip(next_positions, (0,0), np.array(self.navigable_map.shape)-1) # saturate movement if out of indexes values (map edges)
+        next_allowed_actionpose_dict = {action: next_position for action, next_position in enumerate(next_positions) if self.navigable_map[next_position[0], next_position[1]] == 1} # remove next positions that leads to a non-navigable area 
+
+        rewards = {}
+        for action, next_position in enumerate(next_positions):
+            if action in next_allowed_actionpose_dict:
+                # ALL TEAMS #
+                future_influence_mask = self.compute_influence_mask(next_position, agent.vision_length)
+                r_for_being_with_the_trash = 1 if self.model_trash_map[future_influence_mask.astype(bool)].sum() > 0 else 0
+                
+                if np.any(self.model_trash_map):
+                    closest_trash_position = self.env.get_closest_known_trash_to_position(agent_position)
+                    r_for_taking_action_that_approaches_to_trash = 1 if np.linalg.norm(next_position - closest_trash_position) \
+                                                        < np.linalg.norm(agent_position - closest_trash_position) else 0 
+                else:
+                    r_for_taking_action_that_approaches_to_trash = 0
+
+                # EXPLORERS TEAM #
+                if agent.team_id == self.explorers_team_id:
+                    r_for_discover_new_area = (self.visited_areas_map[future_influence_mask.astype(bool)] == 1).sum()
+                else:  
+                    r_for_discover_new_area = 0
+                
+                # CLEANERS TEAM #
+                if agent.team_id == self.cleaners_team_id:
+                    self.model_trash_map[agent_position[0], agent_position[1]]
+                    r_for_cleaned_trash = self.model_trash_map[agent_position[0], agent_position[1]] if action == 9 else 0
+                    penalization_for_not_cleaning_when_trash = -10 if action != 9 and self.model_trash_map[agent_position[0], agent_position[1]] > 0 else 0
+                else:
+                    r_for_cleaned_trash = 0
+                    penalization_for_not_cleaning_when_trash = 0
+
+                # Exchange ponderation between exploration/exploitation when the 80% of the map is visited #
+                if self.percentage_visited > 0.8:
+                    ponderation_for_discover_new_area = self.reward_weights[self.explorers_team_id]
+                else:
+                    ponderation_for_discover_new_area = self.reward_weights[2]
+
+                rewards[action] = r_for_taking_action_that_approaches_to_trash \
+                            + r_for_discover_new_area * ponderation_for_discover_new_area \
+                            + r_for_cleaned_trash * self.reward_weights[self.cleaners_team_id] \
+                            + r_for_being_with_the_trash * self.reward_weights[3]\
+                            + penalization_for_not_cleaning_when_trash
+            else:
+                rewards[action] = -np.inf    
+
+        return rewards
+
+    def get_agents_q_values(self):
+        """ Get the q_values for each agent given the conditions of the environment. """
+        
+        self.navigable_map = self.scenario_map.copy() # 1 where navigable, 0 where not navigable
+        self.visited_areas_map = self.env.visited_areas_map.copy()
+        self.model_trash_map = self.env.model_trash_map 
+        self.percentage_visited = self.env.percentage_visited
+        active_agents_positions = self.env.get_active_agents_positions_dict()
+
+        q_values = {}
+
+        for agent_id, agent_position in active_agents_positions.items():
+            q_values[agent_id] = self.get_agent_potential_rewards(agent_position, agent_id)
+        
+        return q_values

@@ -12,6 +12,7 @@ from Algorithms.DRL.ActionMasking.ActionMaskingUtils import NoGoBackMasking, Saf
 import time
 import json
 import os
+from Algorithms.Greedy import OneStepGreedyFleet as OneStepGreedyFleet
 
 class MultiAgentDuelingDQNAgent:
 
@@ -25,6 +26,7 @@ class MultiAgentDuelingDQNAgent:
 			tau: float = 0.0001,
 			epsilon_values: List[float] = [1.0, 0.0],
 			epsilon_interval: List[float] = [0.0, 1.0],
+			greedy_training: bool = False,
 			learning_starts: int = 10,
 			gamma: float = 0.99,
 			lr: float = 1e-4,
@@ -96,6 +98,7 @@ class MultiAgentDuelingDQNAgent:
 		self.epsilon_values = epsilon_values
 		self.epsilon_interval = epsilon_interval
 		self.epsilon = self.epsilon_values[0]
+		self.greedy_training = greedy_training
 		self.learning_starts = learning_starts
 		self.train_every = train_every
 		self.masked_actions = masked_actions
@@ -235,8 +238,12 @@ class MultiAgentDuelingDQNAgent:
 		# 	self.consensus_safe_masking_module.update_navigation_map(states[list(states.keys())[0]][0])
 
 		if self.epsilon > np.random.rand() and not self.noisy and not deterministic:
-			# Compute randomly the q's #
-			q_values = {agent_id: np.random.rand(n_actions_of_each_agent[agent_id]) for agent_id in states.keys() if not done[agent_id]}
+			if self.greedy_training:
+				# Greedy algorithm compute the q's #
+				q_values = self.greedy_fleet.get_agents_q_values()			
+			else:
+				# Compute randomly the q's #
+				q_values = {agent_id: np.random.rand(n_actions_of_each_agent[agent_id]) for agent_id in states.keys() if not done[agent_id]}
 		else:
 			# The network compute the q's #
 			if self.independent_networks_per_team:
@@ -344,8 +351,6 @@ class MultiAgentDuelingDQNAgent:
 	def prewarm_memory(self):
 		"""Fill the memory with One Step Greedy experiences."""
 
-		from Algorithms.Greedy import OneStepGreedyFleet as OneStepGreedyFleet
-
 		algorithm = OneStepGreedyFleet(env=self.env)
 
 		print('Prewarming memory...')
@@ -383,9 +388,15 @@ class MultiAgentDuelingDQNAgent:
 	def train(self, episodes):
 		""" Train the agents. """
 
+		# Prewarm memory #
 		if self.prewarm_episodes > 0:
 			self.prewarm_memory()
 
+		# Use greedy policy to take actions for training instead of random #
+		if self.greedy_training:
+			self.greedy_fleet = OneStepGreedyFleet(env=self.env)
+
+		# START TRAINING #
 		if self.independent_networks_per_team:
 
 			# Optimization steps per team #
@@ -449,7 +460,7 @@ class MultiAgentDuelingDQNAgent:
 
 					# Store every observation for every agent #
 					for agent_id in next_states.keys():
-						if np.random.rand() < 0.5: # Store only 5% of the transitions to have more diversity in experiences
+						if np.random.rand() < 0.05: # Store only 5% of the transitions to have more diversity in experiences
 							self.transition = [states[agent_id],
 												actions[agent_id],
 												reward[agent_id],

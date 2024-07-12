@@ -86,6 +86,7 @@ network = MultiAgentDuelingDQNAgent(env=env,
 									tau=0.001,
 									epsilon_values=[1.0, 0.05],
 									epsilon_interval=[0.0, 0.5], #0.5
+									greedy_training=True, # epsilon is used to take to take greedy actions policy during training instead of random
 									learning_starts=100, 
 									gamma=0.99,
 									lr=1e-4,
