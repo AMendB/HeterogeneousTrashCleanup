@@ -589,7 +589,7 @@ class MultiAgentCleanupEnvironment:
 		# self.done = {agent_id: (self.fleet.get_fleet_distances_traveled()[agent_id] > self.max_distance_travelled_of_each_agent[agent_id] or self.fleet.fleet_collisions > self.max_collisions) for agent_id in range(self.n_agents)}
 		
 		# By steps: 
-		if self.steps >= self.max_steps_per_episode:
+		if self.steps >= self.max_steps_per_episode or len(self.trash_positions_yx) == 0:
 			self.done = {agent_id: True for agent_id in range(self.n_agents)}
 		
 		self.dones_by_teams = {team: all([is_done for agent_id, is_done in self.done.items() if self.team_id_of_each_agent[agent_id] == team]) for team in self.teams_ids}  

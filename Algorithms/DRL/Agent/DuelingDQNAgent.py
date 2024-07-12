@@ -962,6 +962,7 @@ class MultiAgentDuelingDQNAgent:
 			"epsilon": self.epsilon,
 			"epsilon_values": self.epsilon_values,
 			"epsilon_interval": self.epsilon_interval,
+			"greedy_training": self.greedy_training,
 			"beta": self.beta,
 			"num_atoms": self.num_atoms,
 			"masked_actions": self.masked_actions,
