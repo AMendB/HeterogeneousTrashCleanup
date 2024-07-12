@@ -491,10 +491,10 @@ class MultiAgentDuelingDQNAgent:
 								# Save policy if is better on average
 								mean_episodic_reward = np.mean(episodic_reward_vector[team_id])
 								if mean_episodic_reward > record[team_id]:
-									print(f"\nNew best policy with mean reward of {mean_episodic_reward} for network nº {team_id}")
+									print(f"\nNew best policy with mean reward of {mean_episodic_reward} [EP {episode}] for network nº {team_id}")
 									print("Saving model in " + self.logdir)
 									record[team_id] = mean_episodic_reward
-									self.save_model(name=f'BestPolicy_network{team_id}.pth', team_id_index=team_id)
+									self.save_model(name=f'BestPolicy_ep_{episode}_network{team_id}.pth', team_id_index=team_id)
 								
 								# Set stop metrics flag because the episode is ended for all agents of that team #
 								stop_metrics_per_teams[team_id] = True
@@ -891,6 +891,9 @@ class MultiAgentDuelingDQNAgent:
 				
 				# Reset previous actions of NoGoBack #
 				self.nogobackfleet_masking_module.reset()
+
+			for team in range(len(total_reward)):
+				print(f'Average reward for team {team}: {total_reward[team]/eval_episodes}, with an episode average length of {total_length[team] / eval_episodes}')
 
 			# Set networks to train #
 			for team_id in self.env.teams_ids:

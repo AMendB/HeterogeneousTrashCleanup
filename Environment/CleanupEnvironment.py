@@ -841,6 +841,14 @@ class MultiAgentCleanupEnvironment:
 			r_for_cleaned_trash = np.array([len(self.trashes_removed_per_agent[idx]) if idx in cleaners_alive and idx in self.trashes_removed_per_agent else 0 for idx in range(self.n_agents)])
 			r_cleaners_for_being_with_the_trash = np.array([1 if self.model_trash_map[agent.influence_mask.astype(bool)].sum() > 0 and idx in cleaners_alive else 0 for idx, agent in enumerate(self.fleet.vehicles)])
 			penalization_for_not_cleaning_when_trash = np.array([-10 if idx in cleaners_alive and actions[idx] != 9 and self.model_trash_map[agent.previous_agent_position[0], agent.previous_agent_position[1]] > 0 else 0 for idx, agent in enumerate(self.fleet.vehicles)])
+			# If there is known trash, reward for taking action that approaches to trash #
+			if np.any(self.model_trash_map):
+				r_for_taking_action_that_approaches_to_trash = np.array([1 if np.linalg.norm(agent.actual_agent_position - self.get_closest_known_trash_to_position(agent.actual_agent_position)) 
+													< np.linalg.norm(agent.previous_agent_position - self.get_closest_known_trash_to_position(agent.previous_agent_position)) and self.active_agents[idx] 
+													else 0 for idx, agent in enumerate(self.fleet.vehicles)])
+			else:
+				r_for_taking_action_that_approaches_to_trash = np.zeros(self.n_agents)
+
 
 			# Exchange ponderation between exploration/exploitation when the 80% of the map is visited #
 			if self.percentage_visited > 0.8:
@@ -853,6 +861,7 @@ class MultiAgentCleanupEnvironment:
 			# ponderation_for_discover_new_area = self.reward_weights[2]
 
 			rewards = np.zeros(self.n_agents) \
+					  + r_for_taking_action_that_approaches_to_trash \
 					  + r_for_discover_trash * ponderation_for_discover_trash \
 					  + r_for_discover_new_area * ponderation_for_discover_new_area \
 					  + r_for_cleaned_trash * self.reward_weights[self.cleaners_team_id] \
