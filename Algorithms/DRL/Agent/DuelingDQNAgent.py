@@ -355,7 +355,6 @@ class MultiAgentDuelingDQNAgent:
 			done = {i: False for i in range(self.env.n_agents)}
 			stop_saving = {i: False for i in range(self.env.n_agents)}
 			states = self.env.reset_env()
-			algorithm.reset()
 
 			# Run an episode #
 			while not all(done.values()):
