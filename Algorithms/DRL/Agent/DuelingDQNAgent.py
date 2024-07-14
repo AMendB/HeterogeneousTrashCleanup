@@ -504,7 +504,7 @@ class MultiAgentDuelingDQNAgent:
 									print(f"\nNew best policy with mean reward of {mean_episodic_reward} [EP {episode}] for network nº {team_id}")
 									print("Saving model in " + self.logdir)
 									record[team_id] = mean_episodic_reward
-									self.save_model(name=f'BestPolicy_ep_{episode}_network{team_id}.pth', team_id_index=team_id)
+									self.save_model(name=f'BestPolicy_network{team_id}.pth', team_id_index=team_id)
 								
 								# Set stop metrics flag because the episode is ended for all agents of that team #
 								stop_metrics_per_teams[team_id] = True
