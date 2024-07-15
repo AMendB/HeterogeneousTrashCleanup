@@ -388,7 +388,7 @@ class MultiAgentDuelingDQNAgent:
 											{}]
 						self.memory[self.env.team_id_of_each_agent[agent_id]].store(*self.transition)
 						stop_saving[agent_id] = done[agent_id]
-						experiences_to_save[self.env.team_id_of_each_agent[agent_id]] -= 1
+						experiences_to_save[self.env.team_id_of_each_agent[agent_id]] = max(0, experiences_to_save[self.env.team_id_of_each_agent[agent_id]] - 1)
 
 				# Update the state
 				states = next_states
