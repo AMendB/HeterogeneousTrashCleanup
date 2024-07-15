@@ -7,12 +7,11 @@ import numpy as np
 
 # Selection of PARAMETERS TO TRAIN #
 reward_function = 'backtosimple' # basic_reward, extended_reward, backtosimple
-reward_weights = (1, 25, 2, 10) 
+reward_weights = (1, 50, 2, 10) 
 memory_size = int(1E6)
 network_type = 'independent_networks_per_team'
 device = 'cuda:0'
-episodes = 60000
-n_agents = 4  # max 4
+episodes = 10000
 
 
 
@@ -27,7 +26,7 @@ seed = 0
 n_actions_explorers = 9
 n_actions_cleaners = 10
 n_explorers = 0
-n_cleaners = 2
+n_cleaners = 1
 n_agents = n_explorers + n_cleaners
 movement_length_explorers = 2
 movement_length_cleaners = 1
@@ -64,7 +63,7 @@ env = MultiAgentCleanupEnvironment(scenario_map = scenario_map,
 							max_collisions = 10,
 							reward_function = reward_function, 
 							reward_weights = reward_weights,
-							dynamic = True,
+							dynamic = False,
 							obstacles = False,
 							show_plot_graphics = SHOW_PLOT_GRAPHICS,
 							)
@@ -86,7 +85,7 @@ network = MultiAgentDuelingDQNAgent(env=env,
 									tau=0.001,
 									epsilon_values=[1.0, 0.05],
 									epsilon_interval=[0.0, 0.5], #0.5
-									greedy_training=True, # epsilon is used to take to take greedy actions policy during training instead of random
+									greedy_training=False, # epsilon is used to take to take greedy actions policy during training instead of random
 									learning_starts=100, 
 									gamma=0.99,
 									lr=1e-4,
@@ -98,7 +97,7 @@ network = MultiAgentDuelingDQNAgent(env=env,
 									logdir=logdir,
 									eval_every=500, #1000
 									eval_episodes=50, # 10
-									prewarm_episodes=int(np.ceil(memory_size*0.2/max_steps_per_episode)), # 20% of memory
+									prewarm_percentage=0.2, # 20% of memory
 									noisy=False,
 									distributional=False,
 									independent_networks_per_team = independent_networks_per_team,

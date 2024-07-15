@@ -40,7 +40,7 @@ class MultiAgentDuelingDQNAgent:
 			seed = 0,
 			eval_every = None,
 			eval_episodes = 1000,
-			prewarm_episodes = 0,
+			prewarm_percentage = 0,
 			# PER parameters
 			alpha: float = 0.2,
 			beta: float = 0.6,
@@ -122,7 +122,8 @@ class MultiAgentDuelingDQNAgent:
 			self.memory = PrioritizedReplayBuffer(self.obs_dim, memory_size, batch_size, alpha=alpha)
 		self.beta = beta
 		self.prior_eps = prior_eps
-		self.prewarm_episodes = prewarm_episodes
+		self.prewarm_percentage = prewarm_percentage
+		self.memory_size = memory_size
 
 		""" Create the DQN and the DQN-Target (noisy if selected) """
 		if self.independent_networks_per_team:
@@ -255,7 +256,7 @@ class MultiAgentDuelingDQNAgent:
 		q_values = self.nogobackfleet_masking_module.mask_actions(q_values=q_values)
 
 		# Add a probability to clean if a cleaner is in a pixel with trash # 
-		if self.epsilon > np.random.rand() and not self.noisy and not deterministic:
+		if 0.2 > np.random.rand() and not self.noisy and not deterministic:
 			for agent_id in q_values.keys():
 				if self.env.team_id_of_each_agent[agent_id] == self.env.cleaners_team_id and self.env.active_agents[agent_id] and self.env.model_trash_map[positions[agent_id][0], positions[agent_id][1]] > 0:
 					q_values[agent_id][9] = 10000
@@ -355,10 +356,17 @@ class MultiAgentDuelingDQNAgent:
 
 		print('Prewarming memory...')
 
-		for _ in trange(self.prewarm_episodes):
+		experiences_to_save = {team_id: self.memory_size*self.prewarm_percentage for team_id in self.env.teams_ids if self.env.number_of_agents_by_team[team_id] > 0}
+		print(experiences_to_save)
+
+		episode = 0
+		while any(experiences_to_save.values()):
+
+			episode += 1
+			print(f'Prewarming episode {episode}...')
 			
 			done = {i: False for i in range(self.env.n_agents)}
-			stop_saving = {i: False for i in range(self.env.n_agents)}
+			stop_saving = {i: not bool(experiences_to_save[self.env.team_id_of_each_agent[i]]) for i in range(self.env.n_agents)}
 			states = self.env.reset_env()
 
 			# Run an episode #
@@ -380,16 +388,22 @@ class MultiAgentDuelingDQNAgent:
 											{}]
 						self.memory[self.env.team_id_of_each_agent[agent_id]].store(*self.transition)
 						stop_saving[agent_id] = done[agent_id]
+						experiences_to_save[self.env.team_id_of_each_agent[agent_id]] -= 1
 
 				# Update the state
 				states = next_states
+
+				# Break if the memory is full #
+				if not any(experiences_to_save.values()):
+					break
+
 		print('Prewarming finished.')
 
 	def train(self, episodes):
 		""" Train the agents. """
 
 		# Prewarm memory #
-		if self.prewarm_episodes > 0:
+		if self.prewarm_percentage > 0:
 			self.prewarm_memory()
 
 		# Use greedy policy to take actions for training instead of random #
@@ -398,6 +412,8 @@ class MultiAgentDuelingDQNAgent:
 
 		# START TRAINING #
 		if self.independent_networks_per_team:
+			
+			percentage_store_in_memory = {self.memory_size/((episodes/2) * n_agents_in_team * self.env.max_steps_per_episode) for n_agents_in_team in self.env.number_of_agents_by_team if n_agents_in_team > 0}
 
 			# Optimization steps per team #
 			steps_per_team = [0]*self.env.n_teams
@@ -895,7 +911,7 @@ class MultiAgentDuelingDQNAgent:
 						if self.env.number_of_agents_by_team[team_id] > 0:
 							if not(self.env.dones_by_teams[team_id]):
 								total_length[team_id] += 1
-								total_reward[team_id] += np.sum(reward_array[self.env.masks_by_team[team_id]])
+								total_reward[team_id] += np.mean(reward_array[self.env.masks_by_team[team_id]])
 					# acc_r = acc_r + reward_array
 				# print(f"Accumulated reward (EP: {_}: {acc_r}")
 				
