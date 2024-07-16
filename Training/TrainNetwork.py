@@ -9,9 +9,10 @@ import numpy as np
 reward_function = 'backtosimple' # basic_reward, extended_reward, backtosimple
 reward_weights = (1, 50, 2, 10) 
 memory_size = int(1E6)
-network_type = 'independent_networks_per_team'
+network_type = 'network' # 'independent_networks_per_team'
 device = 'cuda:0'
-episodes = 10000
+episodes = 40000
+greedy_training=False
 
 
 
@@ -71,6 +72,8 @@ env = MultiAgentCleanupEnvironment(scenario_map = scenario_map,
 # Network config:
 if network_type == 'independent_networks_per_team':
 	independent_networks_per_team = True
+else:
+	independent_networks_per_team = False
 
 if memory_size == int(1E3):
 	logdir = f'testing/Training_{network_type.split("_")[0]}_RW_{reward_function.split("_")[0]}_' + '_'.join(map(str, reward_weights))
@@ -85,7 +88,7 @@ network = MultiAgentDuelingDQNAgent(env=env,
 									tau=0.001,
 									epsilon_values=[1.0, 0.05],
 									epsilon_interval=[0.0, 0.5], #0.5
-									greedy_training=False, # epsilon is used to take to take greedy actions policy during training instead of random
+									greedy_training=greedy_training, # epsilon is used to take to take greedy actions policy during training instead of random
 									learning_starts=100, 
 									gamma=0.99,
 									lr=1e-4,
@@ -101,6 +104,7 @@ network = MultiAgentDuelingDQNAgent(env=env,
 									noisy=False,
 									distributional=False,
 									independent_networks_per_team = independent_networks_per_team,
+									curriculum_learning_team=env.cleaners_team_id,
 )
 
 network.train(episodes=episodes) 

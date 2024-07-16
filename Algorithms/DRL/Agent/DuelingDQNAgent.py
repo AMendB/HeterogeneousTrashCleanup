@@ -54,6 +54,7 @@ class MultiAgentDuelingDQNAgent:
 			v_interval: Tuple[float, float] = (0.0, 100.0),
 			# A network for every team #
 			independent_networks_per_team: bool = False,
+			curriculum_learning_team = False,
 	):
 		"""
 
@@ -108,6 +109,7 @@ class MultiAgentDuelingDQNAgent:
 		self.num_atoms = num_atoms
 		self.v_interval = v_interval
 		self.independent_networks_per_team = independent_networks_per_team
+		self.curriculum_learning_team = curriculum_learning_team
 
 		""" Automatic selection of the device """
 		self.device = device
@@ -137,6 +139,7 @@ class MultiAgentDuelingDQNAgent:
 			self.dqn = DistributionalVisualNetwork(self.obs_dim, action_dim, number_of_features, num_atoms, self.support).to(self.device)
 			self.dqn_target = DistributionalVisualNetwork(self.obs_dim, action_dim, number_of_features, num_atoms, self.support).to(self.device)
 		else:
+			action_dim = self.action_dim_by_team[self.curriculum_learning_team]
 			self.dqn = DuelingVisualNetwork(self.obs_dim, action_dim, number_of_features).to(self.device)
 			self.dqn_target = DuelingVisualNetwork(self.obs_dim, action_dim, number_of_features).to(self.device)
 
@@ -413,7 +416,8 @@ class MultiAgentDuelingDQNAgent:
 		# START TRAINING #
 		if self.independent_networks_per_team:
 			
-			percentage_store_in_memory = {self.memory_size/((episodes/2) * n_agents_in_team * self.env.max_steps_per_episode) for n_agents_in_team in self.env.number_of_agents_by_team if n_agents_in_team > 0}
+			# Percentage of experiences to store in memory #
+			percentage_store_in_memory = {((episodes/2) * n_agents_in_team * self.env.max_steps_per_episode)/self.memory_size for n_agents_in_team in self.env.number_of_agents_by_team if n_agents_in_team > 0}
 
 			# Optimization steps per team #
 			steps_per_team = [0]*self.env.n_teams
@@ -476,7 +480,7 @@ class MultiAgentDuelingDQNAgent:
 
 					# Store every observation for every agent #
 					for agent_id in next_states.keys():
-						if np.random.rand() < 0.05: # Store only 5% of the transitions to have more diversity in experiences
+						if np.random.rand() < percentage_store_in_memory[self.env.team_id_of_each_agent[agent_id]]: # Store only a percentage of the experiences to fill the memory at the middle of the training
 							self.transition = [states[agent_id],
 												actions[agent_id],
 												reward[agent_id],
@@ -569,6 +573,8 @@ class MultiAgentDuelingDQNAgent:
 					self.save_model(name=f'Final_Policy_network{team_id}.pth', team_id_index=team_id)
 
 		else:
+			# Percentage of experiences to store in memory #
+			percentage_store_in_memory = ((episodes/2) * self.env.n_agents * self.env.max_steps_per_episode)/self.memory_size
 
 			# Optimization steps #
 			steps = 0
@@ -634,12 +640,13 @@ class MultiAgentDuelingDQNAgent:
 
 					# Store every observation for every agent #
 					for agent_id in next_states.keys():
-						if np.random.rand() < 0.10: # Store only 10% of the transitions to have more diversity in experiences
+						if np.random.rand() < percentage_store_in_memory: # Store only a percentage of the experiences to fill the memory at the middle of the training
 							self.transition = [states[agent_id],
 												actions[agent_id],
 												reward[agent_id],
 												next_states[agent_id],
-												done[agent_id]]
+												done[agent_id],
+												{}]
 
 							self.memory.store(*self.transition)
 
@@ -983,7 +990,8 @@ class MultiAgentDuelingDQNAgent:
 			"num_atoms": self.num_atoms,
 			"masked_actions": self.masked_actions,
 			"concensus_actions": self.concensus_actions,
-			"independent_networks_per_team": self.independent_networks_per_team
+			"independent_networks_per_team": self.independent_networks_per_team,
+			"curriculum_learning_team": self.curriculum_learning_team,
 		}
 
 		with open(self.logdir + '/experiment_config.json', 'w') as f:
