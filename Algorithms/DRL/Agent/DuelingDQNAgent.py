@@ -359,17 +359,17 @@ class MultiAgentDuelingDQNAgent:
 
 		print('Prewarming memory...')
 
-		experiences_to_save = {team_id: self.memory_size*self.prewarm_percentage for team_id in self.env.teams_ids if self.env.number_of_agents_by_team[team_id] > 0}
-		print(experiences_to_save)
+		n_experiences_to_save = {team_id: self.memory_size*self.prewarm_percentage for team_id in self.env.teams_ids if self.env.number_of_agents_by_team[team_id] > 0}
+		print(n_experiences_to_save)
 
 		episode = 0
-		while any(experiences_to_save.values()):
+		while any(n_experiences_to_save.values()):
 
 			episode += 1
 			print(f'Prewarming episode {episode}...')
 			
 			done = {i: False for i in range(self.env.n_agents)}
-			stop_saving = {i: not bool(experiences_to_save[self.env.team_id_of_each_agent[i]]) for i in range(self.env.n_agents)}
+			stop_saving = {i: not bool(n_experiences_to_save[self.env.team_id_of_each_agent[i]]) for i in range(self.env.n_agents)}
 			states = self.env.reset_env()
 
 			# Run an episode #
@@ -389,15 +389,18 @@ class MultiAgentDuelingDQNAgent:
 											next_states[agent_id],
 											done[agent_id],
 											{}]
-						self.memory[self.env.team_id_of_each_agent[agent_id]].store(*self.transition)
+						if self.independent_networks_per_team:
+							self.memory[self.env.team_id_of_each_agent[agent_id]].store(*self.transition)
+						else:
+							self.memory.store(*self.transition)
 						stop_saving[agent_id] = done[agent_id]
-						experiences_to_save[self.env.team_id_of_each_agent[agent_id]] = max(0, experiences_to_save[self.env.team_id_of_each_agent[agent_id]] - 1)
+						n_experiences_to_save[self.env.team_id_of_each_agent[agent_id]] = max(0, n_experiences_to_save[self.env.team_id_of_each_agent[agent_id]] - 1)
 
 				# Update the state
 				states = next_states
 
 				# Break if the memory is full #
-				if not any(experiences_to_save.values()):
+				if not any(n_experiences_to_save.values()):
 					break
 
 		print('Prewarming finished.')
