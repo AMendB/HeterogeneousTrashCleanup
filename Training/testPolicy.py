@@ -6,8 +6,8 @@ from Environment.CleanupEnvironment import MultiAgentCleanupEnvironment
 from Algorithms.DRL.Agent.DuelingDQNAgent import MultiAgentDuelingDQNAgent
 import numpy as np
 
-# path_to_training_folder = 'Training/Trning_RW_backtosimple_1_20_2_10_exchange_20k/'
-path_to_training_folder = 'DoneTrainings/Trning_RW_backtosimple_1_20_2_10_20k_curriculum_cleaners/'
+path_to_training_folder = 'Training/Trning_RW_backtosimple_1_50_2_10/'
+# path_to_training_folder = 'DoneTrainings/Trning_RW_backtosimple_1_20_2_10_20k_curriculum_cleaners/'
 
 f = open(path_to_training_folder + 'environment_config.json',)
 env_config = json.load(f)
@@ -44,19 +44,20 @@ network = MultiAgentDuelingDQNAgent(env=env,
 						batch_size=64,
 						target_update=1000,
 						seed = SEED,
-						concensus_actions=exp_config['independent_networks_per_team'],
+						concensus_actions=exp_config['concensus_actions'],
 						device='cuda:0',
 						independent_networks_per_team = exp_config['independent_networks_per_team'],
+						curriculum_learning_team=exp_config['curriculum_learning_team'],
 						)
 
 # network.load_model(path_to_training_folder + 'Final_Policy.pth')
 # network.load_model(path_to_training_folder + 'BestPolicy.pth')
 network.load_model(path_to_training_folder + 'BestEvalPolicy.pth')
 
-average_reward, average_episode_length = network.evaluate_env(RUNS)
+average_reward, average_episode_length, mean_cleaned_percentage = network.evaluate_env(RUNS)
 
 if exp_config['independent_networks_per_team']:
 	for team in range(len(average_reward)):
-		print(f'Average reward for team {team}: {average_reward[team]}, with an episode average length of {average_episode_length[team]}')
+		print(f'Average reward for team {team}: {average_reward[team]}, with an episode average length of {average_episode_length[team]}. Cleaned percentage: {mean_cleaned_percentage}')
 else:
-	print(f'Average reward: {average_reward}, with an episode average length of {average_episode_length}')
+	print(f'Average reward: {average_reward}, with an episode average length of {average_episode_length}. Cleaned percentage: {mean_cleaned_percentage}')

@@ -137,7 +137,12 @@ class PrioritizedReplayBuffer(ReplayBuffer):
 
 		# Convert observation to uint8 to save memory. Transform first observations with decimals, others just convert to uint8 directly #
 		# Transform channels 0, 4 and 5 to uint8, which are the float channels #
-		obs[[0, 4, 5]] *= 255
+		# obs[[0, 4, 5]] *= 255
+		# next_obs[[0, 4, 5]] *= 255
+		
+		obs = obs * 255
+		next_obs = next_obs * 255
+
 		obs = np.uint8(obs)
 		next_obs = np.uint8(next_obs)
 
@@ -173,11 +178,13 @@ class PrioritizedReplayBuffer(ReplayBuffer):
 		# Reconverting observations to float16
 		obs = np.float16(obs)
 		next_obs = np.float16(next_obs)
-		obs[:, [0, 4, 5], :, :] /= 255
-		obs[:, [0, 4, 5], :, :] = np.where(obs[:, [0, 4, 5], :, :] == 0.498, 0.5, obs[:, [0, 4, 5], :, :])
-		next_obs[:, [0, 4, 5], :, :] /= 255
-		next_obs[:, [0, 4, 5], :, :] = np.where(next_obs[:, [0, 4, 5], :, :] == 0.498, 0.5, next_obs[:, [0, 4, 5], :, :])
-
+		# obs[:, [0, 4, 5], :, :] /= 255
+		# obs[:, [0, 4, 5], :, :] = np.where(obs[:, [0, 4, 5], :, :] == 0.498, 0.5, obs[:, [0, 4, 5], :, :])
+		# next_obs[:, [0, 4, 5], :, :] /= 255
+		# next_obs[:, [0, 4, 5], :, :] = np.where(next_obs[:, [0, 4, 5], :, :] == 0.498, 0.5, next_obs[:, [0, 4, 5], :, :])
+		obs = obs/255
+		next_obs = next_obs/255
+		
 		return dict(
 			obs=obs,
 			next_obs=next_obs,

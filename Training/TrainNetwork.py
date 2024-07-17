@@ -8,8 +8,8 @@ import numpy as np
 # Selection of PARAMETERS TO TRAIN #
 reward_function = 'backtosimple' # basic_reward, extended_reward, backtosimple
 reward_weights = (1, 50, 2, 10) 
-memory_size = int(1E6)
-network_type = 'network' # 'independent_networks_per_team'
+memory_size = int(1E3)
+network_type = 'independent_networks_per_team'
 device = 'cuda:0'
 episodes = 40000
 greedy_training=False
@@ -24,8 +24,8 @@ SHOW_PLOT_GRAPHICS = False
 seed = 0
 
 # Agents info #
-n_actions_explorers = 9
-n_actions_cleaners = 10
+n_actions_explorers = 8
+n_actions_cleaners = 8
 n_explorers = 0
 n_cleaners = 1
 n_agents = n_explorers + n_cleaners
@@ -78,7 +78,10 @@ else:
 if memory_size == int(1E3):
 	logdir = f'testing/Training_{network_type.split("_")[0]}_RW_{reward_function.split("_")[0]}_' + '_'.join(map(str, reward_weights))
 else:
-	logdir = f'Training/Trning_RW_{reward_function.split("_")[0]}_' + '_'.join(map(str, reward_weights))
+	if n_explorers == 0 or n_cleaners == 0:
+		logdir = f'Training/Trning_curriculum_RW_{reward_function.split("_")[0]}_' + '_'.join(map(str, reward_weights))
+	else:
+		logdir = f'Training/Trning_RW_{reward_function.split("_")[0]}_' + '_'.join(map(str, reward_weights))
 
 network = MultiAgentDuelingDQNAgent(env=env,
 									memory_size=memory_size, 
@@ -100,11 +103,11 @@ network = MultiAgentDuelingDQNAgent(env=env,
 									logdir=logdir,
 									eval_every=500, #1000
 									eval_episodes=50, # 10
-									prewarm_percentage=0.2, # 20% of memory
+									prewarm_percentage=0, # 20% of memory
 									noisy=False,
 									distributional=False,
 									independent_networks_per_team = independent_networks_per_team,
-									curriculum_learning_team=env.cleaners_team_id,
+									curriculum_learning_team=None, # env.cleaners_team_id,
 )
 
 network.train(episodes=episodes) 

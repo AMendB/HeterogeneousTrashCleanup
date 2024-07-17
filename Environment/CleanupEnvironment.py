@@ -359,19 +359,26 @@ class MultiAgentCleanupEnvironment:
 		self.redundancy_mask = np.sum([agent.influence_mask for idx, agent in enumerate(self.fleet.vehicles) if self.active_agents[idx]], axis = 0)
 
 		# Info for training among others # 
-		self.observation_space_shape = (6, *self.scenario_map.shape)
+		if self.n_agents == 1 and not self.dynamic:
+			self.observation_space_shape = (3, *self.scenario_map.shape)
+		elif self.n_agents > 1 and not self.dynamic:
+			self.observation_space_shape = (4, *self.scenario_map.shape)
+		elif self.n_agents == 1 and self.dynamic:
+			self.observation_space_shape = (5, *self.scenario_map.shape)
+		elif self.n_agents > 1 and self.dynamic:
+			self.observation_space_shape = (6, *self.scenario_map.shape)
 		self.angle_set_of_each_agent = {idx: self.fleet.vehicles[idx].angle_set for idx in range(self.n_agents)}
 
 	def set_agents_id_info(self):
 
 		# Save the team id of each agent #
-		self.explorers_team_id = None
-		self.cleaners_team_id = None
-		for team_id, n_actions in enumerate(self.n_actions_by_team):
-			if n_actions == 9: 
-				self.explorers_team_id = team_id
-			elif n_actions == 10: # cleaners have one more action, the clean action
-				self.cleaners_team_id = team_id
+		self.explorers_team_id = 0
+		self.cleaners_team_id = 1
+		# for team_id, n_actions in enumerate(self.n_actions_by_team):
+		# 	if n_actions == 9: 
+		# 		self.explorers_team_id = team_id
+		# 	elif n_actions == 10: # cleaners have one more action, the clean action
+		# 		self.cleaners_team_id = team_id
 			
 		# Differentiate between agents by their teams #
 		self.team_id_of_each_agent = np.repeat(np.arange(self.n_teams), self.number_of_agents_by_team)
@@ -425,9 +432,6 @@ class MultiAgentCleanupEnvironment:
 			random_positions_indx = self.rng_initial_agents_positions.choice(np.arange(0, len(self.visitable_locations)), self.n_agents, replace=False)
 			self.initial_positions = self.visitable_locations[random_positions_indx]
 
-		# Set new agents specs #
-		# self.set_agents_specs(reset=True)
-		
 		# Reset the positions of the fleet #
 		self.steps = 0
 		self.fleet.reset_fleet(initial_positions=self.initial_positions)
@@ -469,6 +473,8 @@ class MultiAgentCleanupEnvironment:
 			trash_positions_yx_to_add = self.rng_trash_positions_MVN.multivariate_normal(mean=self.visitable_locations[index], cov=[[20,0],[0,20]], size = number_of_trash_elements_in_each_spot[j])
 			trash_positions_yx = np.vstack((trash_positions_yx, trash_positions_yx_to_add)) if trash_positions_yx.size else trash_positions_yx_to_add
 
+		self.initial_number_of_trash_elements = len(trash_positions_yx)
+
 		return trash_positions_yx
 
 	def init_real_trash_map(self):
@@ -495,9 +501,16 @@ class MultiAgentCleanupEnvironment:
 		cleaners_actions = {idx: action for idx, action in actions.items() if self.team_id_of_each_agent[idx] == self.cleaners_team_id}
 		cleaners_positions = self.get_active_cleaners_positions()
 		rounded_trash_positions = self.trash_positions_yx.round()
-		def get_indexes_to_clean_with_ramdomness(indexes, mean = 0.8, std = 0.1):
-			return np.random.choice(indexes, round(len(indexes)*np.clip(0,1,np.random.normal(loc=mean,scale=std))), replace=False)
-		self.trashes_removed_per_agent = {idx: np.array([np.random.choice(indexes)]) if cleaners_actions[idx] !=9 else get_indexes_to_clean_with_ramdomness(indexes) for idx, position in cleaners_positions.items() if len(indexes := np.where((rounded_trash_positions == position).all(1))[0]) > 0}
+		
+		if self.n_actions_by_team[self.cleaners_team_id] == 10:
+			# There is a cleaning action: #
+			def get_indexes_to_clean_with_ramdomness(indexes, mean = 0.8, std = 0.1):
+				return np.random.choice(indexes, round(len(indexes)*np.clip(0,1,np.random.normal(loc=mean,scale=std))), replace=False)
+			self.trashes_removed_per_agent = {idx: np.array([np.random.choice(indexes)]) if cleaners_actions[idx] !=9 else get_indexes_to_clean_with_ramdomness(indexes) for idx, position in cleaners_positions.items() if len(indexes := np.where((rounded_trash_positions == position).all(1))[0]) > 0}
+		else:
+			# Trash is cleaned just with going through: #
+			self.trashes_removed_per_agent = {idx: indexes for idx, position in cleaners_positions.items() if len(indexes := np.where((rounded_trash_positions == position).all(1))[0]) > 0}
+		
 		if self.trashes_removed_per_agent:
 			indexes_to_remove = np.concatenate([*self.trashes_removed_per_agent.values()])
 			self.trash_positions_yx = np.delete(self.trash_positions_yx, indexes_to_remove, axis = 0)
@@ -643,11 +656,11 @@ class MultiAgentCleanupEnvironment:
 				states[agent_id] = np.concatenate(( 
 					# obstacle_map[np.newaxis], # Channel 0 -> Known boundaries/navigation map
 					self.visited_areas_map[np.newaxis], # Channel 0 -> Map with visited positions. 0 non visitable, 1 non visited, 0.5 visited.
-					self.model_trash_map[np.newaxis], # Channel 1 -> Trash model map
-					self.previous_model_trash_map[np.newaxis], # Channel 2 -> Previous trash model map
-					self.previousprevious_model_trash_map[np.newaxis], # Channel 3 -> Previous previous trash model map
+					(self.model_trash_map/np.max(self.model_trash_map))[np.newaxis], # Channel 1 -> Trash model map (normalized)
+					# (self.previous_model_trash_map/np.max(self.previous_model_trash_map))[np.newaxis], # Channel 2 -> Previous trash model map (normalized)
+					# (self.previousprevious_model_trash_map/np.max(self.previousprevious_model_trash_map))[np.newaxis], # Channel 3 -> Previous previous trash model map (normalized)
 					observing_agent_position_with_stela[np.newaxis], # Channel 4 -> Observing agent position map with a stela
-					agent_observation_of_fleet[np.newaxis], # Channel 5 -> Others active agents position map
+					# agent_observation_of_fleet[np.newaxis], # Channel 5 -> Others active agents position map
 				), dtype=np.float16)
 
 				if agent_id == first_available_agent and self.activate_plot_graphics:
@@ -840,14 +853,14 @@ class MultiAgentCleanupEnvironment:
 			cleaners_alive = [idx for idx, agent_team in enumerate(self.team_id_of_each_agent) if agent_team == self.cleaners_team_id and self.active_agents[idx]]
 			r_for_cleaned_trash = np.array([len(self.trashes_removed_per_agent[idx]) if idx in cleaners_alive and idx in self.trashes_removed_per_agent else 0 for idx in range(self.n_agents)])
 			# r_cleaners_for_being_with_the_trash = np.array([1 if self.model_trash_map[agent.influence_mask.astype(bool)].sum() > 0 and idx in cleaners_alive else 0 for idx, agent in enumerate(self.fleet.vehicles)])
-			penalization_for_not_cleaning_when_trash = np.array([-10 if idx in cleaners_alive and actions[idx] != 9 and self.model_trash_map[agent.previous_agent_position[0], agent.previous_agent_position[1]] > 0 else 0 for idx, agent in enumerate(self.fleet.vehicles)])
+			# penalization_for_not_cleaning_when_trash = np.array([-10 if idx in cleaners_alive and actions[idx] != 9 and self.model_trash_map[agent.previous_agent_position[0], agent.previous_agent_position[1]] > 0 else 0 for idx, agent in enumerate(self.fleet.vehicles)])
 			# If there is known trash, reward for taking action that approaches to trash #
-			# if np.any(self.model_trash_map):
-			# 	r_for_taking_action_that_approaches_to_trash = np.array([1 if self.get_distance_to_closest_known_trash(agent.actual_agent_position) 
-			# 										< self.get_distance_to_closest_known_trash(agent.previous_agent_position, previous_model=True) and self.active_agents[idx] 
-			# 										else -1 for idx, agent in enumerate(self.fleet.vehicles)])
-			# else:
-			# 	r_for_taking_action_that_approaches_to_trash = np.zeros(self.n_agents)
+			if np.any(self.model_trash_map):
+				r_for_taking_action_that_approaches_to_trash = np.array([1 if self.get_distance_to_closest_known_trash(agent.actual_agent_position) 
+													< self.get_distance_to_closest_known_trash(agent.previous_agent_position, previous_model=True) and self.active_agents[idx] 
+													else -2 for idx, agent in enumerate(self.fleet.vehicles)])
+			else:
+				r_for_taking_action_that_approaches_to_trash = np.zeros(self.n_agents)
 
 
 			# Exchange ponderation between exploration/exploitation when the 80% of the map is visited #
@@ -862,14 +875,19 @@ class MultiAgentCleanupEnvironment:
 
 			rewards = np.zeros(self.n_agents) \
 					  + r_for_cleaned_trash * self.reward_weights[self.cleaners_team_id] \
-					  + penalization_for_not_cleaning_when_trash
-					#   + r_for_taking_action_that_approaches_to_trash \
+					  + r_for_taking_action_that_approaches_to_trash \
+					#   + penalization_for_not_cleaning_when_trash
 					#   + r_for_discover_trash * ponderation_for_discover_trash \
 					#   + r_for_discover_new_area * ponderation_for_discover_new_area \
 					#   + r_cleaners_for_being_with_the_trash * self.reward_weights[3]\
 		
 
 		return {agent_id: rewards[agent_id] if self.active_agents[agent_id] else 0 for agent_id in range(self.n_agents)}
+	
+	def get_percentage_cleaned_trash(self):
+		""" Returns the percentage of cleaned trash. """
+
+		return 1 - len(self.trash_positions_yx) / self.initial_number_of_trash_elements
 	
 	def get_closest_known_trash_to_position(self, position):
 		""" Returns the position of the closer known trash to the given position. """
@@ -952,8 +970,8 @@ if __name__ == '__main__':
 	# scenario_map = np.genfromtxt('Environment/Maps/ypacarai_lake_58x41.csv', delimiter=',')
 
 	# Agents info #
-	n_actions_explorers = 9
-	n_actions_cleaners = 10
+	n_actions_explorers = 8
+	n_actions_cleaners = 8
 	n_explorers = 0
 	n_cleaners = 2
 	n_agents = n_explorers + n_cleaners

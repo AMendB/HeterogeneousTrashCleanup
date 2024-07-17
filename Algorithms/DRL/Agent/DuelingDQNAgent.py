@@ -54,7 +54,7 @@ class MultiAgentDuelingDQNAgent:
 			v_interval: Tuple[float, float] = (0.0, 100.0),
 			# A network for every team #
 			independent_networks_per_team: bool = False,
-			curriculum_learning_team = False,
+			curriculum_learning_team = None,
 	):
 		"""
 
@@ -259,10 +259,10 @@ class MultiAgentDuelingDQNAgent:
 		q_values = self.nogobackfleet_masking_module.mask_actions(q_values=q_values)
 
 		# Add a probability to clean if a cleaner is in a pixel with trash # 
-		if 0.2 > np.random.rand() and not self.noisy and not deterministic:
-			for agent_id in q_values.keys():
-				if self.env.team_id_of_each_agent[agent_id] == self.env.cleaners_team_id and self.env.active_agents[agent_id] and self.env.model_trash_map[positions[agent_id][0], positions[agent_id][1]] > 0:
-					q_values[agent_id][9] = 10000
+		# if 0.2 > np.random.rand() and not self.noisy and not deterministic:
+		# 	for agent_id in q_values.keys():
+		# 		if self.env.team_id_of_each_agent[agent_id] == self.env.cleaners_team_id and self.env.active_agents[agent_id] and self.env.model_trash_map[positions[agent_id][0], positions[agent_id][1]] > 0:
+		# 			q_values[agent_id][9] = 10000
 		
 		permanent_actions = self.consensus_safe_masking_module.query_actions(q_values=q_values, agents_positions=positions, model_trash_map=self.env.model_trash_map)
 		self.nogobackfleet_masking_module.update_previous_actions(permanent_actions)
@@ -420,7 +420,7 @@ class MultiAgentDuelingDQNAgent:
 		if self.independent_networks_per_team:
 			
 			# Percentage of experiences to store in memory #
-			percentage_store_in_memory = {((episodes/2) * n_agents_in_team * self.env.max_steps_per_episode)/self.memory_size for n_agents_in_team in self.env.number_of_agents_by_team if n_agents_in_team > 0}
+			percentage_store_in_memory = {team_id: ((episodes/2) * n_agents_in_team * self.env.max_steps_per_episode)/self.memory_size for team_id, n_agents_in_team in enumerate(self.env.number_of_agents_by_team) if n_agents_in_team > 0}
 
 			# Optimization steps per team #
 			steps_per_team = [0]*self.env.n_teams
@@ -559,11 +559,12 @@ class MultiAgentDuelingDQNAgent:
 
 				# Evaluation #
 				if self.eval_every is not None and episode % self.eval_every == 0:
-					mean_eval_reward, mean_eval_length = self.evaluate_env(self.eval_episodes)
+					mean_eval_reward, mean_eval_length, mean_cleaned_percentage = self.evaluate_env(self.eval_episodes)
 					for team_id in self.env.teams_ids:
 						if self.env.number_of_agents_by_team[team_id] > 0:
 							self.writer[team_id].add_scalar('test/accumulated_reward', mean_eval_reward[team_id], self.episode[team_id])
 							self.writer[team_id].add_scalar('test/accumulated_length', mean_eval_length[team_id], self.episode[team_id])
+							self.writer[team_id].add_scalar('test/mean_cleaned_percentage', mean_cleaned_percentage, self.episode[team_id])
 							if mean_eval_reward[team_id] > eval_record[team_id]:
 									print(f"\nNew best policy IN EVAL with mean reward of {mean_eval_reward[team_id]} for network nº {team_id}")
 									print("Saving model in " + self.logdir)
@@ -709,9 +710,10 @@ class MultiAgentDuelingDQNAgent:
 				# Evaluation #
 				if self.eval_every is not None:
 					if episode % self.eval_every == 0:
-						mean_eval_reward, mean_eval_length = self.evaluate_env(self.eval_episodes)
+						mean_eval_reward, mean_eval_length, mean_cleaned_percentage = self.evaluate_env(self.eval_episodes)
 						self.writer.add_scalar('test/accumulated_reward', mean_eval_reward, self.episode)
 						self.writer.add_scalar('test/accumulated_length', mean_eval_length, self.episode)
+						self.writer.add_scalar('test/mean_cleaned_percentage', mean_cleaned_percentage, self.episode)
 						if mean_eval_reward > eval_record:
 								print(f"\nNew best policy IN EVAL with mean reward of {mean_eval_reward}")
 								print("Saving model in " + self.logdir)
@@ -832,6 +834,8 @@ class MultiAgentDuelingDQNAgent:
 			self.writer[team_id_index].add_scalar('train/accumulated_reward', self.episodic_reward, self.episode[team_id_index])
 			self.writer[team_id_index].add_scalar('train/accumulated_length', self.episodic_length, self.episode[team_id_index])
 
+			self.writer[team_id_index].add_scalar('train/buffer_size', self.memory[team_id_index].size, self.episode[team_id_index])
+
 			self.writer[team_id_index].flush()
 
 		else:
@@ -843,6 +847,8 @@ class MultiAgentDuelingDQNAgent:
 
 			self.writer.add_scalar('train/accumulated_reward', self.episodic_reward, self.episode)
 			self.writer.add_scalar('train/accumulated_length', self.episodic_length, self.episode)
+
+			self.writer.add_scalar('train/buffer_size', self.memory.size, self.episode)
 
 			self.writer.flush()
 
@@ -885,6 +891,7 @@ class MultiAgentDuelingDQNAgent:
 		if self.independent_networks_per_team:
 			total_reward = np.array([0]*self.env.n_teams)
 			total_length = np.array([0]*self.env.n_teams)
+			cleaned_percentage = []
 			
 			# Set networks to eval #
 			for team_id in self.env.teams_ids:
@@ -925,6 +932,9 @@ class MultiAgentDuelingDQNAgent:
 					# acc_r = acc_r + reward_array
 				# print(f"Accumulated reward (EP: {_}: {acc_r}")
 				
+				# Save percentage of cleaning #
+				cleaned_percentage.append(self.env.get_percentage_cleaned_trash())
+
 				# Reset previous actions of NoGoBack #
 				self.nogobackfleet_masking_module.reset()
 
@@ -940,6 +950,7 @@ class MultiAgentDuelingDQNAgent:
 			self.dqn.eval()
 			total_reward = 0
 			total_length = 0
+			cleaned_percentage = []
 
 			for _ in trange(eval_episodes):
 
@@ -966,13 +977,16 @@ class MultiAgentDuelingDQNAgent:
 					
 					total_reward += np.sum(list(reward.values()))
 				
+				# Save percentage of cleaning #
+				cleaned_percentage.append(self.env.get_percentage_cleaned_trash())
+
 				# Reset previous actions of NoGoBack #
 				self.nogobackfleet_masking_module.reset()
 
 			self.dqn.train()
 
 		# Return the average reward, average length
-		return total_reward / eval_episodes, total_length / eval_episodes
+		return total_reward / eval_episodes, total_length / eval_episodes, np.mean(cleaned_percentage)
 
 	def write_experiment_config(self):
 		""" Write experiment and environment variables in a json file """
