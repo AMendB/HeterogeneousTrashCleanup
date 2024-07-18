@@ -6,7 +6,7 @@ from Environment.CleanupEnvironment import MultiAgentCleanupEnvironment
 from Algorithms.DRL.Agent.DuelingDQNAgent import MultiAgentDuelingDQNAgent
 import numpy as np
 
-path_to_training_folder = 'Training/Trning_RW_backtosimple_1_50_2_10/'
+path_to_training_folder = 'Training/Trning_curriculum_RW_backtosimple_1_50_2_10/'
 # path_to_training_folder = 'DoneTrainings/Trning_RW_backtosimple_1_20_2_10_20k_curriculum_cleaners/'
 
 f = open(path_to_training_folder + 'environment_config.json',)

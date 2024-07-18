@@ -158,8 +158,8 @@ class MultiAgentDuelingDQNAgent:
 			""" Optimizer """
 			self.optimizer = optim.Adam(self.dqn.parameters(), lr=self.learning_rate)
 
-		""" Actual list of transitions """
-		self.transition = list()
+		# """ Actual list of transitions """
+		# self.transition = list()
 
 		""" Evaluation flag """
 		# self.is_eval = False
@@ -383,16 +383,16 @@ class MultiAgentDuelingDQNAgent:
 				# Store every observation for every agent #
 				for agent_id in next_states.keys():
 					if not stop_saving[agent_id]:
-						self.transition = [states[agent_id],
+						transition = [states[agent_id],
 											actions[agent_id],
 											reward[agent_id],
 											next_states[agent_id],
 											done[agent_id],
 											{}]
 						if self.independent_networks_per_team:
-							self.memory[self.env.team_id_of_each_agent[agent_id]].store(*self.transition)
+							self.memory[self.env.team_id_of_each_agent[agent_id]].store(*transition)
 						else:
-							self.memory.store(*self.transition)
+							self.memory.store(*transition)
 						stop_saving[agent_id] = done[agent_id]
 						n_experiences_to_save[self.env.team_id_of_each_agent[agent_id]] = max(0, n_experiences_to_save[self.env.team_id_of_each_agent[agent_id]] - 1)
 
@@ -420,7 +420,7 @@ class MultiAgentDuelingDQNAgent:
 		if self.independent_networks_per_team:
 			
 			# Percentage of experiences to store in memory #
-			percentage_store_in_memory = {team_id: ((episodes/2) * n_agents_in_team * self.env.max_steps_per_episode)/self.memory_size for team_id, n_agents_in_team in enumerate(self.env.number_of_agents_by_team) if n_agents_in_team > 0}
+			percentage_store_in_memory = {team_id: (self.memory_size * (1-self.prewarm_percentage))/((episodes/2) * n_agents_in_team * self.env.max_steps_per_episode) for team_id, n_agents_in_team in enumerate(self.env.number_of_agents_by_team) if n_agents_in_team > 0}
 
 			# Optimization steps per team #
 			steps_per_team = [0]*self.env.n_teams
@@ -484,14 +484,14 @@ class MultiAgentDuelingDQNAgent:
 					# Store every observation for every agent #
 					for agent_id in next_states.keys():
 						if np.random.rand() < percentage_store_in_memory[self.env.team_id_of_each_agent[agent_id]]: # Store only a percentage of the experiences to fill the memory at the middle of the training
-							self.transition = [states[agent_id],
+							transition = [states[agent_id],
 												actions[agent_id],
 												reward[agent_id],
 												next_states[agent_id],
 												done[agent_id],
 												{}]
 
-							self.memory[self.env.team_id_of_each_agent[agent_id]].store(*self.transition)
+							self.memory[self.env.team_id_of_each_agent[agent_id]].store(*transition)
 
 					# Update the state
 					states = next_states
@@ -507,6 +507,7 @@ class MultiAgentDuelingDQNAgent:
 						
 							# If episode is ended for all agents of the team
 							if self.env.dones_by_teams[team_id] == True:
+								# Get info to save in tensorboard log #
 								self.episodic_reward = score[team_id]
 								self.episodic_length = length[team_id]
 								self.episode[team_id] += 1
@@ -578,7 +579,7 @@ class MultiAgentDuelingDQNAgent:
 
 		else:
 			# Percentage of experiences to store in memory #
-			percentage_store_in_memory = ((episodes/2) * self.env.n_agents * self.env.max_steps_per_episode)/self.memory_size
+			percentage_store_in_memory = (self.memory_size * (1-self.prewarm_percentage))/((episodes/2) * self.env.n_agents * self.env.max_steps_per_episode)
 
 			# Optimization steps #
 			steps = 0
@@ -645,14 +646,14 @@ class MultiAgentDuelingDQNAgent:
 					# Store every observation for every agent #
 					for agent_id in next_states.keys():
 						if np.random.rand() < percentage_store_in_memory: # Store only a percentage of the experiences to fill the memory at the middle of the training
-							self.transition = [states[agent_id],
+							transition = [states[agent_id],
 												actions[agent_id],
 												reward[agent_id],
 												next_states[agent_id],
 												done[agent_id],
 												{}]
 
-							self.memory.store(*self.transition)
+							self.memory.store(*transition)
 
 					# Update the state
 					states = next_states

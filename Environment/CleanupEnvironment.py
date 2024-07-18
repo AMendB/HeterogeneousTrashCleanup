@@ -10,6 +10,9 @@ import torch
 from sklearn.metrics import mean_squared_error
 import json
 
+from scipy.ndimage import gaussian_filter
+
+
 class DiscreteVehicle: # class for single vehicle
 
 	def __init__(self, initial_position, team_id, n_actions, movement_length, vision_length, navigation_map):
@@ -839,12 +842,12 @@ class MultiAgentCleanupEnvironment:
 		
 		elif self.reward_function == 'backtosimple':
 			# ALL TEAMS #
-			changes_in_whole_model = np.abs(self.model_trash_map - self.previous_model_trash_map)
-			r_for_discover_trash = np.array(
-				[np.sum(
-					changes_in_whole_model[agent.influence_mask.astype(bool)] / self.redundancy_mask[agent.influence_mask.astype(bool)]
-					) if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles)
-				])
+			# changes_in_whole_model = np.abs(self.model_trash_map - self.previous_model_trash_map)
+			# r_for_discover_trash = np.array(
+			# 	[np.sum(
+			# 		changes_in_whole_model[agent.influence_mask.astype(bool)] / self.redundancy_mask[agent.influence_mask.astype(bool)]
+			# 		) if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles)
+			# 	])
 			
 			# EXPLORERS TEAM #
 			# r_for_discover_new_area = np.array([*self.new_discovered_area_per_agent.values()])
@@ -855,13 +858,16 @@ class MultiAgentCleanupEnvironment:
 			# r_cleaners_for_being_with_the_trash = np.array([1 if self.model_trash_map[agent.influence_mask.astype(bool)].sum() > 0 and idx in cleaners_alive else 0 for idx, agent in enumerate(self.fleet.vehicles)])
 			# penalization_for_not_cleaning_when_trash = np.array([-10 if idx in cleaners_alive and actions[idx] != 9 and self.model_trash_map[agent.previous_agent_position[0], agent.previous_agent_position[1]] > 0 else 0 for idx, agent in enumerate(self.fleet.vehicles)])
 			# If there is known trash, reward for taking action that approaches to trash #
-			if np.any(self.model_trash_map):
-				r_for_taking_action_that_approaches_to_trash = np.array([1 if self.get_distance_to_closest_known_trash(agent.actual_agent_position) 
-													< self.get_distance_to_closest_known_trash(agent.previous_agent_position, previous_model=True) and self.active_agents[idx] 
-													else -2 for idx, agent in enumerate(self.fleet.vehicles)])
-			else:
-				r_for_taking_action_that_approaches_to_trash = np.zeros(self.n_agents)
+			# if np.any(self.model_trash_map):
+			# 	r_for_taking_action_that_approaches_to_trash = np.array([1 if self.get_distance_to_closest_known_trash(agent.actual_agent_position) 
+			# 										< self.get_distance_to_closest_known_trash(agent.previous_agent_position, previous_model=True) and self.active_agents[idx] 
+			# 										else -2 for idx, agent in enumerate(self.fleet.vehicles)])
+			# else:
+			# 	r_for_taking_action_that_approaches_to_trash = np.zeros(self.n_agents)
 
+			gaussian_blurred_model_trash = gaussian_filter(self.model_trash_map, sigma=15)
+			gaussian_blurred_model_trash = gaussian_blurred_model_trash/np.max(gaussian_blurred_model_trash)*np.invert(self.non_water_mask)
+			r_for_taking_action_that_approaches_to_trash = np.array([gaussian_blurred_model_trash[agent.actual_agent_position[0], agent.actual_agent_position[1]] if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles)])
 
 			# Exchange ponderation between exploration/exploitation when the 80% of the map is visited #
 			# if self.percentage_visited > 0.8:
@@ -915,7 +921,6 @@ class MultiAgentCleanupEnvironment:
 
 	def get_model_mse(self, squared = False):
 			""" Returns the trash MSE. The model and the real trash map are compared as density of trash, filtered with a gaussian filter. """
-			from scipy.ndimage import gaussian_filter
 
 			sigma = 1 # standard deviation for gaussian kernel
 			real_trash_density = gaussian_filter(self.real_trash_map, sigma=sigma)

@@ -7,8 +7,8 @@ import numpy as np
 
 # Selection of PARAMETERS TO TRAIN #
 reward_function = 'backtosimple' # basic_reward, extended_reward, backtosimple
-reward_weights = (1, 50, 2, 10) 
-memory_size = int(1E3)
+reward_weights = (1, 25, 2, 10) 
+memory_size = int(1E6)
 network_type = 'independent_networks_per_team'
 device = 'cuda:0'
 episodes = 40000
@@ -60,7 +60,7 @@ env = MultiAgentCleanupEnvironment(scenario_map = scenario_map,
 							seed = seed,
 							movement_length_by_team =  (movement_length_explorers, movement_length_cleaners),
 							vision_length_by_team = (vision_length_explorers, vision_length_cleaners),
-							flag_to_check_collisions_within = True,
+							flag_to_check_collisions_within = False,
 							max_collisions = 10,
 							reward_function = reward_function, 
 							reward_weights = reward_weights,
@@ -103,7 +103,7 @@ network = MultiAgentDuelingDQNAgent(env=env,
 									logdir=logdir,
 									eval_every=500, #1000
 									eval_episodes=50, # 10
-									prewarm_percentage=0, # 20% of memory
+									prewarm_percentage=0.2, # 20% of memory
 									noisy=False,
 									distributional=False,
 									independent_networks_per_team = independent_networks_per_team,
