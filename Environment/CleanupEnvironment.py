@@ -866,7 +866,7 @@ class MultiAgentCleanupEnvironment:
 			# 	r_for_taking_action_that_approaches_to_trash = np.zeros(self.n_agents)
 
 			gaussian_blurred_model_trash = gaussian_filter(self.model_trash_map, sigma=15)
-			gaussian_blurred_model_trash = gaussian_blurred_model_trash/np.max(gaussian_blurred_model_trash)*np.invert(self.non_water_mask)
+			gaussian_blurred_model_trash = gaussian_blurred_model_trash/(np.max(gaussian_blurred_model_trash)*np.invert(self.non_water_mask)+0.001) # 0.001 to avoid division by zero
 			r_for_taking_action_that_approaches_to_trash = np.array([gaussian_blurred_model_trash[agent.actual_agent_position[0], agent.actual_agent_position[1]] if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles)])
 
 			# Exchange ponderation between exploration/exploitation when the 80% of the map is visited #

@@ -10,7 +10,7 @@ reward_function = 'backtosimple' # basic_reward, extended_reward, backtosimple
 reward_weights = (1, 25, 2, 10) 
 memory_size = int(1E6)
 network_type = 'independent_networks_per_team'
-device = 'cuda:0'
+device = 'cuda:1'
 episodes = 40000
 greedy_training=False
 
