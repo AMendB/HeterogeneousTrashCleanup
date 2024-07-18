@@ -659,7 +659,7 @@ class MultiAgentCleanupEnvironment:
 				states[agent_id] = np.concatenate(( 
 					# obstacle_map[np.newaxis], # Channel 0 -> Known boundaries/navigation map
 					self.visited_areas_map[np.newaxis], # Channel 0 -> Map with visited positions. 0 non visitable, 1 non visited, 0.5 visited.
-					(self.model_trash_map/np.max(self.model_trash_map)+0.0001)[np.newaxis], # Channel 1 -> Trash model map (normalized)
+					(self.model_trash_map/(np.max(self.model_trash_map)+1E-5))[np.newaxis], # Channel 1 -> Trash model map (normalized)
 					# (self.previous_model_trash_map/np.max(self.previous_model_trash_map))[np.newaxis], # Channel 2 -> Previous trash model map (normalized)
 					# (self.previousprevious_model_trash_map/np.max(self.previousprevious_model_trash_map))[np.newaxis], # Channel 3 -> Previous previous trash model map (normalized)
 					observing_agent_position_with_stela[np.newaxis], # Channel 4 -> Observing agent position map with a stela
@@ -866,7 +866,7 @@ class MultiAgentCleanupEnvironment:
 			# 	r_for_taking_action_that_approaches_to_trash = np.zeros(self.n_agents)
 
 			gaussian_blurred_model_trash = gaussian_filter(self.model_trash_map, sigma=15)
-			gaussian_blurred_model_trash = gaussian_blurred_model_trash/(np.max(gaussian_blurred_model_trash)*np.invert(self.non_water_mask)+0.001) # 0.001 to avoid division by zero
+			gaussian_blurred_model_trash = gaussian_blurred_model_trash/(np.max(gaussian_blurred_model_trash)*np.invert(self.non_water_mask)+1E-5) # 1E-5 to avoid division by zero
 			r_for_taking_action_that_approaches_to_trash = np.array([gaussian_blurred_model_trash[agent.actual_agent_position[0], agent.actual_agent_position[1]] if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles)])
 
 			# Exchange ponderation between exploration/exploitation when the 80% of the map is visited #
