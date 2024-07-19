@@ -11,6 +11,7 @@ from sklearn.metrics import mean_squared_error
 import json
 
 from scipy.ndimage import gaussian_filter
+from sklearn.neighbors import KernelDensity
 
 
 class DiscreteVehicle: # class for single vehicle
@@ -371,6 +372,9 @@ class MultiAgentCleanupEnvironment:
 		elif self.n_agents > 1 and self.dynamic:
 			self.observation_space_shape = (6, *self.scenario_map.shape)
 		self.angle_set_of_each_agent = {idx: self.fleet.vehicles[idx].angle_set for idx in range(self.n_agents)}
+
+		# KDE for the reward function #
+		self.kde = KernelDensity(kernel='gaussian', bandwidth=20)
 
 	def set_agents_id_info(self):
 
@@ -857,17 +861,28 @@ class MultiAgentCleanupEnvironment:
 			r_for_cleaned_trash = np.array([len(self.trashes_removed_per_agent[idx]) if idx in cleaners_alive and idx in self.trashes_removed_per_agent else 0 for idx in range(self.n_agents)])
 			# r_cleaners_for_being_with_the_trash = np.array([1 if self.model_trash_map[agent.influence_mask.astype(bool)].sum() > 0 and idx in cleaners_alive else 0 for idx, agent in enumerate(self.fleet.vehicles)])
 			# penalization_for_not_cleaning_when_trash = np.array([-10 if idx in cleaners_alive and actions[idx] != 9 and self.model_trash_map[agent.previous_agent_position[0], agent.previous_agent_position[1]] > 0 else 0 for idx, agent in enumerate(self.fleet.vehicles)])
-			# If there is known trash, reward for taking action that approaches to trash #
+			
+			# # If there is known trash, reward for taking action that approaches to trash #
 			# if np.any(self.model_trash_map):
-			# 	r_for_taking_action_that_approaches_to_trash = np.array([1 if self.get_distance_to_closest_known_trash(agent.actual_agent_position) 
-			# 										< self.get_distance_to_closest_known_trash(agent.previous_agent_position, previous_model=True) and self.active_agents[idx] 
-			# 										else -2 for idx, agent in enumerate(self.fleet.vehicles)])
+			# 	r_for_taking_action_that_approaches_to_trash = np.array([self.get_distance_to_closest_known_trash(agent.previous_agent_position, previous_model=True) - 
+			# 										self.get_distance_to_closest_known_trash(agent.actual_agent_position) for idx, agent in enumerate(self.fleet.vehicles)
+			# 										if self.active_agents[idx]])
 			# else:
 			# 	r_for_taking_action_that_approaches_to_trash = np.zeros(self.n_agents)
-
-			gaussian_blurred_model_trash = gaussian_filter(self.model_trash_map, sigma=15)
-			gaussian_blurred_model_trash = gaussian_blurred_model_trash/(np.max(gaussian_blurred_model_trash)*np.invert(self.non_water_mask)+1E-5) # 1E-5 to avoid division by zero
-			r_for_taking_action_that_approaches_to_trash = np.array([gaussian_blurred_model_trash[agent.actual_agent_position[0], agent.actual_agent_position[1]] if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles)])
+			
+			# If there is known trash, KDE to estimate the probability distribution of the model_trash_map #
+			if np.any(self.model_trash_map):
+				indices = np.nonzero(self.model_trash_map)
+				coords = np.column_stack(indices)
+				weights_trash = self.model_trash_map[indices]
+				self.kde.fit(coords, sample_weight=weights_trash)
+				X_plot = np.mgrid[0:self.model_trash_map.shape[0], 0:self.model_trash_map.shape[1]].reshape(2,-1).T
+				log_dens = self.kde.score_samples(X_plot)
+				density = np.exp(log_dens).reshape(self.model_trash_map.shape)
+				density = np.invert(self.non_water_mask) *  density / (np.max(density) + 1E-5) 
+				r_for_taking_action_that_approaches_to_trash = np.array([density[agent.actual_agent_position[0], agent.actual_agent_position[1]] if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles)])
+			else:
+				r_for_taking_action_that_approaches_to_trash = np.zeros(self.n_agents)
 
 			# Exchange ponderation between exploration/exploitation when the 80% of the map is visited #
 			# if self.percentage_visited > 0.8:

@@ -38,14 +38,15 @@ class OneStepGreedyFleet:
         return influence_mask
     
     def get_agent_action_with_best_future_reward(self, agent_position, agent_id):
-        
+        """ Get the most rewarding action for the agent given the conditions of the environment. """
+
         agent = self.fleet.vehicles[agent_id]
 
         next_movements = np.array([(0,0) if angle < 0 else np.round([np.cos(angle), np.sin(angle)]) * agent.movement_length for angle in agent.angle_set]).astype(int)
         next_positions = agent_position + next_movements
         next_positions = np.clip(next_positions, (0,0), np.array(self.navigable_map.shape)-1) # saturate movement if out of indexes values (map edges)
         next_allowed_actionpose_dict = {action: next_position for action, next_position in enumerate(next_positions) if self.navigable_map[next_position[0], next_position[1]] == 1} # remove next positions that leads to a non-navigable area 
-
+        
         best_action = None
         best_reward = -np.inf
         for action, next_position in next_allowed_actionpose_dict.items():
@@ -58,6 +59,7 @@ class OneStepGreedyFleet:
                 r_for_taking_action_that_approaches_to_trash = np.linalg.norm(agent_position - closest_trash_position) - np.linalg.norm(next_position - closest_trash_position)
             else:
                 r_for_taking_action_that_approaches_to_trash = 0
+
 
             # EXPLORERS TEAM #
             if agent.team_id == self.explorers_team_id:
@@ -101,7 +103,7 @@ class OneStepGreedyFleet:
         
         self.navigable_map = self.scenario_map.copy() # 1 where navigable, 0 where not navigable
         self.visited_areas_map = self.env.visited_areas_map.copy()
-        self.model_trash_map = self.env.model_trash_map 
+        self.model_trash_map = self.env.model_trash_map
         self.percentage_visited = self.env.percentage_visited
         active_agents_positions = self.env.get_active_agents_positions_dict()
 

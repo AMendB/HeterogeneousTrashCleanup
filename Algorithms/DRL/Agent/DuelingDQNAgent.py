@@ -940,7 +940,7 @@ class MultiAgentDuelingDQNAgent:
 				self.nogobackfleet_masking_module.reset()
 
 			for team in range(len(total_reward)):
-				print(f'Average reward for team {team}: {total_reward[team]/eval_episodes}, with an episode average length of {total_length[team] / eval_episodes}')
+				print(f'\n Average eval reward team {team}: {total_reward[team]/eval_episodes}. Episode average length: {total_length[team] / eval_episodes}. Mean cleaned: {np.mean(cleaned_percentage)}%')
 
 			# Set networks to train #
 			for team_id in self.env.teams_ids:
