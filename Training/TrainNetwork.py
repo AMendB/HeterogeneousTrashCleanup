@@ -96,7 +96,7 @@ network = MultiAgentDuelingDQNAgent(env=env,
 									gamma=0.99,
 									lr=1e-4,
 									save_every=10000, # 5000
-									train_every=25, #15
+									train_every=15, #15 (steps)
 									masked_actions=False,
 									concensus_actions=True,
 									device=device,

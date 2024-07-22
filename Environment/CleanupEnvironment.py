@@ -11,8 +11,6 @@ from sklearn.metrics import mean_squared_error
 import json
 
 from scipy.ndimage import gaussian_filter
-from sklearn.neighbors import KernelDensity
-
 
 class DiscreteVehicle: # class for single vehicle
 
@@ -372,9 +370,6 @@ class MultiAgentCleanupEnvironment:
 		elif self.n_agents > 1 and self.dynamic:
 			self.observation_space_shape = (6, *self.scenario_map.shape)
 		self.angle_set_of_each_agent = {idx: self.fleet.vehicles[idx].angle_set for idx in range(self.n_agents)}
-
-		# KDE for the reward function #
-		self.kde = KernelDensity(kernel='gaussian', bandwidth=20)
 
 	def set_agents_id_info(self):
 
@@ -870,17 +865,11 @@ class MultiAgentCleanupEnvironment:
 			# else:
 			# 	r_for_taking_action_that_approaches_to_trash = np.zeros(self.n_agents)
 			
-			# If there is known trash, KDE to estimate the probability distribution of the model_trash_map #
+			# If there is known trash, gaussian filter to estimate the probability distribution of the model_trash_map #
 			if np.any(self.model_trash_map):
-				indices = np.nonzero(self.model_trash_map)
-				coords = np.column_stack(indices)
-				weights_trash = self.model_trash_map[indices]
-				self.kde.fit(coords, sample_weight=weights_trash)
-				X_plot = np.mgrid[0:self.model_trash_map.shape[0], 0:self.model_trash_map.shape[1]].reshape(2,-1).T
-				log_dens = self.kde.score_samples(X_plot)
-				density = np.exp(log_dens).reshape(self.model_trash_map.shape)
-				density = np.invert(self.non_water_mask) *  density / (np.max(density) + 1E-5) 
-				r_for_taking_action_that_approaches_to_trash = np.array([density[agent.actual_agent_position[0], agent.actual_agent_position[1]] if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles)])
+				gaussian_blurred_model_trash = gaussian_filter(self.real_trash_map, sigma=20, mode='constant', cval=0)
+				gaussian_blurred_model_trash = np.invert(self.non_water_mask) * gaussian_blurred_model_trash/(np.max(gaussian_blurred_model_trash)+1E-5)
+				r_for_taking_action_that_approaches_to_trash = np.array([gaussian_blurred_model_trash[agent.actual_agent_position[0], agent.actual_agent_position[1]] if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles)])
 			else:
 				r_for_taking_action_that_approaches_to_trash = np.zeros(self.n_agents)
 
