@@ -450,7 +450,7 @@ class MultiAgentDuelingDQNAgent:
 				score = [0]*self.env.n_teams
 				length = [0]*self.env.n_teams
 				losses = [[]]*self.env.n_teams
-				stop_metrics_per_teams = {i:False if self.env.number_of_agents_by_team[i] > 0 else True for i in self.env.teams_ids}
+				episode_finished_per_teams = {i:False if self.env.number_of_agents_by_team[i] > 0 else True for i in self.env.teams_ids}
 
 				# Initially sample noisy policy #
 				if self.noisy:
@@ -473,7 +473,7 @@ class MultiAgentDuelingDQNAgent:
 				while not all(done.values()):
 
 					# Increase the played steps per team #
-					steps_per_team = [steps+1 if not stop_metrics_per_teams[team_id] else steps for team_id, steps in enumerate(steps_per_team)]
+					steps_per_team = [steps+1 if not episode_finished_per_teams[team_id] else steps for team_id, steps in enumerate(steps_per_team)]
 
 					# Select the action using the current policy #
 					actions = self.select_concensus_actions(states=states, positions=self.env.get_active_agents_positions_dict(), n_actions_of_each_agent=self.action_dim_of_each_agent, done = done)
@@ -499,7 +499,7 @@ class MultiAgentDuelingDQNAgent:
 					reward_array = np.array([*reward.values()])
 
 					for team_id in self.env.teams_ids:
-						if self.env.number_of_agents_by_team[team_id] > 0 and not(stop_metrics_per_teams[team_id]):
+						if self.env.number_of_agents_by_team[team_id] > 0 and not(episode_finished_per_teams[team_id]):
 							# Accumulate indicators
 							score[team_id] += np.mean(reward_array[self.env.masks_by_team[team_id]])  # The mean reward among the team
 							length[team_id] += 1
@@ -530,8 +530,8 @@ class MultiAgentDuelingDQNAgent:
 									record[team_id] = mean_episodic_reward
 									self.save_model(name=f'BestPolicy_network{team_id}.pth', team_id_index=team_id)
 								
-								# Set stop metrics flag because the episode is ended for all agents of that team #
-								stop_metrics_per_teams[team_id] = True
+								# Set the episode ended for all agents of that team #
+								episode_finished_per_teams[team_id] = True
 			
 							# If training is ready
 							if len(self.memory[team_id]) >= self.batch_size and episode >= self.learning_starts:
@@ -546,7 +546,7 @@ class MultiAgentDuelingDQNAgent:
 								# Update target soft/hard #
 								if self.soft_update:
 									self._target_soft_update(team_id_index=team_id)
-								elif episode % self.target_update == 0 and stop_metrics_per_teams[team_id]:
+								elif episode % self.target_update == 0 and episode_finished_per_teams[team_id]:
 									self._target_hard_update(team_id_index=team_id)
 
 				if self.save_every is not None:
@@ -939,13 +939,11 @@ class MultiAgentDuelingDQNAgent:
 				# Reset previous actions of NoGoBack #
 				self.nogobackfleet_masking_module.reset()
 
-			for team in range(len(total_reward)):
-				print(f'\n Average eval reward team {team}: {total_reward[team]/eval_episodes}. Episode average length: {total_length[team] / eval_episodes}. Mean cleaned: {np.mean(cleaned_percentage)}%')
-
 			# Set networks to train #
 			for team_id in self.env.teams_ids:
 				if self.env.number_of_agents_by_team[team_id] > 0:
 					self.dqn[team_id].train()
+					print(f'\n Average eval reward team {team_id}: {total_reward[team_id]/eval_episodes}. Episode average length: {total_length[team_id] / eval_episodes}. Mean cleaned: {np.mean(cleaned_percentage)}%')
 
 		else:
 			self.dqn.eval()
