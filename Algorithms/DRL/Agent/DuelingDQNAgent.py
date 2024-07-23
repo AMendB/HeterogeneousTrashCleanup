@@ -243,8 +243,12 @@ class MultiAgentDuelingDQNAgent:
 
 		if self.epsilon > np.random.rand() and not self.noisy and not deterministic:
 			if self.greedy_training:
-				# Greedy algorithm compute the q's #
-				q_values = self.greedy_fleet.get_agents_q_values()			
+				if 0.5 > np.random.rand():
+					# Greedy algorithm compute the q's #
+					q_values = self.greedy_fleet.get_agents_q_values()
+				else:
+					# Compute randomly the q's #
+					q_values = {agent_id: np.random.rand(n_actions_of_each_agent[agent_id]) for agent_id in states.keys() if not done[agent_id]}
 			else:
 				# Compute randomly the q's #
 				q_values = {agent_id: np.random.rand(n_actions_of_each_agent[agent_id]) for agent_id in states.keys() if not done[agent_id]}
@@ -258,12 +262,6 @@ class MultiAgentDuelingDQNAgent:
 		# Masking q's and take actions #
 		q_values = self.nogobackfleet_masking_module.mask_actions(q_values=q_values)
 
-		# Add a probability to clean if a cleaner is in a pixel with trash # 
-		# if 0.2 > np.random.rand() and not self.noisy and not deterministic:
-		# 	for agent_id in q_values.keys():
-		# 		if self.env.team_id_of_each_agent[agent_id] == self.env.cleaners_team_id and self.env.active_agents[agent_id] and self.env.model_trash_map[positions[agent_id][0], positions[agent_id][1]] > 0:
-		# 			q_values[agent_id][9] = 10000
-		
 		permanent_actions = self.consensus_safe_masking_module.query_actions(q_values=q_values, agents_positions=positions, model_trash_map=self.env.model_trash_map)
 		self.nogobackfleet_masking_module.update_previous_actions(permanent_actions)
 		

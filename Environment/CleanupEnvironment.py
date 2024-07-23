@@ -583,7 +583,7 @@ class MultiAgentCleanupEnvironment:
 		# Update visited map and new discovered areas divided by overlapping agents #
 		self.new_discovered_area_per_agent = {idx: ((self.visited_areas_map[agent.influence_mask.astype(bool)] == 1).astype(int) / self.redundancy_mask[agent.influence_mask.astype(bool)] ).sum() 
 										if self.active_agents[idx] and agent.team_id == self.explorers_team_id else 0 for idx, agent in enumerate(self.fleet.vehicles)}
-		self.visited_areas_map[self.redundancy_mask.astype(bool) * np.invert(self.non_water_mask)] = 0.5 # 0 non visitable, 1 not visited yet, 0.5 visited
+		self.visited_areas_map[(self.redundancy_mask.astype(bool) * (1-self.non_water_mask)).astype(bool)] = 0.5 # 0 non visitable, 1 not visited yet, 0.5 visited
 		self.percentage_visited = (self.visited_areas_map == 0.5).sum() / (self.visited_areas_map != 0).sum()
 
 		# Detect trash from cameras and update model #
@@ -666,13 +666,16 @@ class MultiAgentCleanupEnvironment:
 				), dtype=np.float16)
 
 				if agent_id == first_available_agent and self.activate_plot_graphics:
+					gaussian_blurred_model_trash = gaussian_filter(self.model_trash_map, sigma=20, mode='constant', cval=0)
+					gaussian_blurred_model_trash = (1-self.non_water_mask) * gaussian_blurred_model_trash/(np.max(gaussian_blurred_model_trash)+1E-5)
 					if self.colored_agents == True:
 						self.state_to_render_first_active_agent = np.concatenate(( 
 							self.visited_areas_map[np.newaxis], # AXIS 0
 							self.real_trash_map[np.newaxis], # AXIS 1
 							self.model_trash_map[np.newaxis], # AXIS 2
 							fleet_position_map_colored[np.newaxis], # AXIS 3
-							self.redundancy_mask[np.newaxis] # AXIS 4
+							# self.redundancy_mask[np.newaxis] # AXIS 4
+							gaussian_blurred_model_trash[np.newaxis] # AXIS 4
 						))
 					
 					else:
@@ -724,7 +727,8 @@ class MultiAgentCleanupEnvironment:
 
 				# AXIS 4: Redundancy mask #
 				self.state_to_render_first_active_agent[4][self.non_water_mask] = np.nan
-				self.im4 = self.axs[4].imshow(self.state_to_render_first_active_agent[4], cmap = 'cet_linear_bgy_10_95_c74', vmin = 0.0, vmax = 4.0)
+				# self.im4 = self.axs[4].imshow(self.state_to_render_first_active_agent[4], cmap = 'cet_linear_bgy_10_95_c74', vmin = 0.0, vmax = 4.0)
+				self.im4 = self.axs[4].imshow(self.state_to_render_first_active_agent[4], cmap = 'cet_linear_bgy_10_95_c74', vmin = 0.0, vmax = 1.0)
 				self.axs[4].set_title("Redundancy mask")
 			else:
 				# AXIS 3: Agent 0 position #
@@ -867,8 +871,8 @@ class MultiAgentCleanupEnvironment:
 			
 			# If there is known trash, gaussian filter to estimate the probability distribution of the model_trash_map #
 			if np.any(self.model_trash_map):
-				gaussian_blurred_model_trash = gaussian_filter(self.real_trash_map, sigma=20, mode='constant', cval=0)
-				gaussian_blurred_model_trash = np.invert(self.non_water_mask) * gaussian_blurred_model_trash/(np.max(gaussian_blurred_model_trash)+1E-5)
+				gaussian_blurred_model_trash = gaussian_filter(self.model_trash_map, sigma=20, mode='constant', cval=0)
+				gaussian_blurred_model_trash = (1-self.non_water_mask) * gaussian_blurred_model_trash/(np.max(gaussian_blurred_model_trash)+1E-5)
 				r_for_taking_action_that_approaches_to_trash = np.array([gaussian_blurred_model_trash[agent.actual_agent_position[0], agent.actual_agent_position[1]] if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles)])
 			else:
 				r_for_taking_action_that_approaches_to_trash = np.zeros(self.n_agents)

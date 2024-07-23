@@ -12,7 +12,7 @@ memory_size = int(1E6)
 network_type = 'independent_networks_per_team'
 device = 'cuda:0'
 episodes = 60000
-greedy_training=False
+greedy_training=True
 
 
 
@@ -86,11 +86,11 @@ else:
 network = MultiAgentDuelingDQNAgent(env=env,
 									memory_size=memory_size, 
 									batch_size=128,
-									target_update=1000,
-									soft_update=True,
-									tau=0.0001, # 0.001
+									target_update=3000,
+									soft_update=False,
+									tau=0.001, 
 									epsilon_values=[1.0, 0.05],
-									epsilon_interval=[0.0, 0.5], #0.5
+									epsilon_interval=[0.0, 0.7], #0.5
 									greedy_training=greedy_training, # epsilon is used to take to take greedy actions policy during training instead of random
 									learning_starts=100, 
 									gamma=0.99,

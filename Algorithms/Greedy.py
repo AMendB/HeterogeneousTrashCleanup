@@ -128,12 +128,11 @@ class OneStepGreedyFleet:
             if action in next_allowed_actionpose_dict:
                 # ALL TEAMS #
                 future_influence_mask = self.compute_influence_mask(next_position, agent.vision_length)
-                r_for_being_with_the_trash = 1 if self.model_trash_map[future_influence_mask.astype(bool)].sum() > 0 else 0
+                # r_for_being_with_the_trash = 1 if self.model_trash_map[future_influence_mask.astype(bool)].sum() > 0 else 0
                 
                 if np.any(self.model_trash_map):
                     closest_trash_position = self.env.get_closest_known_trash_to_position(agent_position)
-                    r_for_taking_action_that_approaches_to_trash = 1 if np.linalg.norm(next_position - closest_trash_position) \
-                                                        < np.linalg.norm(agent_position - closest_trash_position) else 0 
+                    r_for_taking_action_that_approaches_to_trash = np.linalg.norm(agent_position - closest_trash_position) - np.linalg.norm(next_position - closest_trash_position)
                 else:
                     r_for_taking_action_that_approaches_to_trash = 0
 
@@ -145,12 +144,11 @@ class OneStepGreedyFleet:
                 
                 # CLEANERS TEAM #
                 if agent.team_id == self.cleaners_team_id:
-                    self.model_trash_map[agent_position[0], agent_position[1]]
-                    r_for_cleaned_trash = self.model_trash_map[agent_position[0], agent_position[1]] if action == 9 else 0
-                    penalization_for_not_cleaning_when_trash = -10 if action != 9 and self.model_trash_map[agent_position[0], agent_position[1]] > 0 else 0
+                    r_for_cleaned_trash = self.model_trash_map[next_position[0], next_position[1]]                
+                    # penalization_for_not_cleaning_when_trash = -10 if action != 9 and self.model_trash_map[agent_position[0], agent_position[1]] > 0 else 0
                 else:
                     r_for_cleaned_trash = 0
-                    penalization_for_not_cleaning_when_trash = 0
+                    # penalization_for_not_cleaning_when_trash = 0
 
                 # Exchange ponderation between exploration/exploitation when the 80% of the map is visited #
                 if self.percentage_visited > 0.8:
@@ -161,8 +159,8 @@ class OneStepGreedyFleet:
                 rewards[action] = r_for_taking_action_that_approaches_to_trash \
                             + r_for_discover_new_area * ponderation_for_discover_new_area \
                             + r_for_cleaned_trash * self.reward_weights[self.cleaners_team_id] \
-                            + r_for_being_with_the_trash * self.reward_weights[3]\
-                            + penalization_for_not_cleaning_when_trash
+                            # + r_for_being_with_the_trash * self.reward_weights[3]\
+                            # + penalization_for_not_cleaning_when_trash
             else:
                 rewards[action] = -np.inf    
 
