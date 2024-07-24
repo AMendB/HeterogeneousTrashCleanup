@@ -547,6 +547,11 @@ class MultiAgentDuelingDQNAgent:
 								elif episode % self.target_update == 0 and episode_finished_per_teams[team_id]:
 									self._target_hard_update(team_id_index=team_id)
 
+				# Save percentage of cleaned trash during the episode #
+				if self.env.number_of_agents_by_team[self.env.cleaners_team_id] > 0:
+					self.writer[self.env.cleaners_team_id].add_scalar('train/cleaned_percentage', self.env.get_percentage_cleaned_trash(), episode)
+
+				# Save the model every N episodes #
 				if self.save_every is not None:
 					if episode % self.save_every == 0:
 						for team_id in self.env.teams_ids:
@@ -907,6 +912,7 @@ class MultiAgentDuelingDQNAgent:
 
 				while not all(done.values()):
 
+					states = {agent_id: np.float16(np.uint8(state * 255)/255) for agent_id, state in states.items()}
 
 					# Select the action using the current policy
 					if self.concensus_actions:
@@ -1006,6 +1012,9 @@ class MultiAgentDuelingDQNAgent:
 			"concensus_actions": self.concensus_actions,
 			"independent_networks_per_team": self.independent_networks_per_team,
 			"curriculum_learning_team": self.curriculum_learning_team,
+			"soft_update": self.soft_update,
+			"target_update": self.target_update,
+			"prewarm_percentage": self.prewarm_percentage,
 		}
 
 		with open(self.logdir + '/experiment_config.json', 'w') as f:
