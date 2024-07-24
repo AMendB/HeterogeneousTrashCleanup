@@ -642,10 +642,14 @@ class MultiAgentCleanupEnvironment:
 			if active:
 				observing_agent_position_with_stela = np.zeros_like(self.scenario_map)
 				waypoints = self.fleet.vehicles[agent_id].waypoints
-				if len(waypoints) > 10:
-					stela_points = 10
+				stela = False
+				if stela: 
+					if len(waypoints) > 10:
+						stela_points = 10
+					else:
+						stela_points = len(waypoints)
 				else:
-					stela_points = len(waypoints)
+					stela_points = 1
 				stela_values = np.linspace(0, 1, stela_points+1)[1:]
 				y_stela, x_stela =  zip(*waypoints[-stela_points:])
 				observing_agent_position_with_stela[y_stela, x_stela] = stela_values
