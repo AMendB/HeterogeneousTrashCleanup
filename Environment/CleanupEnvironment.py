@@ -516,6 +516,7 @@ class MultiAgentCleanupEnvironment:
 		if self.trashes_removed_per_agent:
 			indexes_to_remove = np.concatenate([*self.trashes_removed_per_agent.values()])
 			self.trash_positions_yx = np.delete(self.trash_positions_yx, indexes_to_remove, axis = 0)
+		self.previous_trashes_removed_per_agent = self.trashes_removed_per_agent.copy()
 		
 		# Movement of trash if dynamic #
 		if self.dynamic:
@@ -847,7 +848,7 @@ class MultiAgentCleanupEnvironment:
 			          + penalization_for_cleaning_when_no_trash \
 					  + penalization_for_not_cleaning_when_trash
 		
-		elif self.reward_function == 'backtosimple':
+		elif self.reward_function == 'backtosimplegauss':
 			# ALL TEAMS #
 			# changes_in_whole_model = np.abs(self.model_trash_map - self.previous_model_trash_map)
 			# r_for_discover_trash = np.array(
@@ -899,6 +900,58 @@ class MultiAgentCleanupEnvironment:
 					#   + r_for_discover_new_area * ponderation_for_discover_new_area \
 					#   + r_cleaners_for_being_with_the_trash * self.reward_weights[3]\
 		
+		elif self.reward_function == 'backtosimpledistance':
+			# ALL TEAMS #
+			# changes_in_whole_model = np.abs(self.model_trash_map - self.previous_model_trash_map)
+			# r_for_discover_trash = np.array(
+			# 	[np.sum(
+			# 		changes_in_whole_model[agent.influence_mask.astype(bool)] / self.redundancy_mask[agent.influence_mask.astype(bool)]
+			# 		) if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles)
+			# 	])
+			
+			# EXPLORERS TEAM #
+			# r_for_discover_new_area = np.array([*self.new_discovered_area_per_agent.values()])
+			
+			# CLEANERS TEAM #
+			cleaners_alive = [idx for idx, agent_team in enumerate(self.team_id_of_each_agent) if agent_team == self.cleaners_team_id and self.active_agents[idx]]
+			r_for_cleaned_trash = np.array([len(self.trashes_removed_per_agent[idx]) if idx in cleaners_alive and idx in self.trashes_removed_per_agent else 0 for idx in range(self.n_agents)])
+			# r_cleaners_for_being_with_the_trash = np.array([1 if self.model_trash_map[agent.influence_mask.astype(bool)].sum() > 0 and idx in cleaners_alive else 0 for idx, agent in enumerate(self.fleet.vehicles)])
+			# penalization_for_not_cleaning_when_trash = np.array([-10 if idx in cleaners_alive and actions[idx] != 9 and self.model_trash_map[agent.previous_agent_position[0], agent.previous_agent_position[1]] > 0 else 0 for idx, agent in enumerate(self.fleet.vehicles)])
+			
+			# # If there is known trash, reward for taking action that approaches to trash #
+			# if np.any(self.model_trash_map):
+			# 	r_for_taking_action_that_approaches_to_trash = np.array([self.get_distance_to_closest_known_trash(agent.previous_agent_position, previous_model=True) - 
+			# 										self.get_distance_to_closest_known_trash(agent.actual_agent_position) for idx, agent in enumerate(self.fleet.vehicles)
+			# 										if self.active_agents[idx]])
+			# else:
+			# 	r_for_taking_action_that_approaches_to_trash = np.zeros(self.n_agents)
+			
+			# If there is known trash, reward trough distance to closer trash #
+			if np.any(self.model_trash_map):
+				actual_distance_to_closest_trash = [self.get_distance_to_closest_known_trash(agent.actual_agent_position) if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles)]
+				r_for_taking_action_that_approaches_to_trash = np.array([self.get_distance_to_closest_known_trash(agent.previous_agent_position, previous_model=True) - actual_distance_to_closest_trash[idx] if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles)])
+				if np.any(self.previous_trashes_removed_per_agent):
+					r_for_taking_action_that_approaches_to_trash = np.array([self.get_distance_to_closest_known_trash(agent.previous_agent_position, previous_model=False) - actual_distance_to_closest_trash[idx] if idx in self.previous_trashes_removed_per_agent else r_for_taking_action_that_approaches_to_trash[idx] for idx, agent in enumerate(self.fleet.vehicles)])
+			else:
+				r_for_taking_action_that_approaches_to_trash = np.zeros(self.n_agents)
+
+			# Exchange ponderation between exploration/exploitation when the 80% of the map is visited #
+			# if self.percentage_visited > 0.8:
+			# 	ponderation_for_discover_trash = self.reward_weights[2]
+			# 	ponderation_for_discover_new_area = self.reward_weights[self.explorers_team_id]
+			# else:
+			# 	ponderation_for_discover_trash = self.reward_weights[self.explorers_team_id]
+			# 	ponderation_for_discover_new_area = self.reward_weights[2]
+			# ponderation_for_discover_trash = self.reward_weights[self.explorers_team_id]
+			# ponderation_for_discover_new_area = self.reward_weights[2]
+
+			rewards = np.zeros(self.n_agents) \
+					  + r_for_cleaned_trash * self.reward_weights[self.cleaners_team_id] \
+					  + r_for_taking_action_that_approaches_to_trash \
+					#   + penalization_for_not_cleaning_when_trash
+					#   + r_for_discover_trash * ponderation_for_discover_trash \
+					#   + r_for_discover_new_area * ponderation_for_discover_new_area \
+					#   + r_cleaners_for_being_with_the_trash * self.reward_weights[3]\		
 
 		return {agent_id: rewards[agent_id] if self.active_agents[agent_id] else 0 for agent_id in range(self.n_agents)}
 	
@@ -1023,7 +1076,7 @@ if __name__ == '__main__':
 							   vision_length_by_team = (vision_length_explorers, vision_length_cleaners),
 							   flag_to_check_collisions_within = True,
 							   max_collisions = 1000,
-							   reward_function = 'backtosimple',  # basic_reward, extended_reward
+							   reward_function = 'backtosimpledistance',  # basic_reward, extended_reward
 							   reward_weights = (1, 20, 2, 10),
 							   dynamic = True,
 							   obstacles = False,

@@ -6,7 +6,8 @@ from Environment.CleanupEnvironment import MultiAgentCleanupEnvironment
 from Algorithms.DRL.Agent.DuelingDQNAgent import MultiAgentDuelingDQNAgent
 import numpy as np
 
-path_to_training_folder = 'Training/Trning_greedy_curriculum_RW_backtosimple_1_25_2_10/'
+# path_to_training_folder = 'Training/Trning_curriculum_RW_backtosimplegauss_0_75_0_0_150k_ep0.7_hu10k/'
+path_to_training_folder = 'testing/Trning_curriculum_RW_backtosimplegauss_0_50_0_0_ep0.7_hu6k/'
 # path_to_training_folder = 'DoneTrainings/Trning_RW_backtosimple_1_20_2_10_20k_curriculum_cleaners/'
 
 f = open(path_to_training_folder + 'environment_config.json',)
@@ -14,8 +15,8 @@ env_config = json.load(f)
 f.close()
 
 SEED = 3
-SHOW_PLOT_GRAPHICS = True
-RUNS = 50
+SHOW_PLOT_GRAPHICS = False
+RUNS = 100
 
 env = MultiAgentCleanupEnvironment(scenario_map = np.array(env_config['scenario_map']),
 						number_of_agents_by_team=env_config['number_of_agents_by_team'],

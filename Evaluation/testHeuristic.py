@@ -27,7 +27,7 @@ scenario_map = np.genfromtxt('Environment/Maps/acoruna_port.csv', delimiter=',')
 n_actions_explorers = 8
 n_actions_cleaners = 8
 n_explorers = 0
-n_cleaners = 2
+n_cleaners = 1
 n_agents = n_explorers + n_cleaners
 movement_length_explorers = 2
 movement_length_cleaners = 1
@@ -38,7 +38,7 @@ max_distance_travelled_explorers = 400
 max_distance_travelled_cleaners = 200
 max_steps_per_episode = 150
 
-reward_function = 'backtosimple'
+reward_function = 'backtosimpledistance'
 reward_weights=(1, 20, 2, 10)
 
 # Set initial positions #
@@ -61,9 +61,9 @@ env = MultiAgentCleanupEnvironment(scenario_map = scenario_map,
                         vision_length_by_team = (vision_length_explorers, vision_length_cleaners),
                         flag_to_check_collisions_within = False,
                         max_collisions = 1000,
-                        reward_function = 'backtosimple', #reward_function,
+                        reward_function = reward_function,
                         reward_weights = reward_weights,
-                        dynamic = True,
+                        dynamic = False,
                         obstacles = False,
                         show_plot_graphics = SHOW_RENDER,
                         )
@@ -79,6 +79,10 @@ for algorithm in algorithms:
         consensus_safe_masking_module = ConsensusSafeActionMasking(navigation_map = scenario_map, angle_set_of_each_agent=env.angle_set_of_each_agent, movement_length_of_each_agent = env.movement_length_of_each_agent)
     elif algorithm == "Greedy":
         agents = OneStepGreedyFleet(env)
+
+    mean_cleaned_percentage = 0
+    average_reward = [0 for _ in range(env.n_teams)]
+    average_episode_length = [0 for _ in range(env.n_teams)]
 
     # Start episodes #
     for run in range(RUNS):
@@ -97,6 +101,7 @@ for algorithm in algorithms:
             agents.reset()
         
         acc_rw_episode = [0 for _ in range(n_agents)]
+        ep_length_per_teams = [0 for _ in range(env.n_teams)]
 
         while any([not value for value in done.values()]):  # while at least 1 active
 
@@ -115,6 +120,7 @@ for algorithm in algorithms:
             # t0 = time.time()
             states, new_reward, done = env.step(actions)
             acc_rw_episode = [acc_rw_episode[i] + new_reward[i] for i in range(n_agents)]
+            ep_length_per_teams = [ep_length_per_teams[team_id] + 1 if not env.dones_by_teams[team_id] else ep_length_per_teams[team_id] for team_id in env.teams_ids]
             # t1 = time.time()
             # runtime += t1-t0
 
@@ -127,14 +133,17 @@ for algorithm in algorithms:
             print(f"Trashes remaining: {len(env.trash_positions_yx)}")
             print()
 
-        # print('Total runtime: ', runtime)
+        # Print accumulated reward of episode #
         print('Total reward: ', acc_rw_episode)
+        # print('Total runtime: ', runtime)
         
-
-
-
-
-average_reward, average_episode_length, mean_cleaned_percentage = network.evaluate_env(RUNS)
-
-for team in range(len(average_reward)):
-    print(f'Average reward for team {team}: {average_reward[team]}, with an episode average length of {average_episode_length[team]}. Cleaned percentage: {mean_cleaned_percentage}')
+        # Calculate mean metrics all episodes #
+        mean_cleaned_percentage += env.get_percentage_cleaned_trash()
+        for team in range(env.n_teams):
+            mean_team_acc_reward_ep = np.mean([acc_rw_episode[i] for i in range(n_agents) if env.team_id_of_each_agent[i] == team])
+            average_reward[team] += mean_team_acc_reward_ep
+            average_episode_length[team] += ep_length_per_teams[team]
+    
+    # Print algorithm results #
+    for team in range(env.n_teams):
+        print(f'Average reward for {algorithm} team {team}: {average_reward[team]/RUNS}, with an episode average length of {average_episode_length[team]/RUNS}. Cleaned percentage: {mean_cleaned_percentage/RUNS}')

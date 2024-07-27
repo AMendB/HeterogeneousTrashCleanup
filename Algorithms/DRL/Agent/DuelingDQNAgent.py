@@ -406,6 +406,8 @@ class MultiAgentDuelingDQNAgent:
 	def train(self, episodes):
 		""" Train the agents. """
 
+		self.episodes = episodes
+
 		# Prewarm memory #
 		if self.prewarm_percentage > 0:
 			self.prewarm_memory()
@@ -1005,6 +1007,7 @@ class MultiAgentDuelingDQNAgent:
 			"epsilon": self.epsilon,
 			"epsilon_values": self.epsilon_values,
 			"epsilon_interval": self.epsilon_interval,
+			"train_every": self.train_every,
 			"greedy_training": self.greedy_training,
 			"beta": self.beta,
 			"num_atoms": self.num_atoms,
@@ -1015,6 +1018,8 @@ class MultiAgentDuelingDQNAgent:
 			"soft_update": self.soft_update,
 			"target_update": self.target_update,
 			"prewarm_percentage": self.prewarm_percentage,
+			"episodes": self.episodes,
+			"memory_size": self.memory_size,
 		}
 
 		with open(self.logdir + '/experiment_config.json', 'w') as f:

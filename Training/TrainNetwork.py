@@ -7,10 +7,11 @@ import numpy as np
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-rw', '--reward_function', type=str, default='backtosimple', help='Reward function to use: basic_reward, extended_reward, backtosimple')
+parser.add_argument('-rw', '--reward_function', type=str, default='backtosimplegauss', help='Reward function to use: basic_reward, extended_reward, backtosimple')
 parser.add_argument('-w', '--reward_weights', type=int, nargs='+', default=[1, 25, 2, 10], help='Reward weights for the reward function.')
 parser.add_argument('-net', '--network_type', type=str, default='independent_networks_per_team', help='Type of network to use: independent_networks_per_team, shared_network')
 parser.add_argument('-dev', '--device', type=str, default='cuda:0', help='Device to use: cuda:x, cpu')
+parser.add_argument('--epsilon', type=float, default=0.5, help='Epsilon value for epsilon-greedy training.')
 parser.add_argument('-eps', '--episodes', type=int, default=60000, help='Number of episodes to train the network.')
 parser.add_argument('-gt', '--greedy_training', type=bool, default=True, help='Use greedy training instead of epsilon-greedy training.')
 parser.add_argument('-t', '--target_update', type=int, default=1000, help='Number of steps to update the target network.')
@@ -24,8 +25,11 @@ reward_function = args.reward_function
 reward_weights = tuple(args.reward_weights) 
 network_type = args.network_type
 device = args.device
+epsilon = args.epsilon
 episodes = args.episodes
 greedy_training= args.greedy_training
+target_update = args.target_update
+train_every = args.train_every
 
 
 
@@ -92,26 +96,26 @@ if memory_size == int(1E3):
 	logdir = f'testing/Training_{network_type.split("_")[0]}_RW_{reward_function.split("_")[0]}_' + '_'.join(map(str, reward_weights)) + args.extra_name
 else:
 	if n_explorers == 0 or n_cleaners == 0 and not greedy_training:
-		logdir = f'Training/Trning_curriculum_RW_{reward_function.split("_")[0]}_' + '_'.join(map(str, reward_weights)) + args.extra_name
+		logdir = f'Training/T_curriculum_RW_{reward_function.split("_")[0]}_' + '_'.join(map(str, reward_weights)) + f'_{int(episodes/1000)}k_ep{epsilon}_hu{int(target_update/1000)}k_te{train_every}' + args.extra_name
 	elif n_explorers == 0 or n_cleaners == 0 and greedy_training:
-		logdir = f'Training/Trning_greedy_curriculum_RW_{reward_function.split("_")[0]}_' + '_'.join(map(str, reward_weights)) + args.extra_name
+		logdir = f'Training/T_greedy_curriculum_RW_{reward_function.split("_")[0]}_' + '_'.join(map(str, reward_weights)) + f'_{int(episodes/1000)}k_ep{epsilon}_hu{int(target_update/1000)}k_te{train_every}' + args.extra_name
 	else:
 		logdir = f'Training/Trning_RW_{reward_function.split("_")[0]}_' + '_'.join(map(str, reward_weights)) + args.extra_name
 
 network = MultiAgentDuelingDQNAgent(env=env,
 									memory_size=memory_size, 
 									batch_size=128,
-									target_update=args.target_update,
+									target_update=target_update,
 									soft_update=False,
 									tau=0.001, 
 									epsilon_values=[1.0, 0.05],
-									epsilon_interval=[0.0, 0.7], #0.5
+									epsilon_interval=[0.0, epsilon], #0.5
 									greedy_training=greedy_training, # epsilon is used to take to take greedy actions policy during training instead of random
 									learning_starts=100, 
 									gamma=0.99,
 									lr=1e-4,
 									save_every=10000, # 5000
-									train_every=args.train_every, #15 (steps)
+									train_every=train_every, #15 (steps)
 									masked_actions=False,
 									concensus_actions=True,
 									device=device,
