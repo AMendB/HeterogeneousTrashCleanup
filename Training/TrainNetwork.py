@@ -13,6 +13,7 @@ parser.add_argument('-net', '--network_type', type=str, default='independent_net
 parser.add_argument('-dev', '--device', type=str, default='cuda:0', help='Device to use: cuda:x, cpu')
 parser.add_argument('--epsilon', type=float, default=0.5, help='Epsilon value for epsilon-greedy training.')
 parser.add_argument('-eps', '--episodes', type=int, default=60000, help='Number of episodes to train the network.')
+parser.add_argument('--extra_episodes', type=int, default=0, help='Extra episodes to keep training after the first training.')
 parser.add_argument('-gt', '--greedy_training', type=bool, default=True, help='Use greedy training instead of epsilon-greedy training.')
 parser.add_argument('-t', '--target_update', type=int, default=1000, help='Number of steps to update the target network.')
 parser.add_argument('--train_every', type=int, default=15, help='Number of steps to train the network.')
@@ -27,6 +28,7 @@ network_type = args.network_type
 device = args.device
 epsilon = args.epsilon
 episodes = args.episodes
+extra_episodes = args.extra_episodes
 greedy_training= args.greedy_training
 target_update = args.target_update
 train_every = args.train_every
@@ -95,10 +97,8 @@ else:
 if memory_size == int(1E3):
 	logdir = f'testing/Training_{network_type.split("_")[0]}_RW_{reward_function.split("_")[0]}_' + '_'.join(map(str, reward_weights)) + args.extra_name
 else:
-	if n_explorers == 0 or n_cleaners == 0 and not greedy_training:
-		logdir = f'Training/T_curriculum_RW_{reward_function.split("_")[0]}_' + '_'.join(map(str, reward_weights)) + f'_{int(episodes/1000)}k_ep{epsilon}_hu{int(target_update/1000)}k_te{train_every}' + args.extra_name
-	elif n_explorers == 0 or n_cleaners == 0 and greedy_training:
-		logdir = f'Training/T_greedy_curriculum_RW_{reward_function.split("_")[0]}_' + '_'.join(map(str, reward_weights)) + f'_{int(episodes/1000)}k_ep{epsilon}_hu{int(target_update/1000)}k_te{train_every}' + args.extra_name
+	if n_explorers == 0 or n_cleaners == 0:
+		logdir = f'Training/T{"_greedy" if greedy_training else ""}_curriculum_RW_{reward_function.split("_")[0]}_' + '_'.join(map(str, reward_weights)) + f'_{int(episodes/1000)}k{f"+{int(extra_episodes/1000)}k" if extra_episodes>0 else ""}_ep{epsilon}_hu{int(target_update/1000)}k_te{train_every}' + args.extra_name
 	else:
 		logdir = f'Training/Trning_RW_{reward_function.split("_")[0]}_' + '_'.join(map(str, reward_weights)) + args.extra_name
 
@@ -129,4 +129,4 @@ network = MultiAgentDuelingDQNAgent(env=env,
 									curriculum_learning_team=None, # env.cleaners_team_id,
 )
 
-network.train(episodes=episodes) 
+network.train(episodes=episodes, extra_episodes=extra_episodes) 

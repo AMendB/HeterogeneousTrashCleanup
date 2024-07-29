@@ -403,10 +403,11 @@ class MultiAgentDuelingDQNAgent:
 
 		print('Prewarming finished.')
 
-	def train(self, episodes):
+	def train(self, episodes, extra_episodes=0):
 		""" Train the agents. """
 
 		self.episodes = episodes
+		self.extra_episodes = extra_episodes
 
 		# Prewarm memory #
 		if self.prewarm_percentage > 0:
@@ -443,7 +444,7 @@ class MultiAgentDuelingDQNAgent:
 			record = [-np.inf]*self.env.n_teams
 			eval_record = [-np.inf]*self.env.n_teams
 
-			for episode in trange(1, int(episodes) + 1):
+			for episode in trange(1, int(episodes+extra_episodes) + 1):
 
 				done = {i:False for i in range(self.env.n_agents)}
 				states = self.env.reset_env()
@@ -1019,6 +1020,7 @@ class MultiAgentDuelingDQNAgent:
 			"target_update": self.target_update,
 			"prewarm_percentage": self.prewarm_percentage,
 			"episodes": self.episodes,
+			"extra_episodes": self.extra_episodes,
 			"memory_size": self.memory_size,
 		}
 
