@@ -100,7 +100,7 @@ else:
 	if n_explorers == 0 or n_cleaners == 0:
 		logdir = f'Training/T{"_greedy" if greedy_training else ""}_curriculum_RW_{reward_function.split("_")[0]}_' + '_'.join(map(str, reward_weights)) + f'_{int(episodes/1000)}k{f"+{int(extra_episodes/1000)}k" if extra_episodes>0 else ""}_ep{epsilon}_hu{int(target_update/1000)}k_te{train_every}' + args.extra_name
 	else:
-		logdir = f'Training/Trning_RW_{reward_function.split("_")[0]}_' + '_'.join(map(str, reward_weights)) + args.extra_name
+		logdir = f'Training/T{"_greedy" if greedy_training else ""}_RW_{reward_function.split("_")[0]}_' + '_'.join(map(str, reward_weights)) + f'_{int(episodes/1000)}k{f"+{int(extra_episodes/1000)}k" if extra_episodes>0 else ""}_ep{epsilon}_hu{int(target_update/1000)}k_te{train_every}' + args.extra_name
 
 network = MultiAgentDuelingDQNAgent(env=env,
 									memory_size=memory_size, 
