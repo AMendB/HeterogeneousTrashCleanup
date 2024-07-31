@@ -570,12 +570,12 @@ class MultiAgentCleanupEnvironment:
 		self.steps += 1
 
 		# Process movement actions. There are actions only for active agents #
-		collisions_mask_dict = self.fleet.move_fleet(actions)
+		self.collisions_mask_dict = self.fleet.move_fleet(actions)
 
 		# Update movement of trash map if dynamic and execute cleaning process #
 		self.update_real_trash_map(actions)
 
-		if self.fleet.fleet_collisions > 0 and any(collisions_mask_dict.values()):
+		if self.fleet.fleet_collisions > 0 and any(self.collisions_mask_dict.values()) and self.steps >= self.max_steps_per_episode -1:
 			print("Nº collision:" + str(self.fleet.fleet_collisions))
 		
 		# Update the redundancy mask after movements #
@@ -915,9 +915,8 @@ class MultiAgentCleanupEnvironment:
 			# CLEANERS TEAM #
 			cleaners_alive = [idx for idx, agent_team in enumerate(self.team_id_of_each_agent) if agent_team == self.cleaners_team_id and self.active_agents[idx]]
 			r_for_cleaned_trash = np.array([len(self.trashes_removed_per_agent[idx]) if idx in cleaners_alive and idx in self.trashes_removed_per_agent else 0 for idx in range(self.n_agents)])
+			penalization_for_not_clean_reachable_trash = [-5 if idx in cleaners_alive and self.check_if_there_was_reachable_trash(agent.previous_agent_position) and not idx in self.trashes_removed_per_agent else 0 for idx, agent in enumerate(self.fleet.vehicles)]
 			# r_cleaners_for_being_with_the_trash = np.array([1 if self.model_trash_map[agent.influence_mask.astype(bool)].sum() > 0 and idx in cleaners_alive else 0 for idx, agent in enumerate(self.fleet.vehicles)])
-			# penalization_for_not_cleaning_when_trash = np.array([-10 if idx in cleaners_alive and actions[idx] != 9 and self.model_trash_map[agent.previous_agent_position[0], agent.previous_agent_position[1]] > 0 else 0 for idx, agent in enumerate(self.fleet.vehicles)])
-			
 			# # If there is known trash, reward for taking action that approaches to trash #
 			# if np.any(self.model_trash_map):
 			# 	r_for_taking_action_that_approaches_to_trash = np.array([self.get_distance_to_closest_known_trash(agent.previous_agent_position, previous_model=True) - 
@@ -948,10 +947,34 @@ class MultiAgentCleanupEnvironment:
 			rewards = np.zeros(self.n_agents) \
 					  + r_for_cleaned_trash * self.reward_weights[self.cleaners_team_id] \
 					  + r_for_taking_action_that_approaches_to_trash \
+					  + penalization_for_not_clean_reachable_trash \
 					#   + penalization_for_not_cleaning_when_trash
 					#   + r_for_discover_trash * ponderation_for_discover_trash \
 					#   + r_for_discover_new_area * ponderation_for_discover_new_area \
 					#   + r_cleaners_for_being_with_the_trash * self.reward_weights[3]\		
+
+		elif self.reward_function == 'backtosimpledistanceppo':
+			# ALL TEAMS #
+			# Penalization for collision #
+			penalization_for_collision = np.array([-10 if idx in self.collisions_mask_dict and self.collisions_mask_dict[idx] else 0 for idx in range(self.n_agents)])
+			
+			# CLEANERS TEAM #
+			cleaners_alive = [idx for idx, agent_team in enumerate(self.team_id_of_each_agent) if agent_team == self.cleaners_team_id and self.active_agents[idx]]
+			r_for_cleaned_trash = np.array([len(self.trashes_removed_per_agent[idx]) if idx in cleaners_alive and idx in self.trashes_removed_per_agent else 0 for idx in range(self.n_agents)])
+
+			# If there is known trash, reward trough distance to closer trash #
+			if np.any(self.model_trash_map):
+				actual_distance_to_closest_trash = [self.get_distance_to_closest_known_trash(agent.actual_agent_position) if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles)]
+				r_for_taking_action_that_approaches_to_trash = np.array([self.get_distance_to_closest_known_trash(agent.previous_agent_position, previous_model=True) - actual_distance_to_closest_trash[idx] if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles)])
+				if np.any(self.previous_trashes_removed_per_agent):
+					r_for_taking_action_that_approaches_to_trash = np.array([self.get_distance_to_closest_known_trash(agent.previous_agent_position, previous_model=False) - actual_distance_to_closest_trash[idx] if idx in self.previous_trashes_removed_per_agent else r_for_taking_action_that_approaches_to_trash[idx] for idx, agent in enumerate(self.fleet.vehicles)])
+			else:
+				r_for_taking_action_that_approaches_to_trash = np.zeros(self.n_agents)
+
+			rewards = np.zeros(self.n_agents) \
+					  + r_for_cleaned_trash * self.reward_weights[self.cleaners_team_id] \
+					  + r_for_taking_action_that_approaches_to_trash \
+					  + penalization_for_collision \
 
 		return {agent_id: rewards[agent_id] if self.active_agents[agent_id] else 0 for agent_id in range(self.n_agents)}
 	
@@ -975,6 +998,25 @@ class MultiAgentCleanupEnvironment:
 			trash_positions = np.argwhere(self.model_trash_map > 0)
 
 		return np.min(np.linalg.norm(trash_positions - position, axis = 1))
+	
+	def check_if_there_was_reachable_trash(self, previous_position):
+		""" Return if there was a reachable trash in the previous step, and it is still there. """
+		
+		previous_trash_positions = np.argwhere(self.previous_model_trash_map > 0)
+		distances_to_previous_trashes = np.linalg.norm(previous_trash_positions - previous_position, axis = 1)
+		previous_reachable_trash_positions = previous_trash_positions[distances_to_previous_trashes < 1.5]
+
+		actual_trash_positions_viewed_from_past = np.argwhere(self.model_trash_map > 0)
+		distances_to_actual_trashes_viewed_from_past = np.linalg.norm(actual_trash_positions_viewed_from_past - previous_position, axis = 1)
+		actual_reachable_trash_positions_viewed_from_past = actual_trash_positions_viewed_from_past[distances_to_actual_trashes_viewed_from_past < 1.5] # 1,5 ~ np.sqrt(2*self.movement_length_by_team[self.cleaners_team_id])
+
+		if len(previous_reachable_trash_positions) > 0:
+			all_present = np.all([np.any(np.all(position == actual_reachable_trash_positions_viewed_from_past, axis=1))
+						for position in previous_reachable_trash_positions])
+		else:
+			all_present = False
+		
+		return all_present
 
 	def get_active_cleaners_positions(self):
 		

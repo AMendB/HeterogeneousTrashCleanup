@@ -61,3 +61,6 @@ class EnvWrapper:
     
     def get_percentage_cleaned_trash(self):
         return self.env.get_percentage_cleaned_trash()
+    
+    def save_environment_configuration(self, path):
+        self.env.save_environment_configuration(path)

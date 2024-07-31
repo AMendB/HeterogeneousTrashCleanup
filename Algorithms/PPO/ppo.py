@@ -174,14 +174,16 @@ class PPO():
 		
 		self.memory.clear_buffer()  # Clear the memory buffer
 
-		self.mean_rewards_sample = []
-		self.mean_cleaned_sample = []
+		self.average_acc_rewards_sample = []
+		self.average_cleaned_sample = []
 		  
 		for n_traj in range(self.max_samples):
       
 			states = self.env.reset()
 			states = torch.FloatTensor(states).to(self.device)
-		
+
+			episode_mean_among_agents_acc_rw = 0
+
 			for t in range(self.max_steps):
 				# Get the actions and logprobs from the policy
 				
@@ -192,8 +194,7 @@ class PPO():
 				# Take a step in the environment
 				actions_np = actions.cpu().numpy()
 				next_states, rewards, dones = self.env.step(actions_np)
-				self.mean_rewards_sample.append(np.mean(rewards))
-				self.mean_cleaned_sample.append(self.env.get_percentage_cleaned_trash())
+				episode_mean_among_agents_acc_rw += np.mean(rewards)
 				next_states = torch.FloatTensor(next_states).to(self.device)
 				
 				# Store the experiences in the memory buffer
@@ -201,13 +202,14 @@ class PPO():
 					self.memory.insert_experience(agent_id=agent_id, sample_num=n_traj, t=t, action=actions[agent_id].item(), state=states[agent_id].cpu().numpy(), logprob=logprobs[agent_id].item(), reward=rewards[agent_id].item(), done=dones[agent_id], state_value=state_values[agent_id].item())
 				
 				states = next_states
-		self.mean_rewards_sample = np.mean(self.mean_rewards_sample)
-		self.mean_cleaned_sample = np.mean(self.mean_cleaned_sample)
-		print(f"Mean rewards in samples: {self.mean_rewards_sample}.")
-		print(f"Mean cleaned in samples: {self.mean_cleaned_sample/100}%.")
+			self.average_acc_rewards_sample.append(episode_mean_among_agents_acc_rw)
+			self.average_cleaned_sample.append(self.env.get_percentage_cleaned_trash())
 
-								   
-		
+		self.average_acc_rewards_sample = np.mean(self.average_acc_rewards_sample) # average accumulated mean rewards among all agents
+		self.average_cleaned_sample = np.mean(self.average_cleaned_sample)
+		print(f"Average mean acc rewards among all agents in samples: {self.average_acc_rewards_sample}.")
+		print(f"Average cleaned in samples: {self.average_cleaned_sample*100}%.")
+
 	def update_model(self, memory, iteration):
 		""" Update the policy using the PPO algorithm. """
 		
@@ -286,16 +288,18 @@ class PPO():
 			loss_entropy.append(entropy_loss.mean().item())
 
 		if self.log:
-			self.writer.add_scalar("Loss/Clipped Surrogate", np.mean(loss_policy), iteration)
-			self.writer.add_scalar("Loss/Value Loss", np.mean(loss_value), iteration)
-			self.writer.add_scalar("Loss/Entropy Loss", np.mean(loss_entropy), iteration)
-			self.writer.add_scalar("Value/Max estimated Value", np.max(max_estimated_values), iteration)
-			self.writer.add_scalar("Mean reward sample", self.mean_rewards_sample, iteration)
-			self.writer.add_scalar("Mean cleaned sample", self.mean_cleaned_sample, iteration)
+			self.writer.add_scalar("Train/Loss Clipped Surrogate", np.mean(loss_policy), iteration)
+			self.writer.add_scalar("Train/Value Loss", np.mean(loss_value), iteration)
+			self.writer.add_scalar("Train/Entropy Loss", np.mean(loss_entropy), iteration)
+			self.writer.add_scalar("Train/Max estimated Value", np.max(max_estimated_values), iteration)
+			self.writer.add_scalar("Train/Mean acc reward sample", self.average_acc_rewards_sample, iteration)
+			self.writer.add_scalar("Train/Mean cleaned sample", self.average_cleaned_sample, iteration)
 				
 		
 	def train(self, n_iterations):
 		""" Train the policy using the PPO algorithm. """
+
+		self.env.save_environment_configuration(self.logdir)
 		
 		BEST = -np.inf
 		for iteration in trange(n_iterations):
@@ -309,16 +313,16 @@ class PPO():
 			MEAN = np.mean(rewards)
 			mean_cleaned_percentage = np.mean(cleaned_percentage)
 			if self.log:
-				self.writer.add_scalar("Avg. Eval. Reward", MEAN, iteration)
-				self.writer.add_scalar("Avg. Eval. CleanedP", mean_cleaned_percentage, iteration)
+				self.writer.add_scalar("Eval/Average Reward", MEAN, iteration)
+				self.writer.add_scalar("Eval/Average Cleaned Percentage", mean_cleaned_percentage, iteration)
 			if MEAN > BEST:
 				BEST = MEAN
 				if self.log:
 					print(f"Saving new best model at iteration {iteration} with reward {MEAN}.")
-					torch.save(self.policy.state_dict(), "best_model.pth")
+					torch.save(self.policy.state_dict(), self.logdir + "/BestPolicy.pth")
 		
 		if self.log:
-			torch.save(self.policy.state_dict(), "final_model.pth")
+			torch.save(self.policy.state_dict(), self.logdir + "/Final_Policy.pth")
 			self.writer.close()
 	
 	@torch.no_grad()
@@ -330,18 +334,23 @@ class PPO():
 		states = torch.FloatTensor(states).to(self.device)
 		done = np.array([False]*self.n_agents)
   
-		accumulated_reward = 0
+		accumulated_reward_among_agents = 0
 		percentage_cleaned = 0
   
 		while not np.any(done):
 			action, _, _ = self.act(states, greedy=greedy)
 			next_states, reward, done = self.env.step(action.cpu().numpy())
 			states = torch.FloatTensor(next_states).to(self.device)
-			accumulated_reward += np.sum(reward)
+			accumulated_reward_among_agents += np.sum(reward)
 			if render:
 				self.env.render()
 
 		percentage_cleaned = self.env.get_percentage_cleaned_trash()
 		self.policy.train()
   
-		return accumulated_reward, percentage_cleaned
+		return accumulated_reward_among_agents, percentage_cleaned
+	
+	def load_model(self, path):
+		""" Load the model from a given path """
+
+		self.policy.load_state_dict(torch.load(path, map_location=self.device))

@@ -950,7 +950,7 @@ class MultiAgentDuelingDQNAgent:
 			for team_id in self.env.teams_ids:
 				if self.env.number_of_agents_by_team[team_id] > 0:
 					self.dqn[team_id].train()
-					print(f'\n Average eval reward team {team_id}: {total_reward[team_id]/eval_episodes}. Episode average length: {total_length[team_id] / eval_episodes}. Mean cleaned: {np.mean(cleaned_percentage)}%')
+					print(f'\n Average eval reward team {team_id}: {total_reward[team_id]/eval_episodes}. Episode average length: {total_length[team_id] / eval_episodes}. Mean cleaned: {np.mean(cleaned_percentage)*100}%')
 
 		else:
 			self.dqn.eval()
