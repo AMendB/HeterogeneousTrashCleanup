@@ -11,7 +11,7 @@ from Algorithms.DRL.Agent.DuelingDQNAgent import MultiAgentDuelingDQNAgent
 from Environment.EnvPPOWrapper import EnvWrapper
 from Algorithms.PPO.ppo import PPO
 
-path_to_training_folder = 'Training/T_greedy_curriculum_RW_backtosimpledistance_0_50_0_0_80k_ep0.8_hu6k_te15/'
+path_to_training_folder = 'Training/PPO/T_PPO_curriculum_RW_backtosimpledistance_0_50_0_0_1k/'
 # path_to_training_folder = 'testing/T_greedy_curriculum_RW_backtosimpledistance_0_50_0_0_60k_ep0.5_hu6k_te5/'
 # path_to_training_folder = 'DoneTrainings/Trning_RW_backtosimple_1_20_2_10_20k_curriculum_cleaners/'
 
@@ -109,6 +109,7 @@ else:
 			device='cuda:0')
 
 	ppo.load_model(path_to_training_folder + 'Final_Policy.pth')
+	# ppo.load_model(path_to_training_folder + 'BestPolicy.pth')
 
 	acc_rewards_among_agents, cleaned_percentages = map(list, zip(*[ppo.evaluate_env() for _ in range(RUNS)]))
 

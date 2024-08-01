@@ -575,7 +575,7 @@ class MultiAgentCleanupEnvironment:
 		# Update movement of trash map if dynamic and execute cleaning process #
 		self.update_real_trash_map(actions)
 
-		if self.fleet.fleet_collisions > 0 and any(self.collisions_mask_dict.values()) and self.steps >= self.max_steps_per_episode -1:
+		if self.fleet.fleet_collisions > 0 and any(self.collisions_mask_dict.values()) and self.steps == self.max_steps_per_episode:
 			print("Nº collision:" + str(self.fleet.fleet_collisions))
 		
 		# Update the redundancy mask after movements #
