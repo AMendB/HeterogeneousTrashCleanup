@@ -13,7 +13,7 @@ parser.add_argument('-net', '--network_type', type=str, default='independent_net
 parser.add_argument('-dev', '--device', type=str, default='cuda:0', help='Device to use: cuda:x, cpu')
 parser.add_argument('--iterations', type=int, default=1000, help='Number of iterations to train the network.')
 parser.add_argument('--extra_name', type=str, default='', help='Extra name to add to the logdir.')
-parser.add_argument('--preload_path', type=str, default='testing/PPO/T_PPO_curriculum_RW_backtosimpledistance_0_50_0_0_10k_cortada_a6k/BestPolicy.pth', help='Path to preload a model.')
+parser.add_argument('--preload_path', type=str, default='', help='Path to preload a model.')
 args = parser.parse_args()
 
 # Selection of PARAMETERS TO TRAIN #

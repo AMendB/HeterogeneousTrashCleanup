@@ -361,7 +361,7 @@ class MultiAgentCleanupEnvironment:
 		self.redundancy_mask = np.sum([agent.influence_mask for idx, agent in enumerate(self.fleet.vehicles) if self.active_agents[idx]], axis = 0)
 
 		# Info for training among others # 
-		navigation_map_in_states = False
+		navigation_map_in_states = True
 		if navigation_map_in_states is True:
 			if self.n_agents == 1 and not self.dynamic:
 				self.observation_space_shape = (3, *self.scenario_map.shape)
