@@ -111,9 +111,9 @@ else:
 	ppo.load_model(path_to_training_folder + 'Final_Policy.pth')
 	# ppo.load_model(path_to_training_folder + 'BestPolicy.pth')
 
-	acc_rewards_among_agents, cleaned_percentages = map(list, zip(*[ppo.evaluate_env() for _ in range(RUNS)]))
+	acc_rewards_among_agents, cleaned_percentages, n_collisions = map(list, zip(*[ppo.evaluate_env() for _ in range(RUNS)]))
 
-	print(f'Average reward: {np.mean(acc_rewards_among_agents)}, with a cleaned percentage of {np.mean(cleaned_percentages)*100}%')
+	print(f'Average reward: {np.mean(acc_rewards_among_agents)}, with a cleaned percentage of {np.mean(cleaned_percentages)*100}%, mean collisions: {np.mean(n_collisions)}')
 
 
 

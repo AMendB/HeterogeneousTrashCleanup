@@ -7,12 +7,13 @@ import numpy as np
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-rw', '--reward_function', type=str, default='backtosimplegauss', help='Reward function to use: basic_reward, extended_reward, backtosimple')
+parser.add_argument('-rw', '--reward_function', type=str, default='backtosimpledistanceppo', help='Reward function to use: basic_reward, extended_reward, backtosimple')
 parser.add_argument('-w', '--reward_weights', type=int, nargs='+', default=[1, 25, 2, 10], help='Reward weights for the reward function.')
 parser.add_argument('-net', '--network_type', type=str, default='independent_networks_per_team', help='Type of network to use: independent_networks_per_team, shared_network')
 parser.add_argument('-dev', '--device', type=str, default='cuda:0', help='Device to use: cuda:x, cpu')
 parser.add_argument('--iterations', type=int, default=1000, help='Number of iterations to train the network.')
 parser.add_argument('--extra_name', type=str, default='', help='Extra name to add to the logdir.')
+parser.add_argument('--preload_path', type=str, default='testing/PPO/T_PPO_curriculum_RW_backtosimpledistance_0_50_0_0_10k_cortada_a6k/BestPolicy.pth', help='Path to preload a model.')
 args = parser.parse_args()
 
 # Selection of PARAMETERS TO TRAIN #
@@ -21,6 +22,7 @@ reward_function = args.reward_function
 reward_weights = tuple(args.reward_weights) 
 network_type = args.network_type
 device = args.device
+preload_path = args.preload_path
 
 
 
@@ -103,4 +105,6 @@ ppo = PPO(env=env,
 		  log=True, 
 		  logdir=logdir, 
 		  device=device)
+if preload_path:
+	ppo.load_model(preload_path)
 ppo.train(n_iterations=iterations)

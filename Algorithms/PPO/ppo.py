@@ -176,39 +176,47 @@ class PPO():
 
 		self.average_acc_rewards_sample = []
 		self.average_cleaned_sample = []
+		self.average_collisions = []
 		  
 		for n_traj in range(self.max_samples):
       
 			states = self.env.reset()
 			states = torch.FloatTensor(states).to(self.device)
+			dones = np.array([False]*self.n_agents)
 
 			episode_mean_among_agents_acc_rw = 0
 
 			for t in range(self.max_steps):
-				# Get the actions and logprobs from the policy
-				
-				# Act for each agent # 
-				
-				actions, logprobs, state_values = self.act(states)
-				
-				# Take a step in the environment
-				actions_np = actions.cpu().numpy()
-				next_states, rewards, dones = self.env.step(actions_np)
-				episode_mean_among_agents_acc_rw += np.mean(rewards)
-				next_states = torch.FloatTensor(next_states).to(self.device)
-				
-				# Store the experiences in the memory buffer
-				for agent_id in range(self.n_agents):
-					self.memory.insert_experience(agent_id=agent_id, sample_num=n_traj, t=t, action=actions[agent_id].item(), state=states[agent_id].cpu().numpy(), logprob=logprobs[agent_id].item(), reward=rewards[agent_id].item(), done=dones[agent_id], state_value=state_values[agent_id].item())
-				
-				states = next_states
+				if not np.all(dones):
+					# Get the actions and logprobs from the policy
+					
+					# Act for each agent # 
+					
+					actions, logprobs, state_values = self.act(states)
+					
+					# Take a step in the environment
+					actions_np = actions.cpu().numpy()
+					next_states, rewards, dones = self.env.step(actions_np)
+					episode_mean_among_agents_acc_rw += np.mean(rewards)
+					next_states = torch.FloatTensor(next_states).to(self.device)
+					
+					# Store the experiences in the memory buffer
+					for agent_id in range(self.n_agents):
+						self.memory.insert_experience(agent_id=agent_id, sample_num=n_traj, t=t, action=actions[agent_id].item(), state=states[agent_id].cpu().numpy(), logprob=logprobs[agent_id].item(), reward=rewards[agent_id].item(), done=dones[agent_id], state_value=state_values[agent_id].item())
+					
+					states = next_states
+				else:
+					break
 			self.average_acc_rewards_sample.append(episode_mean_among_agents_acc_rw)
 			self.average_cleaned_sample.append(self.env.get_percentage_cleaned_trash())
+			self.average_collisions.append(self.env.get_n_collisions())
 
 		self.average_acc_rewards_sample = np.mean(self.average_acc_rewards_sample) # average accumulated mean rewards among all agents
-		self.average_cleaned_sample = np.mean(self.average_cleaned_sample)
+		self.average_cleaned_sample = np.mean(self.average_cleaned_sample)*100
+		self.average_collisions = np.mean(self.average_collisions)
 		print(f"Average mean acc rewards among all agents in samples: {self.average_acc_rewards_sample}.")
-		print(f"Average cleaned in samples: {self.average_cleaned_sample*100}%.")
+		print(f"Average cleaned in samples: {self.average_cleaned_sample}%.")
+		print(f"Average collisions in samples: {self.average_collisions}.")
 
 	def update_model(self, memory, iteration):
 		""" Update the policy using the PPO algorithm. """
@@ -288,12 +296,13 @@ class PPO():
 			loss_entropy.append(entropy_loss.mean().item())
 
 		if self.log:
-			self.writer.add_scalar("Train/Loss Clipped Surrogate", np.mean(loss_policy), iteration)
-			self.writer.add_scalar("Train/Value Loss", np.mean(loss_value), iteration)
-			self.writer.add_scalar("Train/Entropy Loss", np.mean(loss_entropy), iteration)
-			self.writer.add_scalar("Train/Max estimated Value", np.max(max_estimated_values), iteration)
-			self.writer.add_scalar("Train/Mean acc reward sample", self.average_acc_rewards_sample, iteration)
-			self.writer.add_scalar("Train/Mean cleaned sample", self.average_cleaned_sample, iteration)
+			self.writer.add_scalar("Train/Loss_Clipped_Surrogate", np.mean(loss_policy), iteration)
+			self.writer.add_scalar("Train/Value_Loss", np.mean(loss_value), iteration)
+			self.writer.add_scalar("Train/Entropy_Loss", np.mean(loss_entropy), iteration)
+			self.writer.add_scalar("Train/Max_estimated_Value", np.max(max_estimated_values), iteration)
+			self.writer.add_scalar("Train/Average_acc_reward_sample", self.average_acc_rewards_sample, iteration)
+			self.writer.add_scalar("Train/Average_cleaned_sample", self.average_cleaned_sample, iteration)
+			self.writer.add_scalar("Train/Average_collisions_sample", self.average_collisions, iteration)
 				
 		
 	def train(self, n_iterations):
@@ -309,12 +318,14 @@ class PPO():
 			t0 = time.time()
 			self.update_model(self.memory, iteration)
 			print("Time to update model: ", time.time() - t0)
-			rewards, cleaned_percentage = map(list, zip(*[self.evaluate_env() for _ in range(self.eval_episodes)]))
+			rewards, cleaned_percentage, n_collisions = map(list, zip(*[self.evaluate_env() for _ in range(self.eval_episodes)]))
 			MEAN = np.mean(rewards)
 			mean_cleaned_percentage = np.mean(cleaned_percentage)
+			mean_n_collisions = np.mean(n_collisions)
 			if self.log:
-				self.writer.add_scalar("Eval/Average Reward", MEAN, iteration)
-				self.writer.add_scalar("Eval/Average Cleaned Percentage", mean_cleaned_percentage, iteration)
+				self.writer.add_scalar("Eval/Average_Reward", MEAN, iteration)
+				self.writer.add_scalar("Eval/Average_Cleaned_Percentage", mean_cleaned_percentage, iteration)
+				self.writer.add_scalar("Eval/Average_Collisions", mean_n_collisions, iteration)
 			if MEAN > BEST:
 				BEST = MEAN
 				if self.log:
@@ -346,9 +357,10 @@ class PPO():
 				self.env.render()
 
 		percentage_cleaned = self.env.get_percentage_cleaned_trash()
+		n_collisions = self.env.get_n_collisions()
 		self.policy.train()
   
-		return accumulated_reward_among_agents, percentage_cleaned
+		return accumulated_reward_among_agents, percentage_cleaned, n_collisions
 	
 	def load_model(self, path):
 		""" Load the model from a given path """

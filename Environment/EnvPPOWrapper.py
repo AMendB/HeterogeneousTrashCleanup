@@ -62,5 +62,8 @@ class EnvWrapper:
     def get_percentage_cleaned_trash(self):
         return self.env.get_percentage_cleaned_trash()
     
+    def get_n_collisions(self):
+        return self.env.fleet.fleet_collisions
+    
     def save_environment_configuration(self, path):
         self.env.save_environment_configuration(path)
