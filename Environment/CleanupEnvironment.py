@@ -361,7 +361,7 @@ class MultiAgentCleanupEnvironment:
 		self.redundancy_mask = np.sum([agent.influence_mask for idx, agent in enumerate(self.fleet.vehicles) if self.active_agents[idx]], axis = 0)
 
 		# Info for training among others # 
-		navigation_map_in_states = True
+		navigation_map_in_states = False
 		if navigation_map_in_states is True:
 			if self.n_agents == 1 and not self.dynamic:
 				self.observation_space_shape = (3, *self.scenario_map.shape)
@@ -673,7 +673,7 @@ class MultiAgentCleanupEnvironment:
 				"""Each key from states dictionary is an agent, all states associated to that agent are concatenated in its value:"""
 				states[agent_id] = np.concatenate(( 
 					# obstacle_map[np.newaxis], # Channel 0 -> Known boundaries/navigation map
-					self.visited_areas_map[np.newaxis], # Channel 0 -> Map with visited positions. 0 non visitable, 1 non visited, 0.5 visited.
+					# self.visited_areas_map[np.newaxis], # Channel 0 -> Map with visited positions. 0 non visitable, 1 non visited, 0.5 visited.
 					(self.model_trash_map/(np.max(self.model_trash_map)+1E-5))[np.newaxis], # Channel 1 -> Trash model map (normalized)
 					# (self.previous_model_trash_map/np.max(self.previous_model_trash_map))[np.newaxis], # Channel 2 -> Previous trash model map (normalized)
 					# (self.previousprevious_model_trash_map/np.max(self.previousprevious_model_trash_map))[np.newaxis], # Channel 3 -> Previous previous trash model map (normalized)
