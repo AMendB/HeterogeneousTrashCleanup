@@ -967,7 +967,7 @@ class MultiAgentCleanupEnvironment:
 		elif self.reward_function == 'backtosimpledistanceppo':
 			# ALL TEAMS #
 			# Penalization for collision #
-			penalization_for_collision = np.array([-10 if idx in self.collisions_mask_dict and self.collisions_mask_dict[idx] else 0 for idx in range(self.n_agents)])
+			penalization_for_collision = np.array([-50 if idx in self.collisions_mask_dict and self.collisions_mask_dict[idx] else 0 for idx in range(self.n_agents)])
 			
 			# CLEANERS TEAM #
 			cleaners_alive = [idx for idx, agent_team in enumerate(self.team_id_of_each_agent) if agent_team == self.cleaners_team_id and self.active_agents[idx]]

@@ -86,7 +86,7 @@ else:
 	independent_networks_per_team = False
 
 if n_explorers == 0 or n_cleaners == 0:
-	logdir = f'Training/T_PPO_curriculum_RW_{reward_function.split("_")[0]}_' + '_'.join(map(str, reward_weights)) + f'_{int(iterations/1000)}' + args.extra_name
+	logdir = f'Training/T_PPO_curriculum_RW_{reward_function.split("_")[0]}_' + '_'.join(map(str, reward_weights)) + f'_{int(iterations/1000)}k' + args.extra_name
 else:
 	logdir = f'Training/T_PPO_RW_{reward_function.split("_")[0]}_' + '_'.join(map(str, reward_weights)) + f'_{int(iterations/1000)}k' + args.extra_name
 
