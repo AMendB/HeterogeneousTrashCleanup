@@ -65,5 +65,8 @@ class EnvWrapper:
     def get_n_collisions(self):
         return self.env.fleet.fleet_collisions
     
+    def get_n_steps(self):
+        return self.env.steps
+    
     def save_environment_configuration(self, path):
         self.env.save_environment_configuration(path)

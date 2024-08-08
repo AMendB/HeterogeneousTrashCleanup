@@ -177,6 +177,7 @@ class PPO():
 		self.average_acc_rewards_sample = []
 		self.average_cleaned_sample = []
 		self.average_collisions = []
+		self.average_steps_per_episode = []
 		  
 		for n_traj in range(self.max_samples):
       
@@ -210,10 +211,12 @@ class PPO():
 			self.average_acc_rewards_sample.append(episode_mean_among_agents_acc_rw)
 			self.average_cleaned_sample.append(self.env.get_percentage_cleaned_trash())
 			self.average_collisions.append(self.env.get_n_collisions())
+			self.average_steps_per_episode.append(t)
 
 		self.average_acc_rewards_sample = np.mean(self.average_acc_rewards_sample) # average accumulated mean rewards among all agents
 		self.average_cleaned_sample = np.mean(self.average_cleaned_sample)*100
 		self.average_collisions = np.mean(self.average_collisions)
+		self.average_steps_per_episode = np.mean(self.average_steps_per_episode)
 		print(f"Average mean acc rewards among all agents in samples: {self.average_acc_rewards_sample}.")
 		print(f"Average cleaned in samples: {self.average_cleaned_sample}%.")
 		print(f"Average collisions in samples: {self.average_collisions}.")
@@ -303,6 +306,7 @@ class PPO():
 			self.writer.add_scalar("Train/Average_acc_reward_sample", self.average_acc_rewards_sample, iteration)
 			self.writer.add_scalar("Train/Average_cleaned_sample", self.average_cleaned_sample, iteration)
 			self.writer.add_scalar("Train/Average_collisions_sample", self.average_collisions, iteration)
+			self.writer.add_scalar("Train/Average_steps_per_episode", self.average_steps_per_episode, iteration)
 				
 		
 	def train(self, n_iterations):
@@ -318,14 +322,16 @@ class PPO():
 			t0 = time.time()
 			self.update_model(self.memory, iteration)
 			print("Time to update model: ", time.time() - t0)
-			rewards, cleaned_percentage, n_collisions = map(list, zip(*[self.evaluate_env() for _ in range(self.eval_episodes)]))
+			rewards, cleaned_percentage, n_collisions, n_steps = map(list, zip(*[self.evaluate_env() for _ in range(self.eval_episodes)]))
 			MEAN = np.mean(rewards)
 			mean_cleaned_percentage = np.mean(cleaned_percentage)
 			mean_n_collisions = np.mean(n_collisions)
+			mean_n_steps = np.mean(n_steps)
 			if self.log:
 				self.writer.add_scalar("Eval/Average_Reward", MEAN, iteration)
 				self.writer.add_scalar("Eval/Average_Cleaned_Percentage", mean_cleaned_percentage, iteration)
 				self.writer.add_scalar("Eval/Average_Collisions", mean_n_collisions, iteration)
+				self.writer.add_scalar("Eval/Average_Steps_Per_Episode", mean_n_steps, iteration)
 			if MEAN > BEST:
 				BEST = MEAN
 				if self.log:
@@ -358,9 +364,10 @@ class PPO():
 
 		percentage_cleaned = self.env.get_percentage_cleaned_trash()
 		n_collisions = self.env.get_n_collisions()
+		n_steps = self.env.get_n_steps()
 		self.policy.train()
   
-		return accumulated_reward_among_agents, percentage_cleaned, n_collisions
+		return accumulated_reward_among_agents, percentage_cleaned, n_collisions, n_steps
 	
 	def load_model(self, path):
 		""" Load the model from a given path """
