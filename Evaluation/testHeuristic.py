@@ -19,7 +19,7 @@ algorithms = [
 
 SEED = 3
 SHOW_RENDER = True
-RUNS = 25
+RUNS = 100
 
 
 # Set config #

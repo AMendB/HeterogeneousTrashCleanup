@@ -20,7 +20,7 @@ env_config = json.load(f)
 f.close()
 
 SEED = 3
-SHOW_PLOT_GRAPHICS = False
+SHOW_PLOT_GRAPHICS = True
 RUNS = 100
 
 

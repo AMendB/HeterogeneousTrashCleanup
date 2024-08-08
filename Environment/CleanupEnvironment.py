@@ -863,6 +863,7 @@ class MultiAgentCleanupEnvironment:
 			# CLEANERS TEAM #
 			cleaners_alive = [idx for idx, agent_team in enumerate(self.team_id_of_each_agent) if agent_team == self.cleaners_team_id and self.active_agents[idx]]
 			r_for_cleaned_trash = np.array([len(self.trashes_removed_per_agent[idx]) if idx in cleaners_alive and idx in self.trashes_removed_per_agent else 0 for idx in range(self.n_agents)])
+			penalization_for_not_clean_reachable_trash = [-10 if idx in cleaners_alive and self.check_if_there_was_reachable_trash(agent.previous_agent_position) and not idx in self.trashes_removed_per_agent else 0 for idx, agent in enumerate(self.fleet.vehicles)]
 			# r_cleaners_for_being_with_the_trash = np.array([1 if self.model_trash_map[agent.influence_mask.astype(bool)].sum() > 0 and idx in cleaners_alive else 0 for idx, agent in enumerate(self.fleet.vehicles)])
 			# penalization_for_not_cleaning_when_trash = np.array([-10 if idx in cleaners_alive and actions[idx] != 9 and self.model_trash_map[agent.previous_agent_position[0], agent.previous_agent_position[1]] > 0 else 0 for idx, agent in enumerate(self.fleet.vehicles)])
 			
@@ -876,7 +877,7 @@ class MultiAgentCleanupEnvironment:
 			
 			# If there is known trash, gaussian filter to estimate the probability distribution of the model_trash_map #
 			if np.any(self.model_trash_map):
-				gaussian_blurred_model_trash = gaussian_filter(self.model_trash_map, sigma=20, mode='constant', cval=0)
+				gaussian_blurred_model_trash = gaussian_filter(self.model_trash_map, sigma=10, mode='constant', cval=0)
 				gaussian_blurred_model_trash = (1-self.non_water_mask) * gaussian_blurred_model_trash/(np.max(gaussian_blurred_model_trash)+1E-5)
 				r_for_taking_action_that_approaches_to_trash = np.array([gaussian_blurred_model_trash[agent.actual_agent_position[0], agent.actual_agent_position[1]] if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles)])
 			else:
@@ -895,6 +896,7 @@ class MultiAgentCleanupEnvironment:
 			rewards = np.zeros(self.n_agents) \
 					  + r_for_cleaned_trash * self.reward_weights[self.cleaners_team_id] \
 					  + r_for_taking_action_that_approaches_to_trash \
+					  + penalization_for_not_clean_reachable_trash \
 					#   + penalization_for_not_cleaning_when_trash
 					#   + r_for_discover_trash * ponderation_for_discover_trash \
 					#   + r_for_discover_new_area * ponderation_for_discover_new_area \
@@ -915,7 +917,7 @@ class MultiAgentCleanupEnvironment:
 			# CLEANERS TEAM #
 			cleaners_alive = [idx for idx, agent_team in enumerate(self.team_id_of_each_agent) if agent_team == self.cleaners_team_id and self.active_agents[idx]]
 			r_for_cleaned_trash = np.array([len(self.trashes_removed_per_agent[idx]) if idx in cleaners_alive and idx in self.trashes_removed_per_agent else 0 for idx in range(self.n_agents)])
-			penalization_for_not_clean_reachable_trash = [-5 if idx in cleaners_alive and self.check_if_there_was_reachable_trash(agent.previous_agent_position) and not idx in self.trashes_removed_per_agent else 0 for idx, agent in enumerate(self.fleet.vehicles)]
+			penalization_for_not_clean_reachable_trash = [-10 if idx in cleaners_alive and self.check_if_there_was_reachable_trash(agent.previous_agent_position) and not idx in self.trashes_removed_per_agent else 0 for idx, agent in enumerate(self.fleet.vehicles)]
 			# r_cleaners_for_being_with_the_trash = np.array([1 if self.model_trash_map[agent.influence_mask.astype(bool)].sum() > 0 and idx in cleaners_alive else 0 for idx, agent in enumerate(self.fleet.vehicles)])
 			# # If there is known trash, reward for taking action that approaches to trash #
 			# if np.any(self.model_trash_map):

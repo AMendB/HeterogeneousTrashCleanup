@@ -108,13 +108,14 @@ class ParticleSwarmOptimizationFleet:
 
             # Get Q-values in term of nearness to action #
             q_values[agent_id] = 1/(np.linalg.norm(self.potential_movements_of_each_agent[agent_id] - self.velocities[agent_id], axis=1) + 0.01) # 0.01 to avoid division by zero
-            q_values[agent_id][8] = -10 # avoid staying in the same position
+            if self.potential_movements_of_each_agent[agent_id].shape[0] > 8:
+                q_values[agent_id][8] = -10 # avoid staying in the same position
 
-            # If cleaner and trash in pixel, q of the clean action is very high #
-            if self.team_id_of_each_agent[agent_id] == self.cleaners_team_id and self.env.model_trash_map[agent_position[0], agent_position[1]] > 0:
-                q_values[agent_id][9] = 100000
-            elif self.team_id_of_each_agent[agent_id] == self.cleaners_team_id:
-                q_values[agent_id][9] = -10 # avoid cleaning if there is no trash
+                # If cleaner and trash in pixel, q of the clean action is very high #
+                if self.team_id_of_each_agent[agent_id] == self.cleaners_team_id and self.env.model_trash_map[agent_position[0], agent_position[1]] > 0:
+                    q_values[agent_id][9] = 100000
+                elif self.team_id_of_each_agent[agent_id] == self.cleaners_team_id:
+                    q_values[agent_id][9] = -10 # avoid cleaning if there is no trash
 
         return q_values
     

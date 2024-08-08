@@ -421,7 +421,8 @@ class MultiAgentDuelingDQNAgent:
 		if self.independent_networks_per_team:
 			
 			# Percentage of experiences to store in memory #
-			percentage_store_in_memory = {team_id: (self.memory_size * (1-self.prewarm_percentage))/((episodes/2) * n_agents_in_team * self.env.max_steps_per_episode) for team_id, n_agents_in_team in enumerate(self.env.number_of_agents_by_team) if n_agents_in_team > 0}
+			fill_percent = 0.8
+			percentage_store_in_memory = {team_id: (self.memory_size * (1-self.prewarm_percentage))/((episodes*fill_percent) * n_agents_in_team * self.env.max_steps_per_episode) for team_id, n_agents_in_team in enumerate(self.env.number_of_agents_by_team) if n_agents_in_team > 0}
 
 			# Optimization steps per team #
 			steps_per_team = [0]*self.env.n_teams
