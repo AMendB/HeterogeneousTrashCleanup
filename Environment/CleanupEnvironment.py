@@ -361,25 +361,14 @@ class MultiAgentCleanupEnvironment:
 		self.redundancy_mask = np.sum([agent.influence_mask for idx, agent in enumerate(self.fleet.vehicles) if self.active_agents[idx]], axis = 0)
 
 		# Info for training among others # 
-		navigation_map_in_states = False
-		if navigation_map_in_states is True:
-			if self.n_agents == 1 and not self.dynamic:
-				self.observation_space_shape = (3, *self.scenario_map.shape)
-			elif self.n_agents > 1 and not self.dynamic:
-				self.observation_space_shape = (4, *self.scenario_map.shape)
-			elif self.n_agents == 1 and self.dynamic:
-				self.observation_space_shape = (5, *self.scenario_map.shape)
-			elif self.n_agents > 1 and self.dynamic:
-				self.observation_space_shape = (6, *self.scenario_map.shape)
-		else:
-			if self.n_agents == 1 and not self.dynamic:
-				self.observation_space_shape = (2, *self.scenario_map.shape)
-			elif self.n_agents > 1 and not self.dynamic:
-				self.observation_space_shape = (3, *self.scenario_map.shape)
-			elif self.n_agents == 1 and self.dynamic:
-				self.observation_space_shape = (4, *self.scenario_map.shape)
-			elif self.n_agents > 1 and self.dynamic:
-				self.observation_space_shape = (5, *self.scenario_map.shape)
+		if self.n_agents == 1 and not self.dynamic:
+			self.observation_space_shape = (3, *self.scenario_map.shape)
+		elif self.n_agents > 1 and not self.dynamic:
+			self.observation_space_shape = (4, *self.scenario_map.shape)
+		elif self.n_agents == 1 and self.dynamic:
+			self.observation_space_shape = (5, *self.scenario_map.shape)
+		elif self.n_agents > 1 and self.dynamic:
+			self.observation_space_shape = (6, *self.scenario_map.shape)
 		self.angle_set_of_each_agent = {idx: self.fleet.vehicles[idx].angle_set for idx in range(self.n_agents)}
 
 	def set_agents_id_info(self):
