@@ -120,7 +120,7 @@ network = MultiAgentDuelingDQNAgent(env=env,
 									concensus_actions=True,
 									device=device,
 									logdir=logdir,
-									eval_every=500, #1000
+									eval_every=250, #1000
 									eval_episodes=50, # 10
 									prewarm_percentage=0.2, # 20% of memory
 									noisy=False,
