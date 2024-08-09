@@ -848,6 +848,15 @@ class MultiAgentCleanupEnvironment:
 			          + penalization_for_cleaning_when_no_trash \
 					  + penalization_for_not_cleaning_when_trash
 		
+		elif self.reward_function == 'justclean':
+			
+			# CLEANERS TEAM #
+			cleaners_alive = [idx for idx, agent_team in enumerate(self.team_id_of_each_agent) if agent_team == self.cleaners_team_id and self.active_agents[idx]]
+			r_for_cleaned_trash = np.array([len(self.trashes_removed_per_agent[idx]) if idx in cleaners_alive and idx in self.trashes_removed_per_agent else 0 for idx in range(self.n_agents)])
+
+			rewards = np.zeros(self.n_agents) \
+					  + r_for_cleaned_trash * self.reward_weights[self.cleaners_team_id] \
+					
 		elif self.reward_function == 'backtosimplegauss':
 			# ALL TEAMS #
 			# changes_in_whole_model = np.abs(self.model_trash_map - self.previous_model_trash_map)
