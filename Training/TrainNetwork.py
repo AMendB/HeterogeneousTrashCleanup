@@ -18,6 +18,7 @@ parser.add_argument('-gt', '--greedy_training', type=bool, default=True, help='U
 parser.add_argument('-t', '--target_update', type=int, default=1000, help='Number of steps to update the target network.')
 parser.add_argument('--train_every', type=int, default=15, help='Number of steps to train the network.')
 parser.add_argument('--extra_name', type=str, default='', help='Extra name to add to the logdir.')
+parser.add_argument('--preload_path', type=str, default='', help='Path to preload a model.')
 args = parser.parse_args()
 
 # Selection of PARAMETERS TO TRAIN #
@@ -32,7 +33,7 @@ extra_episodes = args.extra_episodes
 greedy_training= args.greedy_training
 target_update = args.target_update
 train_every = args.train_every
-
+preload_path = args.preload_path
 
 
 
@@ -128,5 +129,6 @@ network = MultiAgentDuelingDQNAgent(env=env,
 									independent_networks_per_team = independent_networks_per_team,
 									curriculum_learning_team=None, # env.cleaners_team_id,
 )
-
+if preload_path:
+	network.load_model(preload_path)
 network.train(episodes=episodes, extra_episodes=extra_episodes) 

@@ -866,8 +866,12 @@ class MultiAgentDuelingDQNAgent:
 			for team_id in self.env.teams_ids:
 				if self.env.number_of_agents_by_team[team_id] > 0:
 					self.dqn[team_id].load_state_dict(torch.load(path_to_file[:-4] + f'_network{team_id}.pth', map_location=self.device))
+					# Load weights from dqn to dqn_target to be equal at the begining #
+					self.dqn_target[team_id].load_state_dict(self.dqn[team_id].state_dict())
 		else:
 			self.dqn.load_state_dict(torch.load(path_to_file, map_location=self.device))
+			# Load weights from dqn to dqn_target to be equal at the begining #
+			self.dqn_target.load_state_dict(self.dqn.state_dict())
 
 	def save_model(self, name='experiment.pth', team_id_index=None):
 		
