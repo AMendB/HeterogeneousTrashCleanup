@@ -19,6 +19,7 @@ parser.add_argument('-t', '--target_update', type=int, default=1000, help='Numbe
 parser.add_argument('--train_every', type=int, default=15, help='Number of steps to train the network.')
 parser.add_argument('--extra_name', type=str, default='', help='Extra name to add to the logdir.')
 parser.add_argument('--preload_path', type=str, default='', help='Path to preload a model.')
+parser.add_argument('--prewarm_percentage', type=float, default=0, help='Percentage of memory to prewarm with Greedy actions.')
 args = parser.parse_args()
 
 # Selection of PARAMETERS TO TRAIN #
@@ -34,6 +35,7 @@ greedy_training= args.greedy_training
 target_update = args.target_update
 train_every = args.train_every
 preload_path = args.preload_path
+prewarm_percentage = args.prewarm_percentage
 
 
 
@@ -123,7 +125,7 @@ network = MultiAgentDuelingDQNAgent(env=env,
 									logdir=logdir,
 									eval_every=250, #1000
 									eval_episodes=50, # 10
-									prewarm_percentage=0.2, # 20% of memory
+									prewarm_percentage=prewarm_percentage,
 									noisy=False,
 									distributional=False,
 									independent_networks_per_team = independent_networks_per_team,
