@@ -11,7 +11,7 @@ from Algorithms.DRL.Agent.DuelingDQNAgent import MultiAgentDuelingDQNAgent
 from Environment.EnvPPOWrapper import EnvWrapper
 from Algorithms.PPO.ppo import PPO
 
-path_to_training_folder = 'Training/T_PPO_curriculum_RW_backtosimpledistanceppo_0_50_0_0_40k/'
+path_to_training_folder = 'Training/T/T_PPO_curriculum_RW_backtosimpledistanceppo_0_50_0_0_40k/'
 # path_to_training_folder = 'testing/T_greedy_curriculum_RW_backtosimpledistance_0_50_0_0_60k_ep0.5_hu6k_te5/'
 # path_to_training_folder = 'DoneTrainings/Trning_RW_backtosimple_1_20_2_10_20k_curriculum_cleaners/'
 
@@ -20,7 +20,7 @@ env_config = json.load(f)
 f.close()
 
 SEED = 3
-SHOW_PLOT_GRAPHICS = True
+SHOW_PLOT_GRAPHICS = False
 RUNS = 100
 
 
