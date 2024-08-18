@@ -421,8 +421,8 @@ class MultiAgentDuelingDQNAgent:
 		if self.independent_networks_per_team:
 			
 			# Percentage of experiences to store in memory #
-			fill_percent = 0.5
-			percentage_store_in_memory = {team_id: (self.memory_size * (1-self.prewarm_percentage))/((episodes*fill_percent) * n_agents_in_team * self.env.max_steps_per_episode) for team_id, n_agents_in_team in enumerate(self.env.number_of_agents_by_team) if n_agents_in_team > 0}
+			buffer_filled_percentage = 0.5 # percentage of training when the buffer is filled
+			percentage_store_in_memory = {team_id: (self.memory_size * (1-self.prewarm_percentage))/((episodes*buffer_filled_percentage) * n_agents_in_team * self.env.max_steps_per_episode) for team_id, n_agents_in_team in enumerate(self.env.number_of_agents_by_team) if n_agents_in_team > 0}
 
 			# Optimization steps per team #
 			steps_per_team = [0]*self.env.n_teams
@@ -485,7 +485,8 @@ class MultiAgentDuelingDQNAgent:
 
 					# Store every observation for every agent #
 					for agent_id in next_states.keys():
-						if np.random.rand() < percentage_store_in_memory[self.env.team_id_of_each_agent[agent_id]]: # Store only a percentage of the experiences to fill the memory at the middle of the training
+						team_id = self.env.team_id_of_each_agent[agent_id]
+						if np.random.rand() < percentage_store_in_memory[team_id]:# or self.memory[team_id].size == self.memory_size: # Store only a percentage of the experiences to fill the memory at the middle of the training
 							transition = [states[agent_id],
 												actions[agent_id],
 												reward[agent_id],
@@ -586,7 +587,8 @@ class MultiAgentDuelingDQNAgent:
 
 		else:
 			# Percentage of experiences to store in memory #
-			percentage_store_in_memory = (self.memory_size * (1-self.prewarm_percentage))/((episodes/2) * self.env.n_agents * self.env.max_steps_per_episode)
+			buffer_filled_percentage = 0.5 # percentage of training when the buffer is filled
+			percentage_store_in_memory = (self.memory_size * (1-self.prewarm_percentage))/((episodes*buffer_filled_percentage) * self.env.n_agents * self.env.max_steps_per_episode)
 
 			# Optimization steps #
 			steps = 0
@@ -652,7 +654,7 @@ class MultiAgentDuelingDQNAgent:
 
 					# Store every observation for every agent #
 					for agent_id in next_states.keys():
-						if np.random.rand() < percentage_store_in_memory: # Store only a percentage of the experiences to fill the memory at the middle of the training
+						if np.random.rand() < percentage_store_in_memory or self.memory.size == self.memory_size: # Store only a percentage of the experiences to fill the memory at the middle of the training
 							transition = [states[agent_id],
 												actions[agent_id],
 												reward[agent_id],
