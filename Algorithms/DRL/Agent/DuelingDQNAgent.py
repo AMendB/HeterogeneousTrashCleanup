@@ -486,7 +486,7 @@ class MultiAgentDuelingDQNAgent:
 					# Store every observation for every agent #
 					for agent_id in next_states.keys():
 						team_id = self.env.team_id_of_each_agent[agent_id]
-						if np.random.rand() < percentage_store_in_memory[team_id]:# or self.memory[team_id].size == self.memory_size: # Store only a percentage of the experiences to fill the memory at the middle of the training
+						if np.random.rand() < percentage_store_in_memory[team_id] or self.memory[team_id].size == self.memory_size: # Store only a percentage of the experiences to fill the memory at the middle of the training
 							transition = [states[agent_id],
 												actions[agent_id],
 												reward[agent_id],
