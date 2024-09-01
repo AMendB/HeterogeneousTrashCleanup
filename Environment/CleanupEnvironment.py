@@ -857,6 +857,17 @@ class MultiAgentCleanupEnvironment:
 			rewards = np.zeros(self.n_agents) \
 					  + r_for_cleaned_trash * self.reward_weights[self.cleaners_team_id] \
 		
+		elif self.reward_function == 'justcleancountdown':
+			
+			# CLEANERS TEAM #
+			cleaners_alive = [idx for idx, agent_team in enumerate(self.team_id_of_each_agent) if agent_team == self.cleaners_team_id and self.active_agents[idx]]
+			r_for_cleaned_trash = np.array([len(self.trashes_removed_per_agent[idx]) if idx in cleaners_alive and idx in self.trashes_removed_per_agent else 0 for idx in range(self.n_agents)])
+			r_countdown = np.array([-1 if idx in cleaners_alive and r_for_cleaned_trash[idx] == 0 else 0 for idx in range(self.n_agents)]) # clean or penalization all the time
+
+			rewards = np.zeros(self.n_agents) \
+					  + r_for_cleaned_trash * self.reward_weights[self.cleaners_team_id] \
+					  + r_countdown \
+		
 		elif self.reward_function == 'justcleanreachable':
 			
 			# CLEANERS TEAM #

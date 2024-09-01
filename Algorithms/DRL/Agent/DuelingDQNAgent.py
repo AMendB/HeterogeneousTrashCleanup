@@ -12,7 +12,8 @@ from Algorithms.DRL.ActionMasking.ActionMaskingUtils import NoGoBackMasking, Saf
 import time
 import json
 import os
-from Algorithms.Greedy import OneStepGreedyFleet as OneStepGreedyFleet
+from Algorithms.Greedy import OneStepGreedyFleet
+from Algorithms.PSO import ParticleSwarmOptimizationFleet
 
 class MultiAgentDuelingDQNAgent:
 
@@ -27,6 +28,7 @@ class MultiAgentDuelingDQNAgent:
 			epsilon_values: List[float] = [1.0, 0.0],
 			epsilon_interval: List[float] = [0.0, 1.0],
 			greedy_training: bool = False,
+			heuristic_training: bool = False,
 			learning_starts: int = 10,
 			gamma: float = 0.99,
 			lr: float = 1e-4,
@@ -100,6 +102,7 @@ class MultiAgentDuelingDQNAgent:
 		self.epsilon_interval = epsilon_interval
 		self.epsilon = self.epsilon_values[0]
 		self.greedy_training = greedy_training
+		self.heuristic_training = heuristic_training
 		self.learning_starts = learning_starts
 		self.train_every = train_every
 		self.masked_actions = masked_actions
@@ -243,9 +246,21 @@ class MultiAgentDuelingDQNAgent:
 
 		if self.epsilon > np.random.rand() and not self.noisy and not deterministic:
 			if self.greedy_training:
-				if 0.5 > np.random.rand():
+				rand_value = np.random.rand()
+				if 0.5 > rand_value:
 					# Greedy algorithm compute the q's #
 					q_values = self.greedy_fleet.get_agents_q_values()
+				else:
+					# Compute randomly the q's #
+					q_values = {agent_id: np.random.rand(n_actions_of_each_agent[agent_id]) for agent_id in states.keys() if not done[agent_id]}
+			elif self.heuristic_training:
+				rand_value = np.random.rand()
+				if 0.2 > rand_value:
+					# Greedy algorithm compute the q's #
+					q_values = self.greedy_fleet.get_agents_q_values()
+				elif 0.4 > rand_value:
+					# PSO algorithm compute the q's #
+					q_values = self.pso_fleet.get_agents_q_values()
 				else:
 					# Compute randomly the q's #
 					q_values = {agent_id: np.random.rand(n_actions_of_each_agent[agent_id]) for agent_id in states.keys() if not done[agent_id]}
@@ -416,6 +431,9 @@ class MultiAgentDuelingDQNAgent:
 		# Use greedy policy to take actions for training instead of random #
 		if self.greedy_training:
 			self.greedy_fleet = OneStepGreedyFleet(env=self.env)
+		elif self.heuristic_training:
+			self.greedy_fleet = OneStepGreedyFleet(env=self.env)
+			self.pso_fleet = ParticleSwarmOptimizationFleet(env=self.env)
 
 		# START TRAINING #
 		if self.independent_networks_per_team:
@@ -565,6 +583,10 @@ class MultiAgentDuelingDQNAgent:
 
 				# Reset previous actions of NoGoBack #
 				self.nogobackfleet_masking_module.reset()
+
+				# Reset PSO if heuristic training #
+				if self.heuristic_training:
+					self.pso_fleet.reset()
 
 				# Evaluation #
 				if self.eval_every is not None and episode % self.eval_every == 0:
@@ -1017,6 +1039,7 @@ class MultiAgentDuelingDQNAgent:
 			"epsilon_interval": self.epsilon_interval,
 			"train_every": self.train_every,
 			"greedy_training": self.greedy_training,
+			"heuristic_training": self.heuristic_training,
 			"beta": self.beta,
 			"num_atoms": self.num_atoms,
 			"masked_actions": self.masked_actions,

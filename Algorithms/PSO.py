@@ -33,7 +33,7 @@ class ParticleSwarmOptimizationFleet:
         self.best_location_per_agent = [None]*self.n_agents
         self.velocities = [[0, 0]]*self.n_agents
 
-    def get_agents_actions(self):
+    def get_agents_q_values(self):
         """ Update information and move the agent """
 
         self.active_agents_positions = self.env.get_active_agents_positions_dict()

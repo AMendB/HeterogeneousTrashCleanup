@@ -15,6 +15,7 @@ parser.add_argument('--epsilon', type=float, default=0.5, help='Epsilon value fo
 parser.add_argument('-eps', '--episodes', type=int, default=60000, help='Number of episodes to train the network.')
 parser.add_argument('--extra_episodes', type=int, default=0, help='Extra episodes to keep training after the first training.')
 parser.add_argument('-gt', '--greedy_training', type=str, default="True", help='Use greedy training instead of epsilon-greedy training.')
+parser.add_argument('--heuristic_training', type=str, default="False", help='Use heuristic training instead of epsilon-greedy training.')
 parser.add_argument('-t', '--target_update', type=int, default=1000, help='Number of steps to update the target network.')
 parser.add_argument('--train_every', type=int, default=15, help='Number of steps to train the network.')
 parser.add_argument('--extra_name', type=str, default='', help='Extra name to add to the logdir.')
@@ -32,6 +33,7 @@ epsilon = args.epsilon
 episodes = args.episodes
 extra_episodes = args.extra_episodes
 greedy_training = True if args.greedy_training.capitalize() == "True" else False
+heuristic_training = True if args.heuristic_training.capitalize() == "True" else False
 target_update = args.target_update
 train_every = args.train_every
 preload_path = args.preload_path
@@ -100,10 +102,17 @@ else:
 if memory_size == int(1E3):
 	logdir = f'testing/Training_{network_type.split("_")[0]}_RW_{reward_function.split("_")[0]}_' + '_'.join(map(str, reward_weights)) + args.extra_name
 else:
-	if n_explorers == 0 or n_cleaners == 0:
-		logdir = f'Training/T{"_greedy" if greedy_training else ""}_curriculum_RW_{reward_function.split("_")[0]}_' + '_'.join(map(str, reward_weights)) + f'_{int(episodes/1000)}k{f"+{int(extra_episodes/1000)}k" if extra_episodes>0 else ""}_ep{epsilon}_hu{int(target_update/1000)}k_te{train_every}_prewarm{prewarm_percentage}' + args.extra_name
+	if greedy_training:
+		training_type = "_greedy"
+	elif heuristic_training:
+		training_type = "_heuristic"
 	else:
-		logdir = f'Training/T{"_greedy" if greedy_training else ""}_RW_{reward_function.split("_")[0]}_' + '_'.join(map(str, reward_weights)) + f'_{int(episodes/1000)}k{f"+{int(extra_episodes/1000)}k" if extra_episodes>0 else ""}_ep{epsilon}_hu{int(target_update/1000)}k_te{train_every}_prewarm{prewarm_percentage}' + args.extra_name
+		training_type = ""
+
+	if n_explorers == 0 or n_cleaners == 0:
+		logdir = f'Training/T{training_type}_curriculum_RW_{reward_function.split("_")[0]}_' + '_'.join(map(str, reward_weights)) + f'_{int(episodes/1000)}k{f"+{int(extra_episodes/1000)}k" if extra_episodes>0 else ""}_ep{epsilon}_hu{int(target_update/1000)}k_te{train_every}_prewarm{prewarm_percentage}' + args.extra_name
+	else:
+		logdir = f'Training/T{training_type}_RW_{reward_function.split("_")[0]}_' + '_'.join(map(str, reward_weights)) + f'_{int(episodes/1000)}k{f"+{int(extra_episodes/1000)}k" if extra_episodes>0 else ""}_ep{epsilon}_hu{int(target_update/1000)}k_te{train_every}_prewarm{prewarm_percentage}' + args.extra_name
 
 network = MultiAgentDuelingDQNAgent(env=env,
 									memory_size=memory_size, 
@@ -114,6 +123,7 @@ network = MultiAgentDuelingDQNAgent(env=env,
 									epsilon_values=[1.0, 0.05],
 									epsilon_interval=[0.0, epsilon], #0.5
 									greedy_training=greedy_training, # epsilon is used to take to take greedy actions policy during training instead of random
+									heuristic_training=heuristic_training, # epsilon is used to take to take greedy or pso actions policy during training instead of random
 									learning_starts=100, 
 									gamma=0.99,
 									lr=1e-4,

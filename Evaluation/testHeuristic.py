@@ -112,7 +112,7 @@ for algorithm in algorithms:
             if algorithm  in ['WanderingAgent', 'LawnMower']:
                 actions = {agent_id: agents[agent_id].move(actual_position=position, trash_in_pixel=env.model_trash_map[position[0], position[1]]) for agent_id, position in env.get_active_agents_positions_dict().items()}
             elif algorithm == 'PSO':
-                q_values = agents.get_agents_actions()
+                q_values = agents.get_agents_q_values()
                 actions = consensus_safe_masking_module.query_actions(q_values=q_values, agents_positions=env.get_active_agents_positions_dict(), model_trash_map=env.model_trash_map)
             elif algorithm == 'Greedy':
                 actions = agents.get_agents_actions()
