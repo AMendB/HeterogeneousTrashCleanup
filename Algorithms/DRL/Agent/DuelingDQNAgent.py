@@ -255,10 +255,10 @@ class MultiAgentDuelingDQNAgent:
 					q_values = {agent_id: np.random.rand(n_actions_of_each_agent[agent_id]) for agent_id in states.keys() if not done[agent_id]}
 			elif self.heuristic_training:
 				rand_value = np.random.rand()
-				if 0.2 > rand_value:
+				if 0.4 > rand_value:
 					# Greedy algorithm compute the q's #
 					q_values = self.greedy_fleet.get_agents_q_values()
-				elif 0.4 > rand_value:
+				elif 0.8 > rand_value:
 					# PSO algorithm compute the q's #
 					q_values = self.pso_fleet.get_agents_q_values()
 				else:

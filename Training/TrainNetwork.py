@@ -14,7 +14,7 @@ parser.add_argument('-dev', '--device', type=str, default='cuda:0', help='Device
 parser.add_argument('--epsilon', type=float, default=0.5, help='Epsilon value for epsilon-greedy training.')
 parser.add_argument('-eps', '--episodes', type=int, default=60000, help='Number of episodes to train the network.')
 parser.add_argument('--extra_episodes', type=int, default=0, help='Extra episodes to keep training after the first training.')
-parser.add_argument('-gt', '--greedy_training', type=str, default="True", help='Use greedy training instead of epsilon-greedy training.')
+parser.add_argument('-gt', '--greedy_training', type=str, default="False", help='Use greedy training instead of epsilon-greedy training.')
 parser.add_argument('--heuristic_training', type=str, default="False", help='Use heuristic training instead of epsilon-greedy training.')
 parser.add_argument('-t', '--target_update', type=int, default=1000, help='Number of steps to update the target network.')
 parser.add_argument('--train_every', type=int, default=15, help='Number of steps to train the network.')
