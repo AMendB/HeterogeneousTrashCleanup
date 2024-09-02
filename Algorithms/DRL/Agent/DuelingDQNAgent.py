@@ -246,8 +246,7 @@ class MultiAgentDuelingDQNAgent:
 
 		if self.epsilon > np.random.rand() and not self.noisy and not deterministic:
 			if self.greedy_training:
-				rand_value = np.random.rand()
-				if 0.5 > rand_value:
+				if 0.5 > np.random.rand():
 					# Greedy algorithm compute the q's #
 					q_values = self.greedy_fleet.get_agents_q_values()
 				else:
@@ -255,12 +254,12 @@ class MultiAgentDuelingDQNAgent:
 					q_values = {agent_id: np.random.rand(n_actions_of_each_agent[agent_id]) for agent_id in states.keys() if not done[agent_id]}
 			elif self.heuristic_training:
 				rand_value = np.random.rand()
-				if 0.4 > rand_value:
-					# Greedy algorithm compute the q's #
-					q_values = self.greedy_fleet.get_agents_q_values()
-				elif 0.8 > rand_value:
+				if -1 > rand_value:
 					# PSO algorithm compute the q's #
 					q_values = self.pso_fleet.get_agents_q_values()
+				elif 0.8 > rand_value:
+					# Greedy algorithm compute the q's #
+					q_values = self.greedy_fleet.get_agents_q_values()
 				else:
 					# Compute randomly the q's #
 					q_values = {agent_id: np.random.rand(n_actions_of_each_agent[agent_id]) for agent_id in states.keys() if not done[agent_id]}
@@ -462,6 +461,7 @@ class MultiAgentDuelingDQNAgent:
 			episodic_reward_vector = [[]]*self.env.n_teams
 			record = [-np.inf]*self.env.n_teams
 			eval_record = [-np.inf]*self.env.n_teams
+			eval_clean_record = [-np.inf]*self.env.n_teams
 
 			for episode in trange(1, int(episodes+extra_episodes) + 1):
 
@@ -597,10 +597,15 @@ class MultiAgentDuelingDQNAgent:
 							self.writer[team_id].add_scalar('test/accumulated_length', mean_eval_length[team_id], self.episode[team_id])
 							self.writer[team_id].add_scalar('test/mean_cleaned_percentage', mean_cleaned_percentage, self.episode[team_id])
 							if mean_eval_reward[team_id] > eval_record[team_id]:
-									print(f"\nNew best policy IN EVAL with mean reward of {mean_eval_reward[team_id]} for network nº {team_id}")
-									print("Saving model in " + self.logdir)
-									eval_record[team_id] = mean_eval_reward[team_id]
-									self.save_model(name=f'BestEvalPolicy_network{team_id}.pth', team_id_index=team_id)
+								print(f"\nNew best policy (reward) IN EVAL with mean reward of {mean_eval_reward[team_id]} and cleaned percentage of {mean_cleaned_percentage} for network nº {team_id}")
+								print("Saving model in " + self.logdir)
+								eval_record[team_id] = mean_eval_reward[team_id]
+								self.save_model(name=f'BestEvalPolicy_network{team_id}.pth', team_id_index=team_id)
+							if mean_cleaned_percentage > eval_clean_record[team_id]:
+								print(f"\nNew best policy (cleaned percentage) IN EVAL with mean reward of {mean_eval_reward[team_id]} and cleaned percentage of {mean_cleaned_percentage} for network nº {team_id}")
+								print("Saving model in " + self.logdir)
+								eval_clean_record[team_id] = mean_cleaned_percentage
+								self.save_model(name=f'BestEvalCleanPolicy_network{team_id}.pth', team_id_index=team_id)
 
 			# Save the final policys #
 			for team_id in self.env.teams_ids:

@@ -980,7 +980,7 @@ class MultiAgentCleanupEnvironment:
 			rewards = np.zeros(self.n_agents) \
 					  + r_for_cleaned_trash * self.reward_weights[self.cleaners_team_id] \
 					  + r_for_taking_action_that_approaches_to_trash \
-					  + penalization_for_not_clean_reachable_trash \
+					#   + penalization_for_not_clean_reachable_trash \
 					#   + penalization_for_not_cleaning_when_trash
 					#   + r_for_discover_trash * ponderation_for_discover_trash \
 					#   + r_for_discover_new_area * ponderation_for_discover_new_area \
