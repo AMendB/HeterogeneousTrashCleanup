@@ -257,7 +257,7 @@ class MultiAgentDuelingDQNAgent:
 				if -1 > rand_value:
 					# PSO algorithm compute the q's #
 					q_values = self.pso_fleet.get_agents_q_values()
-				elif 0.8 > rand_value:
+				elif 1 > rand_value:
 					# Greedy algorithm compute the q's #
 					q_values = self.greedy_fleet.get_agents_q_values()
 				else:
