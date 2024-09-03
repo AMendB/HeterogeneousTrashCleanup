@@ -933,7 +933,7 @@ class MultiAgentCleanupEnvironment:
 					#   + r_for_discover_new_area * ponderation_for_discover_new_area \
 					#   + r_cleaners_for_being_with_the_trash * self.reward_weights[3]\
 		
-		elif self.reward_function == 'backtosimpledistance':
+		elif self.reward_function == 'backtosimpledistance' or self.reward_function == 'exponentialdistancereachable':
 			# ALL TEAMS #
 			# changes_in_whole_model = np.abs(self.model_trash_map - self.previous_model_trash_map)
 			# r_for_discover_trash = np.array(
@@ -966,6 +966,8 @@ class MultiAgentCleanupEnvironment:
 					r_for_taking_action_that_approaches_to_trash = np.array([self.get_distance_to_closest_known_trash(agent.previous_agent_position, previous_model=False) - actual_distance_to_closest_trash[idx] if idx in self.previous_trashes_removed_per_agent else r_for_taking_action_that_approaches_to_trash[idx] for idx, agent in enumerate(self.fleet.vehicles)])
 			else:
 				r_for_taking_action_that_approaches_to_trash = np.zeros(self.n_agents)
+			if self.reward_function == 'exponentialdistancereachable':
+				r_for_taking_action_that_approaches_to_trash = r_for_taking_action_that_approaches_to_trash**2 * np.sign(r_for_taking_action_that_approaches_to_trash)
 
 			# Exchange ponderation between exploration/exploitation when the 80% of the map is visited #
 			# if self.percentage_visited > 0.8:
