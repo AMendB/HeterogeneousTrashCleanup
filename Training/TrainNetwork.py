@@ -7,6 +7,8 @@ import numpy as np
 import argparse
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--n_explorers', type=int, default=0, help='Number of explorers agents.')
+parser.add_argument('--n_cleaners', type=int, default=1, help='Number of cleaners agents.')
 parser.add_argument('-rw', '--reward_function', type=str, default='backtosimplegauss', help='Reward function to use: basic_reward, extended_reward, backtosimple')
 parser.add_argument('-w', '--reward_weights', type=int, nargs='+', default=[1, 25, 2, 10], help='Reward weights for the reward function.')
 parser.add_argument('-net', '--network_type', type=str, default='independent_networks_per_team', help='Type of network to use: independent_networks_per_team, shared_network')
@@ -50,8 +52,8 @@ seed = 0
 # Agents info #
 n_actions_explorers = 8
 n_actions_cleaners = 8
-n_explorers = 0
-n_cleaners = 1
+n_explorers = args.n_explorers
+n_cleaners = args.n_cleaners
 n_agents = n_explorers + n_cleaners
 movement_length_explorers = 2
 movement_length_cleaners = 1

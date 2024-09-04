@@ -350,12 +350,14 @@ class MultiAgentCleanupEnvironment:
 		self.real_trash_map = self.init_real_trash_map()
 
 		# Initialize model trash map #
-		# self.model_trash_map = np.zeros_like(self.scenario_map) 
-		# self.previous_model_trash_map = self.model_trash_map.copy()
-		# self.previousprevious_model_trash_map = self.previous_model_trash_map.copy()
-		self.model_trash_map = self.real_trash_map.copy() # oracle model
-		self.previous_model_trash_map = np.zeros_like(self.scenario_map) # oracle model
-		self.previousprevious_model_trash_map = np.zeros_like(self.scenario_map) # oracle model
+		if self.number_of_agents_by_team[self.explorers_team_id] > 0:
+			self.model_trash_map = np.zeros_like(self.scenario_map) 
+			self.previous_model_trash_map = self.model_trash_map.copy()
+			self.previousprevious_model_trash_map = self.previous_model_trash_map.copy()
+		else: # oracle model
+			self.model_trash_map = self.real_trash_map.copy()
+			self.previous_model_trash_map = np.zeros_like(self.scenario_map)
+			self.previousprevious_model_trash_map = np.zeros_like(self.scenario_map)
 
 		# Init the redundancy mask #
 		self.redundancy_mask = np.sum([agent.influence_mask for idx, agent in enumerate(self.fleet.vehicles) if self.active_agents[idx]], axis = 0)
@@ -420,12 +422,14 @@ class MultiAgentCleanupEnvironment:
 		self.non_water_mask = self.scenario_map != 1 - self.inside_obstacles_map # mask with True where no water
 
 		# Create an empty model after reset #
-		# self.model_trash_map = np.zeros_like(self.scenario_map) 
-		# self.previous_model_trash_map = self.model_trash_map.copy()
-		# self.previousprevious_model_trash_map = self.previous_model_trash_map.copy()
-		self.model_trash_map = self.real_trash_map.copy() # oracle model
-		self.previous_model_trash_map = np.zeros_like(self.scenario_map) # oracle model
-		self.previousprevious_model_trash_map = np.zeros_like(self.scenario_map) # oracle model
+		if self.number_of_agents_by_team[self.explorers_team_id] > 0:
+			self.model_trash_map = np.zeros_like(self.scenario_map) 
+			self.previous_model_trash_map = self.model_trash_map.copy()
+			self.previousprevious_model_trash_map = self.previous_model_trash_map.copy()
+		else: # oracle model
+			self.model_trash_map = self.real_trash_map.copy()
+			self.previous_model_trash_map = np.zeros_like(self.scenario_map)
+			self.previousprevious_model_trash_map = np.zeros_like(self.scenario_map)
 
 		# Get the N random initial positions #
 		if self.random_inititial_positions == 'area' or self.random_inititial_positions == 'fixed':
@@ -559,8 +563,10 @@ class MultiAgentCleanupEnvironment:
 		
 		self.previousprevious_model_trash_map = self.previous_model_trash_map.copy()
 		self.previous_model_trash_map = self.model_trash_map.copy()
-		# self.model_trash_map[self.redundancy_mask.astype(bool)] = self.real_trash_map[self.redundancy_mask.astype(bool)]
-		self.model_trash_map = self.real_trash_map.copy() # oracle model
+		if self.number_of_agents_by_team[self.explorers_team_id] > 0:
+			self.model_trash_map[self.redundancy_mask.astype(bool)] = self.real_trash_map[self.redundancy_mask.astype(bool)]
+		else: # oracle model
+			self.model_trash_map = self.real_trash_map.copy()
 
 
 	def step(self, actions: dict):
@@ -660,15 +666,39 @@ class MultiAgentCleanupEnvironment:
 				agent_observation_of_fleet[agents_to_remove_positions[:,0], agents_to_remove_positions[:,1]] = 0.0
 
 				"""Each key from states dictionary is an agent, all states associated to that agent are concatenated in its value:"""
-				states[agent_id] = np.concatenate(( 
-					# obstacle_map[np.newaxis], # Channel 0 -> Known boundaries/navigation map
-					self.visited_areas_map[np.newaxis], # Channel 0 -> Map with visited positions. 0 non visitable, 1 non visited, 0.5 visited.
-					(self.model_trash_map/(np.max(self.model_trash_map)+1E-5))[np.newaxis], # Channel 1 -> Trash model map (normalized)
-					# (self.previous_model_trash_map/np.max(self.previous_model_trash_map))[np.newaxis], # Channel 2 -> Previous trash model map (normalized)
-					# (self.previousprevious_model_trash_map/np.max(self.previousprevious_model_trash_map))[np.newaxis], # Channel 3 -> Previous previous trash model map (normalized)
-					observing_agent_position_with_stela[np.newaxis], # Channel 4 -> Observing agent position map with a stela
-					# agent_observation_of_fleet[np.newaxis], # Channel 5 -> Others active agents position map
-				), dtype=np.float16)
+				if self.n_agents == 1 and not self.dynamic: # 3 channels
+					states[agent_id] = np.concatenate(( 
+						self.visited_areas_map[np.newaxis], # Channel 0 -> Map with visited positions. 0 non visitable, 1 non visited, 0.5 visited.
+						(self.model_trash_map/(np.max(self.model_trash_map)+1E-5))[np.newaxis], # Channel 1 -> Trash model map (normalized)
+						observing_agent_position_with_stela[np.newaxis], # Channel 3 -> Observing agent position map with a stela
+					), dtype=np.float16)
+				elif self.n_agents > 1 and not self.dynamic: # 4 channels
+					self.observation_space_shape = (4, *self.scenario_map.shape)
+					states[agent_id] = np.concatenate(( 
+						self.visited_areas_map[np.newaxis], # Channel 0 -> Map with visited positions. 0 non visitable, 1 non visited, 0.5 visited.
+						(self.model_trash_map/(np.max(self.model_trash_map)+1E-5))[np.newaxis], # Channel 1 -> Trash model map (normalized)
+						observing_agent_position_with_stela[np.newaxis], # Channel 2 -> Observing agent position map with a stela
+						agent_observation_of_fleet[np.newaxis], # Channel 3 -> Others active agents position map
+					), dtype=np.float16)
+				elif self.n_agents == 1 and self.dynamic: # 5 channels
+					states[agent_id] = np.concatenate(( 
+						self.visited_areas_map[np.newaxis], # Channel 0 -> Map with visited positions. 0 non visitable, 1 non visited, 0.5 visited.
+						(self.model_trash_map/(np.max(self.model_trash_map)+1E-5))[np.newaxis], # Channel 1 -> Trash model map (normalized)
+						(self.previous_model_trash_map/np.max(self.previous_model_trash_map))[np.newaxis], # Channel 2 -> Previous trash model map (normalized)
+						(self.previousprevious_model_trash_map/np.max(self.previousprevious_model_trash_map))[np.newaxis], # Channel 3 -> Previous previous trash model map (normalized)
+						observing_agent_position_with_stela[np.newaxis], # Channel 4 -> Observing agent position map with a stela
+					), dtype=np.float16)
+				elif self.n_agents > 1 and self.dynamic: # 6 channels
+					states[agent_id] = np.concatenate(( 
+						# obstacle_map[np.newaxis], # Channel 0 -> Known boundaries/navigation map
+						self.visited_areas_map[np.newaxis], # Channel 0 -> Map with visited positions. 0 non visitable, 1 non visited, 0.5 visited.
+						(self.model_trash_map/(np.max(self.model_trash_map)+1E-5))[np.newaxis], # Channel 1 -> Trash model map (normalized)
+						(self.previous_model_trash_map/np.max(self.previous_model_trash_map))[np.newaxis], # Channel 2 -> Previous trash model map (normalized)
+						(self.previousprevious_model_trash_map/np.max(self.previousprevious_model_trash_map))[np.newaxis], # Channel 3 -> Previous previous trash model map (normalized)
+						observing_agent_position_with_stela[np.newaxis], # Channel 4 -> Observing agent position map with a stela
+						agent_observation_of_fleet[np.newaxis], # Channel 5 -> Others active agents position map
+					), dtype=np.float16)
+
 
 				if agent_id == first_available_agent and self.activate_plot_graphics:
 					gaussian_blurred_model_trash = gaussian_filter(self.model_trash_map, sigma=20, mode='constant', cval=0)
@@ -1119,7 +1149,7 @@ if __name__ == '__main__':
 	# Agents info #
 	n_actions_explorers = 8
 	n_actions_cleaners = 8
-	n_explorers = 0
+	n_explorers = 2
 	n_cleaners = 2
 	n_agents = n_explorers + n_cleaners
 	movement_length_explorers = 2
