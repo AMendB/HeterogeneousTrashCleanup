@@ -26,8 +26,8 @@ RUNS = 100
 scenario_map = np.genfromtxt('Environment/Maps/acoruna_port.csv', delimiter=',')
 n_actions_explorers = 8
 n_actions_cleaners = 8
-n_explorers = 0
-n_cleaners = 1
+n_explorers = 2
+n_cleaners = 2
 n_agents = n_explorers + n_cleaners
 movement_length_explorers = 2
 movement_length_cleaners = 1
