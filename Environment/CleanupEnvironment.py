@@ -963,7 +963,7 @@ class MultiAgentCleanupEnvironment:
 					#   + r_for_discover_new_area * ponderation_for_discover_new_area \
 					#   + r_cleaners_for_being_with_the_trash * self.reward_weights[3]\
 		
-		elif self.reward_function == 'backtosimpledistance' or self.reward_function == 'exponentialdistancereachable':
+		elif self.reward_function == 'backtosimpledistance' or self.reward_function == 'exponentialdistancereachable' or self.reward_function == 'backtosimpledistanceexchange':
 			
 			# EXPLORERS TEAM #
 			explorers_alive = [idx for idx, agent_team in enumerate(self.team_id_of_each_agent) if agent_team == self.explorers_team_id and self.active_agents[idx]]
@@ -996,14 +996,15 @@ class MultiAgentCleanupEnvironment:
 				r_for_taking_action_that_approaches_to_trash = r_for_taking_action_that_approaches_to_trash**2 * np.sign(r_for_taking_action_that_approaches_to_trash)
 
 			# Exchange ponderation between exploration/exploitation when the 80% of the map is visited #
-			if self.percentage_visited > 0.8:
-				ponderation_for_discover_trash = self.reward_weights[2]
-				ponderation_for_discover_new_area = self.reward_weights[self.explorers_team_id]
-			else:
+			if self.reward_function == 'backtosimpledistanceexchange':
+				if self.percentage_visited > 0.8:
+					ponderation_for_discover_trash = self.reward_weights[2]
+					ponderation_for_discover_new_area = self.reward_weights[self.explorers_team_id]
+				else:
+					ponderation_for_discover_trash = self.reward_weights[self.explorers_team_id]
+					ponderation_for_discover_new_area = self.reward_weights[2]
 				ponderation_for_discover_trash = self.reward_weights[self.explorers_team_id]
 				ponderation_for_discover_new_area = self.reward_weights[2]
-			ponderation_for_discover_trash = self.reward_weights[self.explorers_team_id]
-			ponderation_for_discover_new_area = self.reward_weights[2]
 
 			rewards = np.zeros(self.n_agents) \
 					  + r_for_cleaned_trash * self.reward_weights[self.cleaners_team_id] \
