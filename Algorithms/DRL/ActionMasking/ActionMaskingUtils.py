@@ -109,7 +109,8 @@ class ConsensusSafeActionMasking:
 		
 		self.obstacles_map = self.navigation_map.copy()
 		q_max = {idx: q_values[idx].max() for idx in q_values.keys()}
-		agents_order = sorted(q_max, key=q_max.get)[::-1]
+		# agents_order = sorted(q_max, key=q_max.get)[::-1] # optimistics decide first
+		agents_order = sorted(q_max.keys(), reverse=True) # cleaners decide first
 		final_actions = {}
 
 		for agent_id in agents_order:

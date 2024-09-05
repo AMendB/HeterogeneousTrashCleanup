@@ -91,7 +91,7 @@ class OneStepGreedyFleet:
                 best_reward = reward
                 best_action = action
     
-        if best_reward == 0:
+        if best_action is None:
             best_action = np.random.choice(list(next_allowed_actionpose_dict.keys()))
 
         self.navigable_map[next_allowed_actionpose_dict[best_action][0], next_allowed_actionpose_dict[best_action][1]] = 0 # to avoid collisions between agents
@@ -109,7 +109,7 @@ class OneStepGreedyFleet:
 
         actions = {}
 
-        for agent_id, agent_position in active_agents_positions.items():
+        for agent_id, agent_position in sorted(active_agents_positions.items(), reverse=True): # First decide the cleaners team
             actions[agent_id] = self.get_agent_action_with_best_future_reward(agent_position, agent_id)
         
         return actions
