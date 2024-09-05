@@ -996,13 +996,10 @@ class MultiAgentCleanupEnvironment:
 				r_for_taking_action_that_approaches_to_trash = r_for_taking_action_that_approaches_to_trash**2 * np.sign(r_for_taking_action_that_approaches_to_trash)
 
 			# Exchange ponderation between exploration/exploitation when the 80% of the map is visited #
-			if self.reward_function == 'backtosimpledistanceexchange':
-				if self.percentage_visited > 0.8:
-					ponderation_for_discover_trash = self.reward_weights[2]
-					ponderation_for_discover_new_area = self.reward_weights[self.explorers_team_id]
-				else:
-					ponderation_for_discover_trash = self.reward_weights[self.explorers_team_id]
-					ponderation_for_discover_new_area = self.reward_weights[2]
+			if self.percentage_visited > 0.8 and self.reward_function == 'backtosimpledistanceexchange':
+				ponderation_for_discover_trash = self.reward_weights[2]
+				ponderation_for_discover_new_area = self.reward_weights[self.explorers_team_id]
+			else:
 				ponderation_for_discover_trash = self.reward_weights[self.explorers_team_id]
 				ponderation_for_discover_new_area = self.reward_weights[2]
 

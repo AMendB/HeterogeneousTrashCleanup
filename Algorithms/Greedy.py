@@ -49,6 +49,7 @@ class OneStepGreedyFleet:
         
         best_action = None
         best_reward = -np.inf
+        dict_actions_rewards = {}
         for action, next_position in next_allowed_actionpose_dict.items():
             # ALL TEAMS #
             future_influence_mask = self.compute_influence_mask(next_position, agent.vision_length)
@@ -87,10 +88,17 @@ class OneStepGreedyFleet:
                         # + r_for_being_with_the_trash * self.reward_weights[3]\
                         # + penalization_for_not_cleaning_when_trash
             
+            dict_actions_rewards[action] = reward
+
             if reward > best_reward:
                 best_reward = reward
                 best_action = action
-    
+
+        # Check if the best reward is the same for multiple actions. If so, choose randomly between them.
+        if list(dict_actions_rewards.values()).count(best_reward) > 1:
+            best_action = np.random.choice([action for action, reward in dict_actions_rewards.items() if reward == best_reward])
+
+        # In case no action is selected, choose randomly between the allowed actions
         if best_action is None:
             best_action = np.random.choice(list(next_allowed_actionpose_dict.keys()))
 

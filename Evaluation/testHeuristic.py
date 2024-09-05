@@ -9,6 +9,7 @@ from Algorithms.PSO import ParticleSwarmOptimizationFleet
 from Algorithms.Greedy import OneStepGreedyFleet
 from Algorithms.DRL.ActionMasking.ActionMaskingUtils import ConsensusSafeActionMasking
 import numpy as np
+from tqdm import trange
 
 algorithms = [
 	# 'WanderingAgent', 
@@ -18,7 +19,8 @@ algorithms = [
 	]
 
 SEED = 3
-SHOW_RENDER = True
+SHOW_RENDER = False
+PRINT_INFO = False
 RUNS = 100
 
 
@@ -85,7 +87,7 @@ for algorithm in algorithms:
     average_episode_length = [0 for _ in range(env.n_teams)]
 
     # Start episodes #
-    for run in range(RUNS):
+    for run in trange(RUNS):
         
         done = {i: False for i in range(n_agents)}
         states = env.reset_env()
@@ -123,19 +125,21 @@ for algorithm in algorithms:
             ep_length_per_teams = [ep_length_per_teams[team_id] + 1 if not env.dones_by_teams[team_id] else ep_length_per_teams[team_id] for team_id in env.teams_ids]
             # t1 = time.time()
             # runtime += t1-t0
-
-            print(f"Step {env.steps}")
-            print(f"Actions: {dict(sorted(actions.items()))}")
-            print(f"Rewards: {new_reward}")
-            trashes_agents_pixels = {agent_id: env.model_trash_map[position[0], position[1]] for agent_id, position in env.get_active_agents_positions_dict().items()}
-            print(f"Trashes in agents pixels: {trashes_agents_pixels}")
-            print(f"Trashes removed: {env.trashes_removed_per_agent}")
-            print(f"Trashes remaining: {len(env.trash_positions_yx)}")
-            print()
+            
+            if PRINT_INFO:
+                print(f"Step {env.steps}")
+                print(f"Actions: {dict(sorted(actions.items()))}")
+                print(f"Rewards: {new_reward}")
+                trashes_agents_pixels = {agent_id: env.model_trash_map[position[0], position[1]] for agent_id, position in env.get_active_agents_positions_dict().items()}
+                print(f"Trashes in agents pixels: {trashes_agents_pixels}")
+                print(f"Trashes removed: {env.trashes_removed_per_agent}")
+                print(f"Trashes remaining: {len(env.trash_positions_yx)}")
+                print()
 
         # Print accumulated reward of episode #
-        print('Total reward: ', acc_rw_episode)
-        # print('Total runtime: ', runtime)
+        if PRINT_INFO:
+            print('Total reward: ', acc_rw_episode)
+            # print('Total runtime: ', runtime)
         
         # Calculate mean metrics all episodes #
         mean_cleaned_percentage += env.get_percentage_cleaned_trash()
@@ -146,4 +150,4 @@ for algorithm in algorithms:
     
     # Print algorithm results #
     for team in range(env.n_teams):
-        print(f'Average reward for {algorithm} team {team}: {average_reward[team]/RUNS}, with an episode average length of {average_episode_length[team]/RUNS}. Cleaned percentage: {mean_cleaned_percentage/RUNS}')
+        print(f'Average reward for {algorithm} team {team} with {n_explorers if team==0 else n_cleaners} agents: {average_reward[team]/RUNS}, with an episode average length of {average_episode_length[team]/RUNS}. Cleaned percentage: {round(mean_cleaned_percentage/RUNS*100, 2)}%')
