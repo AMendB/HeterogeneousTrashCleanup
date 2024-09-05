@@ -164,7 +164,7 @@ class OneStepGreedyFleet:
             else:
                 rewards[action] = -np.inf    
 
-        return np.array([*rewards.values()])
+        return np.array([*rewards.values()], dtype = np.float32)
 
     def get_agents_q_values(self):
         """ Get the q_values for each agent given the conditions of the environment. """
