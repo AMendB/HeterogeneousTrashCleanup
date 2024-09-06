@@ -9,6 +9,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--n_explorers', type=int, default=0, help='Number of explorers agents.')
 parser.add_argument('--n_cleaners', type=int, default=1, help='Number of cleaners agents.')
+parser.add_argument('--dynamic_env', type=str, default='False', help='Dynamic environment.')
 parser.add_argument('-rw', '--reward_function', type=str, default='backtosimplegauss', help='Reward function to use: basic_reward, extended_reward, backtosimple')
 parser.add_argument('-w', '--reward_weights', type=int, nargs='+', default=[1, 25, 2, 10], help='Reward weights for the reward function.')
 parser.add_argument('-net', '--network_type', type=str, default='independent_networks_per_team', help='Type of network to use: independent_networks_per_team, shared_network')
@@ -90,7 +91,7 @@ env = MultiAgentCleanupEnvironment(scenario_map = scenario_map,
 							max_collisions = 10,
 							reward_function = reward_function, 
 							reward_weights = reward_weights,
-							dynamic = False,
+							dynamic = True if args.dynamic_env.capitalize() == "True" else False,
 							obstacles = False,
 							show_plot_graphics = SHOW_PLOT_GRAPHICS,
 							)

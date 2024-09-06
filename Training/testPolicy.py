@@ -11,7 +11,7 @@ from Algorithms.DRL.Agent.DuelingDQNAgent import MultiAgentDuelingDQNAgent
 from Environment.EnvPPOWrapper import EnvWrapper
 from Algorithms.PPO.ppo import PPO
 
-path_to_training_folder = 'Training/T//'
+path_to_training_folder = 'Training/T/T_heuristic_RW_backtosimpledistance_1_50_2_0_60k_ep0.5_hu6k_te15_prewarm0.2_storeall_CORTADO/'
 # path_to_training_folder = 'testing/T_greedy_curriculum_RW_backtosimpledistance_0_50_0_0_60k_ep0.5_hu6k_te5/'
 # path_to_training_folder = 'DoneTrainings/Trning_RW_backtosimple_1_20_2_10_20k_curriculum_cleaners/'
 
@@ -57,18 +57,22 @@ if not 'PPO' in path_to_training_folder:
 							curriculum_learning_team=exp_config['curriculum_learning_team'],
 							)
 
-	# network.load_model(path_to_training_folder + 'Final_Policy.pth')
-	# network.load_model(path_to_training_folder + 'BestPolicy.pth')
-	# network.load_model(path_to_training_folder + 'BestEvalPolicy.pth')
-	network.load_model(path_to_training_folder + 'BestEvalCleanPolicy.pth')
+	# model = 'Final_Policy.pth'
+	# model = 'BestPolicy.pth'
+	model = 'BestEvalPolicy.pth'
+	# model = 'BestEvalCleanPolicy.pth'
+
+	network.load_model(path_to_training_folder + model)
 	
 	average_reward, average_episode_length, mean_cleaned_percentage = network.evaluate_env(RUNS)
 
-	if exp_config['independent_networks_per_team']:
-		for team in range(len(average_reward)):
-			print(f'Average reward for team {team}: {average_reward[team]}, with an episode average length of {average_episode_length[team]}. Cleaned percentage: {mean_cleaned_percentage*100}%')
-	else:
-		print(f'Average reward: {average_reward}, with an episode average length of {average_episode_length}. Cleaned percentage: {mean_cleaned_percentage*100}%')
+	print(f'\nModel: {model}')
+	
+	# if exp_config['independent_networks_per_team']:
+	# 	for team in range(len(average_reward)):
+	# 		print(f'Average reward for team {team}: {average_reward[team]}, with an episode average length of {average_episode_length[team]}. Cleaned percentage: {round(mean_cleaned_percentage*100,2)}%')
+	# else:
+	# 	print(f'Average reward: {average_reward}, with an episode average length of {average_episode_length}. Cleaned percentage: {round(mean_cleaned_percentage*100,2)}%')
 
 else:
 	env = EnvWrapper(scenario_map = np.array(env_config['scenario_map']),
@@ -109,11 +113,14 @@ else:
 			# logdir=logdir, 
 			device='cuda:0')
 
-	# ppo.load_model(path_to_training_folder + 'Final_Policy.pth')
-	ppo.load_model(path_to_training_folder + 'BestPolicy.pth')
+	model = 'Final_Policy.pth'
+	# model = 'BestPolicy.pth'
+
+	ppo.load_model(path_to_training_folder + model)
 
 	acc_rewards_among_agents, cleaned_percentages, n_collisions, _ = map(list, zip(*[ppo.evaluate_env() for _ in range(RUNS)]))
 
+	print(f'Model: {model}')
 	print(f'Average reward: {np.mean(acc_rewards_among_agents)}, with a cleaned percentage of {np.mean(cleaned_percentages)*100}%, mean collisions: {np.mean(n_collisions)}')
 
 
