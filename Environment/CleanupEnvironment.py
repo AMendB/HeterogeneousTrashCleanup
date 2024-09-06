@@ -684,8 +684,8 @@ class MultiAgentCleanupEnvironment:
 					states[agent_id] = np.concatenate(( 
 						self.visited_areas_map[np.newaxis], # Channel 0 -> Map with visited positions. 0 non visitable, 1 non visited, 0.5 visited.
 						(self.model_trash_map/(np.max(self.model_trash_map)+1E-5))[np.newaxis], # Channel 1 -> Trash model map (normalized)
-						(self.previous_model_trash_map/np.max(self.previous_model_trash_map))[np.newaxis], # Channel 2 -> Previous trash model map (normalized)
-						(self.previousprevious_model_trash_map/np.max(self.previousprevious_model_trash_map))[np.newaxis], # Channel 3 -> Previous previous trash model map (normalized)
+						(self.previous_model_trash_map/np.max(self.previous_model_trash_map+1E-5))[np.newaxis], # Channel 2 -> Previous trash model map (normalized)
+						(self.previousprevious_model_trash_map/np.max(self.previousprevious_model_trash_map+1E-5))[np.newaxis], # Channel 3 -> Previous previous trash model map (normalized)
 						observing_agent_position_with_stela[np.newaxis], # Channel 4 -> Observing agent position map with a stela
 					), dtype=np.float16)
 				elif self.n_agents > 1 and self.dynamic: # 6 channels
@@ -693,8 +693,8 @@ class MultiAgentCleanupEnvironment:
 						# obstacle_map[np.newaxis], # Channel 0 -> Known boundaries/navigation map
 						self.visited_areas_map[np.newaxis], # Channel 0 -> Map with visited positions. 0 non visitable, 1 non visited, 0.5 visited.
 						(self.model_trash_map/(np.max(self.model_trash_map)+1E-5))[np.newaxis], # Channel 1 -> Trash model map (normalized)
-						(self.previous_model_trash_map/np.max(self.previous_model_trash_map))[np.newaxis], # Channel 2 -> Previous trash model map (normalized)
-						(self.previousprevious_model_trash_map/np.max(self.previousprevious_model_trash_map))[np.newaxis], # Channel 3 -> Previous previous trash model map (normalized)
+						(self.previous_model_trash_map/np.max(self.previous_model_trash_map+1E-5))[np.newaxis], # Channel 2 -> Previous trash model map (normalized)
+						(self.previousprevious_model_trash_map/np.max(self.previousprevious_model_trash_map+1E-5))[np.newaxis], # Channel 3 -> Previous previous trash model map (normalized)
 						observing_agent_position_with_stela[np.newaxis], # Channel 4 -> Observing agent position map with a stela
 						agent_observation_of_fleet[np.newaxis], # Channel 5 -> Others active agents position map
 					), dtype=np.float16)
