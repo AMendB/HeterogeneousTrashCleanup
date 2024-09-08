@@ -963,7 +963,7 @@ class MultiAgentCleanupEnvironment:
 					#   + r_for_discover_new_area * ponderation_for_discover_new_area \
 					#   + r_cleaners_for_being_with_the_trash * self.reward_weights[3]\
 		
-		elif self.reward_function == 'backtosimpledistance' or self.reward_function == 'exponentialdistancereachable' or self.reward_function == 'backtosimpledistanceexchange':
+		elif self.reward_function == 'backtosimpledistance' or self.reward_function == 'exponentialdistancereachable' or self.reward_function == 'backtosimpledistanceexchange' or self.reward_function == 'negativedistance':
 			
 			# EXPLORERS TEAM #
 			explorers_alive = [idx for idx, agent_team in enumerate(self.team_id_of_each_agent) if agent_team == self.explorers_team_id and self.active_agents[idx]]
@@ -983,20 +983,27 @@ class MultiAgentCleanupEnvironment:
 			
 			# If there is known trash, reward trough distance to closer trash #
 			if np.any(self.model_trash_map):
-				actual_distance_to_closest_trash = [self.get_distance_to_closest_known_trash(agent.actual_agent_position) if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles)]
-				if np.any(self.previous_model_trash_map):
-					r_for_taking_action_that_approaches_to_trash = np.array([self.get_distance_to_closest_known_trash(agent.previous_agent_position, previous_model=True) - actual_distance_to_closest_trash[idx] if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles)])
+				if self.reward_function == 'negativedistance':
+					# Negative distance to closest trash in each step. Continuous penalization, lower when closer to trash #
+					r_for_taking_action_that_approaches_to_trash = [-self.get_distance_to_closest_known_trash(agent.actual_agent_position) if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles)]
+					# If the agent has removed trash, not penalize the distance with next closest trash #
+					if np.any(self.trashes_removed_per_agent):
+						r_for_taking_action_that_approaches_to_trash = np.array([0 if idx in self.trashes_removed_per_agent else r_for_taking_action_that_approaches_to_trash[idx] for idx, agent in enumerate(self.fleet.vehicles)])
 				else:
-					r_for_taking_action_that_approaches_to_trash = np.zeros(self.n_agents)
-				if np.any(self.previous_trashes_removed_per_agent):
-					r_for_taking_action_that_approaches_to_trash = np.array([self.get_distance_to_closest_known_trash(agent.previous_agent_position, previous_model=False) - actual_distance_to_closest_trash[idx] if idx in self.previous_trashes_removed_per_agent else r_for_taking_action_that_approaches_to_trash[idx] for idx, agent in enumerate(self.fleet.vehicles)])
+					actual_distance_to_closest_trash = [self.get_distance_to_closest_known_trash(agent.actual_agent_position) if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles)]
+					if np.any(self.previous_model_trash_map):
+						r_for_taking_action_that_approaches_to_trash = np.array([self.get_distance_to_closest_known_trash(agent.previous_agent_position, previous_model=True) - actual_distance_to_closest_trash[idx] if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles)])
+					else:
+						r_for_taking_action_that_approaches_to_trash = np.zeros(self.n_agents)
+					if np.any(self.previous_trashes_removed_per_agent):
+						r_for_taking_action_that_approaches_to_trash = np.array([self.get_distance_to_closest_known_trash(agent.previous_agent_position, previous_model=False) - actual_distance_to_closest_trash[idx] if idx in self.previous_trashes_removed_per_agent else r_for_taking_action_that_approaches_to_trash[idx] for idx, agent in enumerate(self.fleet.vehicles)])
 			else:
 				r_for_taking_action_that_approaches_to_trash = np.zeros(self.n_agents)
-			if self.reward_function == 'exponentialdistancereachable':
+			if 'exponential' in self.reward_function:
 				r_for_taking_action_that_approaches_to_trash = r_for_taking_action_that_approaches_to_trash**2 * np.sign(r_for_taking_action_that_approaches_to_trash)
 
 			# Exchange ponderation between exploration/exploitation when the 80% of the map is visited #
-			if self.percentage_visited > 0.8 and self.reward_function == 'backtosimpledistanceexchange':
+			if self.percentage_visited > 0.8 and 'exchange' in self.reward_function:
 				ponderation_for_discover_trash = self.reward_weights[2]
 				ponderation_for_discover_new_area = self.reward_weights[self.explorers_team_id]
 			else:

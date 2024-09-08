@@ -65,7 +65,7 @@ env = MultiAgentCleanupEnvironment(scenario_map = scenario_map,
                         max_collisions = 1000,
                         reward_function = reward_function,
                         reward_weights = reward_weights,
-                        dynamic = False,
+                        dynamic = True,
                         obstacles = False,
                         show_plot_graphics = SHOW_RENDER,
                         )
