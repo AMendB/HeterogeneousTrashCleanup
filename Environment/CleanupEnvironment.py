@@ -963,7 +963,7 @@ class MultiAgentCleanupEnvironment:
 					#   + r_for_discover_new_area * ponderation_for_discover_new_area \
 					#   + r_cleaners_for_being_with_the_trash * self.reward_weights[3]\
 		
-		elif self.reward_function == 'backtosimpledistance' or self.reward_function == 'exponentialdistancereachable' or self.reward_function == 'backtosimpledistanceexchange' or self.reward_function == 'negativedistance':
+		elif self.reward_function == 'backtosimpledistance' or self.reward_function == 'exponentialdistancereachable' or self.reward_function == 'backtosimpledistanceexchange' or self.reward_function == 'negativedistance' or self.reward_function == 'negativedistancereachable':
 			
 			# EXPLORERS TEAM #
 			explorers_alive = [idx for idx, agent_team in enumerate(self.team_id_of_each_agent) if agent_team == self.explorers_team_id and self.active_agents[idx]]
@@ -979,7 +979,10 @@ class MultiAgentCleanupEnvironment:
 			# CLEANERS TEAM #
 			cleaners_alive = [idx for idx, agent_team in enumerate(self.team_id_of_each_agent) if agent_team == self.cleaners_team_id and self.active_agents[idx]]
 			r_for_cleaned_trash = np.array([len(self.trashes_removed_per_agent[idx]) if idx in cleaners_alive and idx in self.trashes_removed_per_agent else 0 for idx in range(self.n_agents)])
-			# penalization_for_not_clean_reachable_trash = [-10 if idx in cleaners_alive and self.check_if_there_was_reachable_trash(agent.previous_agent_position) and not idx in self.trashes_removed_per_agent else 0 for idx, agent in enumerate(self.fleet.vehicles)]
+			if 'reachable' in self.reward_function:
+				penalization_for_not_clean_reachable_trash = [-10 if idx in cleaners_alive and self.check_if_there_was_reachable_trash(agent.previous_agent_position) and not idx in self.trashes_removed_per_agent else 0 for idx in range(self.n_agents)]
+			else:
+				penalization_for_not_clean_reachable_trash = np.zeros(self.n_agents)
 			
 			# If there is known trash, reward trough distance to closer trash #
 			if np.any(self.model_trash_map):
@@ -1015,7 +1018,7 @@ class MultiAgentCleanupEnvironment:
 					  + r_for_taking_action_that_approaches_to_trash \
 					  + r_for_discover_trash * ponderation_for_discover_trash \
 					  + r_for_discover_new_area * ponderation_for_discover_new_area \
-					#   + penalization_for_not_clean_reachable_trash \
+					  + penalization_for_not_clean_reachable_trash \
 
 		elif self.reward_function == 'backtosimpledistanceppo':
 			# ALL TEAMS #
