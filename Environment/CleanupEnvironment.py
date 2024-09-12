@@ -980,7 +980,7 @@ class MultiAgentCleanupEnvironment:
 			cleaners_alive = [idx for idx, agent_team in enumerate(self.team_id_of_each_agent) if agent_team == self.cleaners_team_id and self.active_agents[idx]]
 			r_for_cleaned_trash = np.array([len(self.trashes_removed_per_agent[idx]) if idx in cleaners_alive and idx in self.trashes_removed_per_agent else 0 for idx in range(self.n_agents)])
 			if 'reachable' in self.reward_function:
-				penalization_for_not_clean_reachable_trash = [-10 if idx in cleaners_alive and self.check_if_there_was_reachable_trash(agent.previous_agent_position) and not idx in self.trashes_removed_per_agent else 0 for idx in range(self.n_agents)]
+				penalization_for_not_clean_reachable_trash = [-10 if idx in cleaners_alive and self.check_if_there_was_reachable_trash(agent.previous_agent_position) and not idx in self.trashes_removed_per_agent else 0 for idx, agent in enumerate(self.fleet.vehicles)]
 			else:
 				penalization_for_not_clean_reachable_trash = np.zeros(self.n_agents)
 			
