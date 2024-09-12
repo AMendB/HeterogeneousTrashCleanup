@@ -57,22 +57,26 @@ if not 'PPO' in path_to_training_folder:
 							curriculum_learning_team=exp_config['curriculum_learning_team'],
 							)
 
-	# model = 'Final_Policy.pth'
-	# model = 'BestPolicy.pth'
-	model = 'BestEvalPolicy.pth'
-	# model = 'BestEvalCleanPolicy.pth'
+	models = [
+			'BestEvalPolicy.pth', 
+			'BestEvalCleanPolicy.pth', 
+			'Final_Policy.pth', 
+			'BestPolicy.pth'
+		    ]
 
-	network.load_model(path_to_training_folder + model)
-	
-	average_reward, average_episode_length, mean_cleaned_percentage = network.evaluate_env(RUNS)
+	for model in models:
 
-	print(f'\nModel: {model}')
+		network.load_model(path_to_training_folder + model)
+		
+		average_reward, average_episode_length, mean_cleaned_percentage = network.evaluate_env(RUNS)
+
+		print(f'\nModel: {model}\n')
 	
-	# if exp_config['independent_networks_per_team']:
-	# 	for team in range(len(average_reward)):
-	# 		print(f'Average reward for team {team}: {average_reward[team]}, with an episode average length of {average_episode_length[team]}. Cleaned percentage: {round(mean_cleaned_percentage*100,2)}%')
-	# else:
-	# 	print(f'Average reward: {average_reward}, with an episode average length of {average_episode_length}. Cleaned percentage: {round(mean_cleaned_percentage*100,2)}%')
+		# if exp_config['independent_networks_per_team']:
+		# 	for team in range(len(average_reward)):
+		# 		print(f'Average reward for team {team}: {average_reward[team]}, with an episode average length of {average_episode_length[team]}. Cleaned percentage: {round(mean_cleaned_percentage*100,2)}%')
+		# else:
+		# 	print(f'Average reward: {average_reward}, with an episode average length of {average_episode_length}. Cleaned percentage: {round(mean_cleaned_percentage*100,2)}%')
 
 else:
 	env = EnvWrapper(scenario_map = np.array(env_config['scenario_map']),

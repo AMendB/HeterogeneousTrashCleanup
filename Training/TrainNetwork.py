@@ -9,6 +9,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--n_explorers', type=int, default=2, help='Number of explorers agents.')
 parser.add_argument('--n_cleaners', type=int, default=2, help='Number of cleaners agents.')
+parser.add_argument('--max_steps_per_episode', type=int, default=150, help='Max steps per episode.')
 parser.add_argument('--dynamic_env', type=str, default='True', help='Dynamic environment.')
 parser.add_argument('-rw', '--reward_function', type=str, default='backtosimpledistance', help='Reward function to use: basic_reward, extended_reward, backtosimple')
 parser.add_argument('-w', '--reward_weights', type=int, nargs='+', default=[1, 50, 2, 0], help='Reward weights for the reward function.')
@@ -63,7 +64,7 @@ vision_length_explorers = 4
 vision_length_cleaners = 1
 max_distance_travelled_explorers = 400
 max_distance_travelled_cleaners = 200
-max_steps_per_episode = 150
+max_steps_per_episode = args.max_steps_per_episode
 
 
 # scenario_map = np.genfromtxt('Environment/Maps/ypacarai_map_low_res.csv', delimiter=',')
