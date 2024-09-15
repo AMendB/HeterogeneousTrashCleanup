@@ -452,7 +452,7 @@ if __name__ == '__main__':
                 # initial_positions = None
 
             # Create environment # 
-            env = MultiAgentCleanupEnvironment(scenario_map = scenario_map,
+            env = MultiAgentCleanupEnvironment(scenario_map_name = scenario_map,
                                     number_of_agents_by_team=(n_explorers,n_cleaners),
                                     n_actions_by_team=(n_actions_explorers, n_actions_cleaners),
                                     max_distance_travelled_by_team = (max_distance_travelled_explorers, max_distance_travelled_cleaners),
@@ -487,7 +487,7 @@ if __name__ == '__main__':
             env_config = json.load(f)
             f.close()
             
-            env = MultiAgentCleanupEnvironment(scenario_map = np.array(env_config['scenario_map']),
+            env = MultiAgentCleanupEnvironment(scenario_map_name = np.array(env_config['scenario_map']),
                                     number_of_agents_by_team=env_config['number_of_agents_by_team'],
                                     n_actions_by_team=env_config['n_actions'],
                                     max_distance_travelled_by_team = env_config['max_distance_travelled_by_team'],

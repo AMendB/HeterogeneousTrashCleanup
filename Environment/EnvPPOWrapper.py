@@ -22,7 +22,7 @@ class EnvWrapper:
                     show_plot_graphics,
                     ):
         
-        self.env = MultiAgentCleanupEnvironment(scenario_map = scenario_map,
+        self.env = MultiAgentCleanupEnvironment(scenario_map_name = scenario_map,
                                 number_of_agents_by_team=number_of_agents_by_team,
                                 n_actions_by_team=n_actions_by_team,
                                 max_distance_travelled_by_team = max_distance_travelled_by_team,

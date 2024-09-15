@@ -7,6 +7,7 @@ import numpy as np
 import argparse
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--scenario_map_name', type=str, default='acoruna_port', help='Name of the scenario map.')
 parser.add_argument('--n_explorers', type=int, default=2, help='Number of explorers agents.')
 parser.add_argument('--n_cleaners', type=int, default=2, help='Number of cleaners agents.')
 parser.add_argument('--max_steps_per_episode', type=int, default=150, help='Max steps per episode.')
@@ -65,10 +66,8 @@ vision_length_cleaners = 1
 max_distance_travelled_explorers = 400
 max_distance_travelled_cleaners = 200
 max_steps_per_episode = args.max_steps_per_episode
+scenario_map_name = args.scenario_map_name
 
-
-# scenario_map = np.genfromtxt('Environment/Maps/ypacarai_map_low_res.csv', delimiter=',')
-scenario_map = np.genfromtxt('Environment/Maps/acoruna_port.csv', delimiter=',')
 
 # Set initial positions #
 random_initial_positions = True 
@@ -79,7 +78,7 @@ else:
 	initial_positions = np.array([[32, 7], [30, 7], [28, 7], [26, 7]])[:n_agents, :] #coruna_port
 
 # Create environment # 
-env = MultiAgentCleanupEnvironment(scenario_map = scenario_map,
+env = MultiAgentCleanupEnvironment(scenario_map_name = scenario_map_name,
 							number_of_agents_by_team=(n_explorers,n_cleaners),
 							n_actions_by_team=(n_actions_explorers, n_actions_cleaners),
 							max_distance_travelled_by_team = (max_distance_travelled_explorers, max_distance_travelled_cleaners),

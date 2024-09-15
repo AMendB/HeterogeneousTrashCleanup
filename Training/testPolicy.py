@@ -25,7 +25,7 @@ RUNS = 100
 
 
 if not 'PPO' in path_to_training_folder:
-	env = MultiAgentCleanupEnvironment(scenario_map = np.array(env_config['scenario_map']),
+	env = MultiAgentCleanupEnvironment(scenario_map_name = np.array(env_config['scenario_map_name']),
 							number_of_agents_by_team=env_config['number_of_agents_by_team'],
 							n_actions_by_team=env_config['n_actions'],
 							max_distance_travelled_by_team = env_config['max_distance_travelled_by_team'],
@@ -79,7 +79,7 @@ if not 'PPO' in path_to_training_folder:
 		# 	print(f'Average reward: {average_reward}, with an episode average length of {average_episode_length}. Cleaned percentage: {round(mean_cleaned_percentage*100,2)}%')
 
 else:
-	env = EnvWrapper(scenario_map = np.array(env_config['scenario_map']),
+	env = EnvWrapper(scenario_map_name = np.array(env_config['scenario_map_name']),
 							number_of_agents_by_team=env_config['number_of_agents_by_team'],
 							n_actions_by_team=env_config['n_actions'],
 							max_distance_travelled_by_team = env_config['max_distance_travelled_by_team'],

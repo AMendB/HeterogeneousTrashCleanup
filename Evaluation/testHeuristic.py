@@ -14,7 +14,7 @@ from tqdm import trange
 algorithms = [
 	# 'WanderingAgent', 
     # 'LawnMower', 
-    # 'PSO', 
+    'PSO', 
     'Greedy',
 	]
 
@@ -25,7 +25,9 @@ RUNS = 100
 
 
 # Set config #
-scenario_map = np.genfromtxt('Environment/Maps/acoruna_port.csv', delimiter=',')
+# scenario_map_name = 'acoruna_port'
+# scenario_map_name = 'marinapalamos'
+scenario_map_name = 'comb_port'
 n_actions_explorers = 8
 n_actions_cleaners = 8
 n_explorers = 2
@@ -52,7 +54,7 @@ else:
     # initial_positions = None
 
 # Create environment # 
-env = MultiAgentCleanupEnvironment(scenario_map = scenario_map,
+env = MultiAgentCleanupEnvironment(scenario_map_name = scenario_map_name,
                         number_of_agents_by_team=(n_explorers,n_cleaners),
                         n_actions_by_team=(n_actions_explorers, n_actions_cleaners),
                         max_distance_travelled_by_team = (max_distance_travelled_explorers, max_distance_travelled_cleaners),
@@ -73,12 +75,12 @@ env = MultiAgentCleanupEnvironment(scenario_map = scenario_map,
 for algorithm in algorithms:
     if algorithm == "LawnMower":
         lawn_mower_rng = np.random.default_rng(seed=100)
-        agents = [LawnMowerAgent(world=scenario_map, number_of_actions=8, movement_length=movement_length_of_each_agent[i], forward_direction=int(lawn_mower_rng.uniform(0,8)), seed=SEED+i, agent_is_cleaner=env.team_id_of_each_agent[i]==env.cleaners_team_id) for i in range(n_agents)]
+        agents = [LawnMowerAgent(world=env.scenario_map, number_of_actions=8, movement_length=movement_length_of_each_agent[i], forward_direction=int(lawn_mower_rng.uniform(0,8)), seed=SEED+i, agent_is_cleaner=env.team_id_of_each_agent[i]==env.cleaners_team_id) for i in range(n_agents)]
     elif algorithm == "WanderingAgent":
-        agents = [WanderingAgent(world=scenario_map, number_of_actions=8, movement_length=movement_length_of_each_agent[i], seed=SEED+i, agent_is_cleaner=env.team_id_of_each_agent[i]==env.cleaners_team_id) for i in range(n_agents)]
+        agents = [WanderingAgent(world=env.scenario_map, number_of_actions=8, movement_length=movement_length_of_each_agent[i], seed=SEED+i, agent_is_cleaner=env.team_id_of_each_agent[i]==env.cleaners_team_id) for i in range(n_agents)]
     elif algorithm == "PSO":
         agents = ParticleSwarmOptimizationFleet(env)
-        consensus_safe_masking_module = ConsensusSafeActionMasking(navigation_map = scenario_map, angle_set_of_each_agent=env.angle_set_of_each_agent, movement_length_of_each_agent = env.movement_length_of_each_agent)
+        consensus_safe_masking_module = ConsensusSafeActionMasking(navigation_map = env.scenario_map, angle_set_of_each_agent=env.angle_set_of_each_agent, movement_length_of_each_agent = env.movement_length_of_each_agent)
     elif algorithm == "Greedy":
         agents = OneStepGreedyFleet(env)
 
@@ -149,5 +151,7 @@ for algorithm in algorithms:
             average_episode_length[team] += ep_length_per_teams[team]
     
     # Print algorithm results #
+    print(f'\nAlgorithm: {algorithm}')
     for team in range(env.n_teams):
         print(f'Average reward for {algorithm} team {team} with {n_explorers if team==0 else n_cleaners} agents: {average_reward[team]/RUNS}, with an episode average length of {average_episode_length[team]/RUNS}. Cleaned percentage: {round(mean_cleaned_percentage/RUNS*100, 2)}%')
+    print()

@@ -12,7 +12,7 @@ random_index = np.random.choice(np.arange(0,len(visitable_locations)), N, replac
 
 initial_positions = np.asarray([[24, 21],[28,24],[27,19],[24,24]])
 
-env = MultiAgentCleanupEnvironment(scenario_map=sc_map,
+env = MultiAgentCleanupEnvironment(scenario_map_name=sc_map,
                            fleet_initial_positions=initial_positions,
                            distance_budget=200,
                            number_of_agents=N,

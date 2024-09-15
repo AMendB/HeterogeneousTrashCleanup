@@ -242,7 +242,7 @@ class DiscreteFleet: # class to create FLEETS of class DiscreteVehicle
 class MultiAgentCleanupEnvironment:
 
 	def __init__(self, 
-	      		 scenario_map,
+	      		 scenario_map_name,
 				 max_distance_travelled_by_team,
 				 max_steps_per_episode,
 				 number_of_agents_by_team = (2, 2),
@@ -273,7 +273,8 @@ class MultiAgentCleanupEnvironment:
 		self.rng_pollution_spots_locations_indexes = np.random.default_rng(seed=self.seed)
 		
 		# Load the scenario config and other useful variables #
-		self.scenario_map = scenario_map
+		self.scenario_map_name = scenario_map_name
+		self.scenario_map = np.genfromtxt(f'Environment/Maps/{self.scenario_map_name}.csv', delimiter=',')
 		self.visited_areas_map = self.scenario_map.copy()
 		self.number_of_agents_by_team = number_of_agents_by_team
 		self.n_agents = np.sum(self.number_of_agents_by_team)
@@ -310,8 +311,14 @@ class MultiAgentCleanupEnvironment:
 		elif fleet_initial_positions == 'fixed': # Random choose between 4 fixed deployment positions #
 			self.random_inititial_positions = 'fixed'
 			self.deployment_positions = np.zeros_like(self.scenario_map)
-			# self.deployment_positions[[46,46,49,49], [28,31,28,31]] = 1 # Ypacarai map
-			self.deployment_positions[[32,30,28,26], [7,7,7,7]] = 1 # A Coruna port
+			if 'ypacarai' in self.scenario_map_name:
+				self.deployment_positions[[46,46,49,49], [28,31,28,31]] = 1 # Ypacarai map
+			elif 'acoruna_port' in self.scenario_map_name:
+				self.deployment_positions[[32,30,28,26], [7,7,7,7]] = 1 # A Coruna port
+			elif 'marinapalamos' in self.scenario_map_name:
+				self.deployment_positions[[16,14,12,10], [9,9,9,9]] = 1 # marinapalamos_r90
+			elif 'comb_port' in self.scenario_map_name:
+				self.deployment_positions[[16,14,12,10], [7,7,7,7]] = 1 # comb_port
 			self.initial_positions = np.argwhere(self.deployment_positions == 1)[self.rng_initial_agents_positions.choice(len(np.argwhere(self.deployment_positions == 1)), self.n_agents, replace=False)]
 		elif fleet_initial_positions == 'area': # Random deployment positions inside an area #
 			self.random_inititial_positions = 'area'
@@ -1117,7 +1124,7 @@ class MultiAgentCleanupEnvironment:
 
 		environment_configuration = {
 
-			'scenario_map': self.scenario_map.tolist(),
+			'sceario_map_name': self.scenario_map_name,
 			'number_of_agents_by_team': self.number_of_agents_by_team,
 			'n_actions': self.n_actions_by_team,
 			'max_distance_travelled_by_team': self.max_distance_travelled_by_team,
@@ -1144,9 +1151,7 @@ if __name__ == '__main__':
 	
 	seed = 24
 	np.random.seed(seed)
-	scenario_map = np.genfromtxt('Environment/Maps/acoruna_port.csv', delimiter=',')
-	# scenario_map = np.genfromtxt('Environment/Maps/ypacarai_map_low_res.csv', delimiter=',')
-	# scenario_map = np.genfromtxt('Environment/Maps/ypacarai_lake_58x41.csv', delimiter=',')
+	scenario_map_name = 'acoruna_port' # 'ypacarai_map_low_res', 'ypacarai_lake_58x41', marinapalamos, marinapalamos_r90
 
 	# Agents info #
 	n_actions_explorers = 8
@@ -1174,7 +1179,7 @@ if __name__ == '__main__':
 		# initial_positions = None
 
 	# Create environment # 
-	env = MultiAgentCleanupEnvironment(scenario_map = scenario_map,
+	env = MultiAgentCleanupEnvironment(scenario_map_name = scenario_map_name,
 							   number_of_agents_by_team=(n_explorers,n_cleaners),
 							   n_actions_by_team=(n_actions_explorers, n_actions_cleaners),
 							   max_distance_travelled_by_team = (max_distance_travelled_explorers, max_distance_travelled_cleaners),
