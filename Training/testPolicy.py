@@ -68,7 +68,7 @@ if not 'PPO' in path_to_training_folder:
 
 		network.load_model(path_to_training_folder + model)
 		
-		average_reward, average_episode_length, mean_cleaned_percentage = network.evaluate_env(RUNS)
+		average_reward, average_episode_length, mean_cleaned_percentage, mean_mse = network.evaluate_env(RUNS)
 
 		print(f'\nModel: {model}\n')
 	

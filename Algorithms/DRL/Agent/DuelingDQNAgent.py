@@ -462,6 +462,7 @@ class MultiAgentDuelingDQNAgent:
 			record = [-np.inf]*self.env.n_teams
 			eval_record = [-np.inf]*self.env.n_teams
 			eval_clean_record = [-np.inf]*self.env.n_teams
+			eval_mse_record = [-np.inf]*self.env.n_teams
 
 			for episode in trange(1, int(episodes+extra_episodes) + 1):
 
@@ -573,6 +574,10 @@ class MultiAgentDuelingDQNAgent:
 				# Save percentage of cleaned trash during the episode #
 				if self.env.number_of_agents_by_team[self.env.cleaners_team_id] > 0:
 					self.writer[self.env.cleaners_team_id].add_scalar('train/cleaned_percentage', self.env.get_percentage_cleaned_trash(), episode)
+				
+				# Save MSE error during the episode #
+				if self.env.number_of_agents_by_team[self.env.explorers_team_id] > 0:
+					self.writer[self.env.explorers_team_id].add_scalar('train/MSE_error', self.env.get_model_mse(), episode)
 
 				# Save the model every N episodes #
 				if self.save_every is not None:
@@ -590,22 +595,30 @@ class MultiAgentDuelingDQNAgent:
 
 				# Evaluation #
 				if self.eval_every is not None and episode % self.eval_every == 0:
-					mean_eval_reward, mean_eval_length, mean_cleaned_percentage = self.evaluate_env(self.eval_episodes)
+					mean_eval_reward, mean_eval_length, mean_cleaned_percentage, mean_mse = self.evaluate_env(self.eval_episodes)
 					for team_id in self.env.teams_ids:
 						if self.env.number_of_agents_by_team[team_id] > 0:
 							self.writer[team_id].add_scalar('test/accumulated_reward', mean_eval_reward[team_id], self.episode[team_id])
 							self.writer[team_id].add_scalar('test/accumulated_length', mean_eval_length[team_id], self.episode[team_id])
-							self.writer[team_id].add_scalar('test/mean_cleaned_percentage', mean_cleaned_percentage, self.episode[team_id])
+							if team_id == self.env.cleaners_team_id:
+								self.writer[team_id].add_scalar('test/mean_cleaned_percentage', mean_cleaned_percentage, self.episode[team_id])
+							if team_id == self.env.explorers_team_id:
+								self.writer[team_id].add_scalar('test/mean_mse', mean_mse, self.episode[team_id])
 							if mean_eval_reward[team_id] > eval_record[team_id]:
 								print(f"\nNew best policy (reward) IN EVAL with mean reward of {mean_eval_reward[team_id]} and cleaned percentage of {round(mean_cleaned_percentage*100,2)}% for network nº {team_id}")
 								print("Saving model in " + self.logdir)
 								eval_record[team_id] = mean_eval_reward[team_id]
 								self.save_model(name=f'BestEvalPolicy_network{team_id}.pth', team_id_index=team_id)
-							if mean_cleaned_percentage > eval_clean_record[team_id]:
+							if mean_cleaned_percentage > eval_clean_record[team_id] and team_id == self.env.cleaners_team_id:
 								print(f"\nNew best policy (cleaned percentage) IN EVAL with mean reward of {mean_eval_reward[team_id]} and cleaned percentage of {round(mean_cleaned_percentage*100,2)}% for network nº {team_id}")
 								print("Saving model in " + self.logdir)
 								eval_clean_record[team_id] = mean_cleaned_percentage
 								self.save_model(name=f'BestEvalCleanPolicy_network{team_id}.pth', team_id_index=team_id)
+							if mean_mse > eval_mse_record[team_id] and team_id == self.env.explorers_team_id:
+								print(f"\nNew best policy (MSE) IN EVAL with mean reward of {mean_eval_reward[team_id]} and cleaned percentage of {round(mean_cleaned_percentage*100,2)}% for network nº {team_id}")
+								print("Saving model in " + self.logdir)
+								eval_mse_record[team_id] = mean_mse
+								self.save_model(name=f'BestEvalMSEPolicy_network{team_id}.pth', team_id_index=team_id)
 
 			# Save the final policys #
 			for team_id in self.env.teams_ids:
@@ -747,10 +760,11 @@ class MultiAgentDuelingDQNAgent:
 				# Evaluation #
 				if self.eval_every is not None:
 					if episode % self.eval_every == 0:
-						mean_eval_reward, mean_eval_length, mean_cleaned_percentage = self.evaluate_env(self.eval_episodes)
+						mean_eval_reward, mean_eval_length, mean_cleaned_percentage, mean_mse = self.evaluate_env(self.eval_episodes)
 						self.writer.add_scalar('test/accumulated_reward', mean_eval_reward, self.episode)
 						self.writer.add_scalar('test/accumulated_length', mean_eval_length, self.episode)
 						self.writer.add_scalar('test/mean_cleaned_percentage', mean_cleaned_percentage, self.episode)
+						self.writer.add_scalar('test/mean_mse', mean_mse, self.episode)
 						if mean_eval_reward > eval_record:
 								print(f"\nNew best policy IN EVAL with mean reward of {mean_eval_reward}")
 								print("Saving model in " + self.logdir)
@@ -933,6 +947,7 @@ class MultiAgentDuelingDQNAgent:
 			total_reward = np.array([0]*self.env.n_teams)
 			total_length = np.array([0]*self.env.n_teams)
 			cleaned_percentage = []
+			mse_error_accumulated = 0
 			
 			# Set networks to eval #
 			for team_id in self.env.teams_ids:
@@ -965,6 +980,7 @@ class MultiAgentDuelingDQNAgent:
 					# print(f"Reward: {reward}")
 
 					reward_array = np.array([*reward.values()])
+					mse_error_accumulated += self.env.get_model_mse()
 
 					for team_id in self.env.teams_ids:
 						if self.env.number_of_agents_by_team[team_id] > 0:
@@ -984,13 +1000,14 @@ class MultiAgentDuelingDQNAgent:
 			for team_id in self.env.teams_ids:
 				if self.env.number_of_agents_by_team[team_id] > 0:
 					self.dqn[team_id].train()
-					print(f'\n Average eval reward team {team_id}: {total_reward[team_id]/eval_episodes}. Episode average length: {total_length[team_id] / eval_episodes}. Mean cleaned: {round(np.mean(cleaned_percentage)*100,2)}%')
+					print(f'\n Average eval reward team {team_id}: {total_reward[team_id]/eval_episodes}. Episode average length: {total_length[team_id] / eval_episodes}. Mean cleaned: {round(np.mean(cleaned_percentage)*100,2)}%. Mean MSE accumulated: {mse_error_accumulated / eval_episodes}')
 
 		else:
 			self.dqn.eval()
 			total_reward = 0
 			total_length = 0
 			cleaned_percentage = []
+			mse_error_accumulated = 0
 
 			for _ in trange(eval_episodes):
 
@@ -1016,6 +1033,7 @@ class MultiAgentDuelingDQNAgent:
 					states, reward, done = self.step(actions)
 					
 					total_reward += np.sum(list(reward.values()))
+					mse_error_accumulated += self.env.get_model_mse()
 				
 				# Save percentage of cleaning #
 				cleaned_percentage.append(self.env.get_percentage_cleaned_trash())
@@ -1026,7 +1044,7 @@ class MultiAgentDuelingDQNAgent:
 			self.dqn.train()
 
 		# Return the average reward, average length
-		return total_reward / eval_episodes, total_length / eval_episodes, np.mean(cleaned_percentage)
+		return total_reward / eval_episodes, total_length / eval_episodes, np.mean(cleaned_percentage), mse_error_accumulated / eval_episodes
 
 	def write_experiment_config(self):
 		""" Write experiment and environment variables in a json file """
