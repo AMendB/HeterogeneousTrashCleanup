@@ -623,7 +623,7 @@ class MultiAgentCleanupEnvironment:
 		
 		self.dones_by_teams = {team: all([is_done for agent_id, is_done in self.done.items() if self.team_id_of_each_agent[agent_id] == team]) for team in self.teams_ids}  
 		# If cleaners team is done, the episode is done #
-		if self.dones_by_teams[self.cleaners_team_id]:
+		if self.dones_by_teams[self.cleaners_team_id] and self.number_of_agents_by_team[self.cleaners_team_id] > 0:
 			self.done = {agent_id: True for agent_id in range(self.n_agents)}
 			self.dones_by_teams = {team: True for team in self.teams_ids}
 		self.active_agents = {key: not value for key, value in self.done.items()}
@@ -1157,7 +1157,7 @@ if __name__ == '__main__':
 	n_actions_explorers = 8
 	n_actions_cleaners = 8
 	n_explorers = 2
-	n_cleaners = 2
+	n_cleaners = 0
 	n_agents = n_explorers + n_cleaners
 	movement_length_explorers = 2
 	movement_length_cleaners = 1
