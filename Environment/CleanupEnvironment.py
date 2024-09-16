@@ -1124,7 +1124,7 @@ class MultiAgentCleanupEnvironment:
 
 		environment_configuration = {
 
-			'sceario_map_name': self.scenario_map_name,
+			'scenario_map_name': self.scenario_map_name,
 			'number_of_agents_by_team': self.number_of_agents_by_team,
 			'n_actions': self.n_actions_by_team,
 			'max_distance_travelled_by_team': self.max_distance_travelled_by_team,
