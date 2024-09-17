@@ -102,8 +102,10 @@ class OneStepGreedyFleet:
         if best_action is None:
             # best_action = np.random.choice(list(next_allowed_actionpose_dict.keys()))
             best_action = np.random.choice(self.n_actions_of_each_agent[agent_id])
-
-        self.navigable_map[next_allowed_actionpose_dict[best_action][0], next_allowed_actionpose_dict[best_action][1]] = 0 # to avoid collisions between agents
+            # Stays in the same position
+            self.navigable_map[agent_position[0], agent_position[1]] = 0 # to avoid collisions between agents
+        else:
+            self.navigable_map[next_allowed_actionpose_dict[best_action][0], next_allowed_actionpose_dict[best_action][1]] = 0 # to avoid collisions between agents
 
         return best_action
 
