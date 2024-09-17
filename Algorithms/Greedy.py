@@ -98,9 +98,10 @@ class OneStepGreedyFleet:
         if list(dict_actions_rewards.values()).count(best_reward) > 1:
             best_action = np.random.choice([action for action, reward in dict_actions_rewards.items() if reward == best_reward])
 
-        # In case no action is selected, choose randomly between the allowed actions
+        # In case no action is selected, choose randomly any action
         if best_action is None:
-            best_action = np.random.choice(list(next_allowed_actionpose_dict.keys()))
+            # best_action = np.random.choice(list(next_allowed_actionpose_dict.keys()))
+            best_action = np.random.choice(self.n_actions_of_each_agent[agent_id])
 
         self.navigable_map[next_allowed_actionpose_dict[best_action][0], next_allowed_actionpose_dict[best_action][1]] = 0 # to avoid collisions between agents
 

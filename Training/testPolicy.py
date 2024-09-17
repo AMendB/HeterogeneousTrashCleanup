@@ -65,6 +65,8 @@ if not 'PPO' in path_to_training_folder:
 			'Final_Policy.pth', 
 			'BestPolicy.pth'
 		    ]
+	
+	print(f'Scenario: {env_config["scenario_map_name"]}, with {env_config["number_of_agents_by_team"][0]} explorers and {env_config["number_of_agents_by_team"][1]} cleaners. Dynamic: {env_config["dynamic"]}. Reward function: {env_config["reward_function"]}, Reward weights: {env_config["reward_weights"]}.\n')
 
 	for model in models:
 
