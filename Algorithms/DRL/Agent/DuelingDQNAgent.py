@@ -614,7 +614,7 @@ class MultiAgentDuelingDQNAgent:
 								print("Saving model in " + self.logdir)
 								eval_clean_record[team_id] = mean_cleaned_percentage
 								self.save_model(name=f'BestEvalCleanPolicy_network{team_id}.pth', team_id_index=team_id)
-							if mean_mse > eval_mse_record[team_id] and team_id == self.env.explorers_team_id:
+							if mean_mse < eval_mse_record[team_id] and team_id == self.env.explorers_team_id:
 								print(f"\nNew best policy (MSE) IN EVAL with mean reward of {mean_eval_reward[team_id]} and cleaned percentage of {round(mean_cleaned_percentage*100,2)}% for network nº {team_id}")
 								print("Saving model in " + self.logdir)
 								eval_mse_record[team_id] = mean_mse

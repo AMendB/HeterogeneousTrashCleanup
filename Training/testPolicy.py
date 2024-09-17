@@ -1,6 +1,7 @@
 import sys
 import json
 import numpy as np
+import os
 sys.path.append('.')
 
 # DDQN #
@@ -60,17 +61,22 @@ if not 'PPO' in path_to_training_folder:
 	models = [
 			'BestEvalPolicy.pth', 
 			'BestEvalCleanPolicy.pth', 
+			'BestEvalMSEPolicy.pth', 
 			'Final_Policy.pth', 
 			'BestPolicy.pth'
 		    ]
 
 	for model in models:
 
-		network.load_model(path_to_training_folder + model)
+		# Check if the model exists in the folder. If not, skip to the next model
+		if model.split('.')[0] in ''.join(os.listdir(path_to_training_folder)):
+			network.load_model(path_to_training_folder + model)
+		else:	
+			continue
 		
 		average_reward, average_episode_length, mean_cleaned_percentage, mean_mse = network.evaluate_env(RUNS)
 
-		print(f'\nModel: {model}\n')
+		print(f'Model: {model}\n')
 	
 		# if exp_config['independent_networks_per_team']:
 		# 	for team in range(len(average_reward)):
