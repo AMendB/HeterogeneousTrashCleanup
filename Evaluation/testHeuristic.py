@@ -42,8 +42,8 @@ max_distance_travelled_explorers = 400
 max_distance_travelled_cleaners = 200
 max_steps_per_episode = 150
 
-reward_function = 'backtosimpledistance'
-reward_weights=(1, 20, 2, 10)
+reward_function = 'negativedistance'
+reward_weights=(1, 50, 2, 0)
 
 # Set initial positions #
 random_initial_positions = True #coruna_port
@@ -151,7 +151,8 @@ for algorithm in algorithms:
             average_episode_length[team] += ep_length_per_teams[team]
     
     # Print algorithm results #
-    print(f'\nAlgorithm: {algorithm}')
+    print(f'Algorithm: {algorithm}. Scenario: {env.scenario_map_name}, with {n_explorers} explorers and {n_cleaners} cleaners. Dynamic: {env.dynamic}. Reward function: {env.reward_function}, Reward weights: {env.reward_weights}.')
+
     for team in range(env.n_teams):
         print(f'Average reward for {algorithm} team {team} with {n_explorers if team==0 else n_cleaners} agents: {average_reward[team]/RUNS}, with an episode average length of {average_episode_length[team]/RUNS}. Cleaned percentage: {round(mean_cleaned_percentage/RUNS*100, 2)}%')
     print()
