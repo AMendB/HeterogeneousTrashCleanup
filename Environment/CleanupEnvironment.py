@@ -654,19 +654,19 @@ class MultiAgentCleanupEnvironment:
 		first_available_agent = np.argmax(list(self.active_agents.values())) # first True in active_agents
 		for agent_id, active in self.active_agents.items():
 			if active:
-				observing_agent_position_with_stela = np.zeros_like(self.scenario_map)
+				observing_agent_position_with_trail = np.zeros_like(self.scenario_map)
 				waypoints = self.fleet.vehicles[agent_id].waypoints
-				stela = True
-				if stela: 
+				trail = True # estela
+				if trail: 
 					if len(waypoints) > 10:
-						stela_points = 10
+						trail_points = 10
 					else:
-						stela_points = len(waypoints)
+						trail_points = len(waypoints)
 				else:
-					stela_points = 1
-				stela_values = np.linspace(0, 1, stela_points+1)[1:]
-				y_stela, x_stela =  zip(*waypoints[-stela_points:])
-				observing_agent_position_with_stela[y_stela, x_stela] = stela_values
+					trail_points = 1
+				trail_values = np.linspace(0, 1, trail_points+1)[1:]
+				y_trail, x_trail =  zip(*waypoints[-trail_points:])
+				observing_agent_position_with_trail[y_trail, x_trail] = trail_values
 
 				agent_observation_of_fleet = fleet_position_map_denoted_by_its_team_id.copy()
 				agents_to_remove_positions = np.array([pos for idx, pos in enumerate(self.fleet.fleet_positions) if (idx == agent_id) or (not self.active_agents[idx])])  # if its the observing agent or not active, save its position to remove
@@ -677,14 +677,14 @@ class MultiAgentCleanupEnvironment:
 					states[agent_id] = np.concatenate(( 
 						self.visited_areas_map[np.newaxis], # Channel 0 -> Map with visited positions. 0 non visitable, 1 non visited, 0.5 visited.
 						(self.model_trash_map/(np.max(self.model_trash_map)+1E-5))[np.newaxis], # Channel 1 -> Trash model map (normalized)
-						observing_agent_position_with_stela[np.newaxis], # Channel 3 -> Observing agent position map with a stela
+						observing_agent_position_with_trail[np.newaxis], # Channel 3 -> Observing agent position map with a trail
 					), dtype=np.float16)
 				elif self.n_agents > 1 and not self.dynamic: # 4 channels
 					self.observation_space_shape = (4, *self.scenario_map.shape)
 					states[agent_id] = np.concatenate(( 
 						self.visited_areas_map[np.newaxis], # Channel 0 -> Map with visited positions. 0 non visitable, 1 non visited, 0.5 visited.
 						(self.model_trash_map/(np.max(self.model_trash_map)+1E-5))[np.newaxis], # Channel 1 -> Trash model map (normalized)
-						observing_agent_position_with_stela[np.newaxis], # Channel 2 -> Observing agent position map with a stela
+						observing_agent_position_with_trail[np.newaxis], # Channel 2 -> Observing agent position map with a trail
 						agent_observation_of_fleet[np.newaxis], # Channel 3 -> Others active agents position map
 					), dtype=np.float16)
 				elif self.n_agents == 1 and self.dynamic: # 5 channels
@@ -693,7 +693,7 @@ class MultiAgentCleanupEnvironment:
 						(self.model_trash_map/(np.max(self.model_trash_map)+1E-5))[np.newaxis], # Channel 1 -> Trash model map (normalized)
 						(self.previous_model_trash_map/np.max(self.previous_model_trash_map+1E-5))[np.newaxis], # Channel 2 -> Previous trash model map (normalized)
 						(self.previousprevious_model_trash_map/np.max(self.previousprevious_model_trash_map+1E-5))[np.newaxis], # Channel 3 -> Previous previous trash model map (normalized)
-						observing_agent_position_with_stela[np.newaxis], # Channel 4 -> Observing agent position map with a stela
+						observing_agent_position_with_trail[np.newaxis], # Channel 4 -> Observing agent position map with a trail
 					), dtype=np.float16)
 				elif self.n_agents > 1 and self.dynamic: # 6 channels
 					states[agent_id] = np.concatenate(( 
@@ -702,7 +702,7 @@ class MultiAgentCleanupEnvironment:
 						(self.model_trash_map/(np.max(self.model_trash_map)+1E-5))[np.newaxis], # Channel 1 -> Trash model map (normalized)
 						(self.previous_model_trash_map/np.max(self.previous_model_trash_map+1E-5))[np.newaxis], # Channel 2 -> Previous trash model map (normalized)
 						(self.previousprevious_model_trash_map/np.max(self.previousprevious_model_trash_map+1E-5))[np.newaxis], # Channel 3 -> Previous previous trash model map (normalized)
-						observing_agent_position_with_stela[np.newaxis], # Channel 4 -> Observing agent position map with a stela
+						observing_agent_position_with_trail[np.newaxis], # Channel 4 -> Observing agent position map with a trail
 						agent_observation_of_fleet[np.newaxis], # Channel 5 -> Others active agents position map
 					), dtype=np.float16)
 
@@ -725,7 +725,7 @@ class MultiAgentCleanupEnvironment:
 							self.visited_areas_map[np.newaxis], # AXIS 0
 							self.real_trash_map[np.newaxis], # AXIS 1
 							self.model_trash_map[np.newaxis], # AXIS 2
-							observing_agent_position_with_stela[np.newaxis], # AXIS 3
+							observing_agent_position_with_trail[np.newaxis], # AXIS 3
 							agent_observation_of_fleet[np.newaxis],	# AXIS 4
 							self.redundancy_mask[np.newaxis] # AXIS 5
 						))
