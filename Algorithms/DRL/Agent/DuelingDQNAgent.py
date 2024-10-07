@@ -458,7 +458,7 @@ class MultiAgentDuelingDQNAgent:
 			# Reset episode count #
 			self.episode = [1]*self.env.n_teams
 			# Reset metrics #
-			episodic_reward_vector = [[]]*self.env.n_teams
+			episodic_reward_vector = [[] for _ in range(self.env.n_teams)]
 			record = [-np.inf]*self.env.n_teams
 			eval_record = [-np.inf]*self.env.n_teams
 			eval_clean_record = [-np.inf]*self.env.n_teams
@@ -470,7 +470,7 @@ class MultiAgentDuelingDQNAgent:
 				states = self.env.reset_env()
 				score = [0]*self.env.n_teams
 				length = [0]*self.env.n_teams
-				losses = [[]]*self.env.n_teams
+				losses = [[] for _ in range(self.env.n_teams)]
 				episode_finished_per_teams = {i:False if self.env.number_of_agents_by_team[i] > 0 else True for i in self.env.teams_ids}
 
 				# Initially sample noisy policy #
