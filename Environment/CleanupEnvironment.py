@@ -316,7 +316,7 @@ class MultiAgentCleanupEnvironment:
 			elif 'acoruna_port' in self.scenario_map_name:
 				self.deployment_positions[[32,30,28,26], [7,7,7,7]] = 1 # A Coruna port
 			elif 'marinapalamos' in self.scenario_map_name:
-				self.deployment_positions[[16,14,12,10], [9,9,9,9]] = 1 # marinapalamos_r90
+				self.deployment_positions[[16,14,12,10], [9,9,9,9]] = 1 # marinapalamos
 			elif 'comb_port' in self.scenario_map_name:
 				self.deployment_positions[[16,14,12,10], [7,7,7,7]] = 1 # comb_port
 			self.initial_positions = np.argwhere(self.deployment_positions == 1)[self.rng_initial_agents_positions.choice(len(np.argwhere(self.deployment_positions == 1)), self.n_agents, replace=False)]
@@ -1151,13 +1151,13 @@ if __name__ == '__main__':
 	
 	seed = 24
 	np.random.seed(seed)
-	scenario_map_name = 'acoruna_port' # 'ypacarai_map_low_res', 'ypacarai_lake_58x41', marinapalamos, marinapalamos_r90
+	scenario_map_name = 'comb_port' # 'ypacarai_map_low_res', 'ypacarai_lake_58x41', marinapalamos, comb_port
 
 	# Agents info #
 	n_actions_explorers = 8
 	n_actions_cleaners = 8
 	n_explorers = 2
-	n_cleaners = 0
+	n_cleaners = 2
 	n_agents = n_explorers + n_cleaners
 	movement_length_explorers = 2
 	movement_length_cleaners = 1
@@ -1170,7 +1170,7 @@ if __name__ == '__main__':
 
 
 	# Set initial positions #
-	random_initial_positions = False
+	random_initial_positions = True
 	if random_initial_positions:
 		initial_positions = 'fixed'
 	else:
