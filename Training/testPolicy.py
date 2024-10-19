@@ -13,8 +13,6 @@ from Environment.EnvPPOWrapper import EnvWrapper
 from Algorithms.PPO.ppo import PPO
 
 path_to_training_folder = 'Training/T//'
-# path_to_training_folder = 'testing/T_greedy_curriculum_RW_backtosimpledistance_0_50_0_0_60k_ep0.5_hu6k_te5/'
-# path_to_training_folder = 'DoneTrainings/Trning_RW_backtosimple_1_20_2_10_20k_curriculum_cleaners/'
 
 f = open(path_to_training_folder + 'environment_config.json',)
 env_config = json.load(f)
@@ -66,6 +64,7 @@ if not 'PPO' in path_to_training_folder:
 			'BestPolicy.pth'
 		    ]
 	
+	print(f'Algorithm: {path_to_training_folder.split("/")[-2]}\n')
 	print(f'Scenario: {env_config["scenario_map_name"]}, with {env_config["number_of_agents_by_team"][0]} explorers and {env_config["number_of_agents_by_team"][1]} cleaners. Dynamic: {env_config["dynamic"]}. Reward function: {env_config["reward_function"]}, Reward weights: {env_config["reward_weights"]}.\n')
 
 	for model in models:
@@ -76,6 +75,7 @@ if not 'PPO' in path_to_training_folder:
 		else:	
 			continue
 		
+		env.reset_seeds()
 		average_reward, average_episode_length, mean_cleaned_percentage, mean_mse = network.evaluate_env(RUNS)
 
 		print(f'Model: {model}\n')

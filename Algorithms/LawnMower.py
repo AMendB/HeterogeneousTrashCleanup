@@ -29,7 +29,7 @@ class LawnMowerAgent:
     def move(self, actual_position, trash_in_pixel: bool):
         """ Compute the new state """
         
-        if trash_in_pixel and self.agent_is_cleaner:
+        if trash_in_pixel and self.agent_is_cleaner and self.number_of_actions > 8:
             return 9
         else:
             # Compute the new position #

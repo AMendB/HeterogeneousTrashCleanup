@@ -24,9 +24,10 @@ class AlgorithmRecorderAndAnalizer:
         self.reward_weights = reward_weights
         self.runs = runs
 
-    def plot_all_figs(self, run):
-        self.env.render()
-        plt.show(block=True)
+    def plot_final_figs(self, run):
+        if SHOW_RENDER:
+            self.env.render()
+            plt.show(block=True)
         self.plot_paths(run=run, save_plot=False)
         self.plot_metrics(show_plot=True, run=run, save_plot = False)
 
@@ -216,12 +217,6 @@ class AlgorithmRecorderAndAnalizer:
             if show_plot:
                 plt.show(block=True)
 
-    # def save_ground_truths(self, ground_truths_to_save):
-
-    #     output_filename = '/GroundTruths.npy'
-
-    #     np.save( self.relative_path + output_filename , ground_truths_to_save)
-
     def save_registers(self, new_reward=None, reset=False):
 
         # Get data # 
@@ -244,7 +239,7 @@ class AlgorithmRecorderAndAnalizer:
             self.mse.append(self.env.get_model_mse())
             self.sum_model_changes.append(self.sum_model_changes[-1] + self.env.get_changes_in_model())
             self.trash_remaining.append(len(self.env.trash_positions_yx))
-            self.percentage_of_trash_collected.append( 100 * (1 - self.trash_remaining[-1] / self.trash_remaining[0]) )
+            self.percentage_of_trash_collected.append( 100 * self.env.get_percentage_cleaned_trash())
             self.traveled_distance_agents.append(self.env.fleet.get_fleet_distances_traveled())
             self.traveled_distance.append(np.sum(self.env.fleet.get_fleet_distances_traveled()))
             self.max_redundancy.append(self.env.get_redundancy_max())
@@ -272,6 +267,9 @@ class AlgorithmRecorderAndAnalizer:
 
         # Obtain dataframes #
         numeric_columns = metrics_df.select_dtypes(include=[np.number])
+        # Padding each episode with less steps than the max_steps_per_episode with the last value in the episode #
+        numeric_columns = numeric_columns.groupby('Run').apply(lambda group: group.set_index('Step').reindex(range(self.env.max_steps_per_episode+1), method='ffill').reset_index()).reset_index(drop=True)
+        # Calculate mean and std #
         self.results_mean = numeric_columns.groupby('Step').agg('mean')
         self.results_std = numeric_columns.groupby('Step').agg('std')
 
@@ -281,7 +279,6 @@ class AlgorithmRecorderAndAnalizer:
             self.reward_agents_acc = self.results_mean.iloc[:, first_accreward_agent_index:first_accreward_agent_index + self.n_agents].values.tolist()
             self.reward_acc = self.results_mean['R_acc'].values.tolist()
             self.mse = self.results_mean['MSE'].values.tolist()
-            self.mse_std = self.results_std['MSE'].values.tolist()
             self.sum_model_changes = self.results_mean['Sum_model_changes'].values.tolist()
             self.trash_remaining = self.results_mean['Trash_remaining'].values.tolist()
             self.percentage_of_trash_collected = self.results_mean['Percentage_of_trash_collected'].values.tolist()
@@ -296,7 +293,7 @@ class AlgorithmRecorderAndAnalizer:
             self.plot_metrics(show_plot=show_plot, save_plot=save_plot, plot_std=True)
             plt.close('all')
 
-        # LATEX TABLE #
+        # TABLE OF METRICS #
         import warnings
         warnings.filterwarnings('ignore', category=pd.errors.PerformanceWarning)
 
@@ -375,24 +372,18 @@ if __name__ == '__main__':
     from Algorithms.DRL.ActionMasking.ActionMaskingUtils import ConsensusSafeActionMasking
 
     algorithms = [
-        # 'WanderingAgent', 
-        # 'LawnMower', 
-        # 'PSO', 
+        'Training/T/Definitivos/acoruna_drl_alone/policy',
+        'Training/T/Definitivos/acoruna_greedy_training/policy',
+        'WanderingAgent', 
+        'LawnMower', 
+        'PSO', 
         'Greedy',
-        # 'Training/Trning_RW_basic_10_10_0/',
-        # 'DoneTrainings/Trning_RW_extended_10_50_0/',
-        # 'DoneTrainings/Trning_RW_extended_5_100_0/',
-        # 'DoneTrainings/Trning_RW_backtosimple_1_10_2/',
-        # 'DoneTrainings/Trning_RW_backtosimple_1_10_2_10/',
-        # 'DoneTrainings/Trning_RW_backtosimple_1_100_2_10/',
-        # 'Training/Trning_RW_backtosimple_1_10_2_1/',
-        # 'Training/Trning_RW_backtosimple_1_20_2_10/',
-        # 'DoneTrainings/Trning_RW_backtosimple_1_10_2_10_exchange/',
-        # 'DoneTrainings/Trning_RW_backtosimple_1_20_2_10_exchange/',
-        # 'Training/Trning_RW_backtosimple_1_20_2_10_exchange_20k/',
+        # 'Training/T/Definitivos/combport_drl_alone/policy',
+        # 'Training/T/Definitivos/combport_greedy_training/policy',
+        # 'Training/T//',
         ]
 
-    SHOW_RENDER = True
+    SHOW_RENDER = False
     SHOW_FINAL_EP_PLOT = False
     SHOW_FINAL_EVALUATION_PLOT = False
 
@@ -404,17 +395,20 @@ if __name__ == '__main__':
     RUNS = 100
     SEED = 3
 
-    # EXTRA_NAME = ''
+    EXTRA_NAME = ''
     # EXTRA_NAME = 'Final_Policy'
     # EXTRA_NAME = 'BestPolicy'
-    EXTRA_NAME = 'BestEvalPolicy'
-
+    # EXTRA_NAME = 'BestEvalPolicy'
+    # EXTRA_NAME = 'BestEvalCleanPolicy'
+    # EXTRA_NAME = 'BestEvalMSEPolicy'
+    
 
 
 
     saving_paths = []
     data_table_average = pd.DataFrame() 
     wilcoxon_dict = {}              
+    runtimes_dict = {}
 
     for path_to_training_folder in algorithms:
 
@@ -422,10 +416,9 @@ if __name__ == '__main__':
             selected_algorithm = path_to_training_folder
 
             # Set config #
-            # scenario_map = np.genfromtxt('Environment/Maps/ypacarai_map_low_res.csv', delimiter=',')
-            scenario_map = np.genfromtxt('Environment/Maps/acoruna_port.csv', delimiter=',') #coruna_port
-            n_actions_explorers = 9
-            n_actions_cleaners = 10
+            scenario_map_name = 'acoruna_port' # 'ypacarai_lake', 'acoruna_port', 'marinapalamos', 'comb_port'
+            n_actions_explorers = 8
+            n_actions_cleaners = 8
             n_explorers = 2
             n_cleaners = 2
             n_agents = n_explorers + n_cleaners
@@ -438,21 +431,20 @@ if __name__ == '__main__':
             max_distance_travelled_cleaners = 200
             max_steps_per_episode = 150
 
-            # reward_function = 'backtosimple' # 'basic_reward', 'extended_reward', 'backtosimple'
-            reward_function = selected_algorithm
-            reward_weights=(1, 20, 2, 10)
+            reward_function = 'negativedistance' # 'basic_reward', 'extended_reward', 'backtosimple'
+            reward_weights=(1, 50, 2, 0)
 
             # Set initial positions #
-            random_initial_positions = True #coruna_port
+            random_initial_positions = True
             if random_initial_positions:
                 initial_positions = 'fixed'
             else:
                 # initial_positions = np.array([[30, 20], [40, 25], [40, 20], [30, 28]])[:n_agents, :] # ypacarai lake
-                initial_positions = np.array([[32, 7], [30, 7], [28, 7], [26, 7]])[:n_agents, :] # a coruña port
+                initial_positions = np.array([[32, 7], [30, 7], [28, 7], [26, 7]])[:n_agents, :] # acoruna_port
                 # initial_positions = None
 
             # Create environment # 
-            env = MultiAgentCleanupEnvironment(scenario_map_name = scenario_map,
+            env = MultiAgentCleanupEnvironment(scenario_map_name = scenario_map_name,
                                     number_of_agents_by_team=(n_explorers,n_cleaners),
                                     n_actions_by_team=(n_actions_explorers, n_actions_cleaners),
                                     max_distance_travelled_by_team = (max_distance_travelled_explorers, max_distance_travelled_cleaners),
@@ -463,12 +455,13 @@ if __name__ == '__main__':
                                     vision_length_by_team = (vision_length_explorers, vision_length_cleaners),
                                     flag_to_check_collisions_within = False,
                                     max_collisions = 1000,
-                                    reward_function = 'backtosimple', #reward_function,
+                                    reward_function = reward_function,
                                     reward_weights = reward_weights,
                                     dynamic = True,
                                     obstacles = False,
                                     show_plot_graphics = SHOW_RENDER,
                                     )
+            scenario_map = env.scenario_map
             
             if selected_algorithm == "LawnMower":
                 lawn_mower_rng = np.random.default_rng(seed=100)
@@ -483,11 +476,13 @@ if __name__ == '__main__':
 
         else:
             # Load env config #
+            model_policy = path_to_training_folder.split('/')[-1]
+            path_to_training_folder = '/'.join(path_to_training_folder.split('/')[:-1]) + '/'
             f = open(path_to_training_folder + 'environment_config.json',)
             env_config = json.load(f)
             f.close()
             
-            env = MultiAgentCleanupEnvironment(scenario_map_name = np.array(env_config['scenario_map']),
+            env = MultiAgentCleanupEnvironment(scenario_map_name = env_config['scenario_map_name'],
                                     number_of_agents_by_team=env_config['number_of_agents_by_team'],
                                     n_actions_by_team=env_config['n_actions'],
                                     max_distance_travelled_by_team = env_config['max_distance_travelled_by_team'],
@@ -515,11 +510,14 @@ if __name__ == '__main__':
             f.close()
 
             independent_networks_per_team = exp_config['independent_networks_per_team']
+            greedy_training = exp_config['greedy_training']
 
-            if independent_networks_per_team:
-                selected_algorithm = "Independent_Networks_Per_Team"
+            if independent_networks_per_team and not greedy_training:
+                selected_algorithm = "DRLIndependent_Networks_Per_Team"
+            elif independent_networks_per_team and greedy_training:
+                selected_algorithm = "DRLIndependentgreedy"
             else:
-                selected_algorithm = "Network"
+                selected_algorithm = "DRLNetwork"
                 # raise NotImplementedError("This algorithm is not implemented. Choose one that is.")
 
             network = MultiAgentDuelingDQNAgent(env=env,
@@ -531,7 +529,7 @@ if __name__ == '__main__':
                                     device='cuda:0',
                                     independent_networks_per_team = independent_networks_per_team,
                                     )
-            network.load_model(path_to_training_folder + f'{EXTRA_NAME}.pth')
+            network.load_model(path_to_training_folder + f'{model_policy}.pth')
             network.epsilon = 0
 
         if SAVE_DATA:
@@ -541,8 +539,6 @@ if __name__ == '__main__':
                 os.mkdir(relative_path)
                 os.mkdir(f'{relative_path}/Paths')
                 os.mkdir(f'{relative_path}/Paths_svg')
-                # os.mkdir(f'{relative_path}/Models')
-                # os.mkdir(f'{relative_path}/Models_svg')
             saving_paths.append(relative_path)
 
             # algorithm_analizer = AlgorithmRecorderAndAnalizer(env, scenario_map, n_agents, relative_path, selected_algorithm, reward_function, reward_weights)
@@ -565,13 +561,16 @@ if __name__ == '__main__':
             # ground_truths_to_save = []
             heatmaps = None
 
+        runtimes_dict[selected_algorithm] = []
+
+        env.reset_seeds()
         # Start episodes #
         for run in trange(RUNS):
             
             done = {i: False for i in range(n_agents)}
             states = env.reset_env()
 
-            # runtime = 0
+            runtime = 0
             step = 0
 
             # Save data #
@@ -580,13 +579,13 @@ if __name__ == '__main__':
                 # ground_truths_to_save.append(env.real_trash_map)
             
             # Reset algorithms #
-            if selected_algorithm in ['LawnMower']:
+            if 'DRL' in selected_algorithm:
+                network.nogobackfleet_masking_module.reset()
+            elif selected_algorithm in ['LawnMower']:
                 for i in range(n_agents):
                     selected_algorithm_agents[i].reset(int(lawn_mower_rng.uniform(0,8)) if selected_algorithm == 'LawnMower' else None)
             elif selected_algorithm in ['PSO']:
                 selected_algorithm_agents.reset()
-            elif selected_algorithm in ['Independent_Networks_Per_Team', 'Network']:
-                network.nogobackfleet_masking_module.reset()
             
             acc_rw_episode = [0 for _ in range(n_agents)]
 
@@ -596,9 +595,10 @@ if __name__ == '__main__':
                 step += 1
                 
                 # Take new actions #
-                if selected_algorithm  in ['Independent_Networks_Per_Team', 'Network']:
+                t0 = time.perf_counter()
+                if 'DRL' in selected_algorithm:
                     actions = network.select_concensus_actions(states=states, positions=env.get_active_agents_positions_dict(), n_actions_of_each_agent=env.n_actions_of_each_agent, done = done, deterministic=True)
-                elif selected_algorithm  in ['WanderingAgent', 'LawnMower']:
+                elif selected_algorithm in ['WanderingAgent', 'LawnMower']:
                     actions = {agent_id: selected_algorithm_agents[agent_id].move(actual_position=position, trash_in_pixel=env.model_trash_map[position[0], position[1]]) for agent_id, position in env.get_active_agents_positions_dict().items()}
                 elif selected_algorithm == 'PSO':
                     q_values = selected_algorithm_agents.get_agents_q_values()
@@ -607,31 +607,30 @@ if __name__ == '__main__':
                     actions = selected_algorithm_agents.get_agents_actions()
                     # q_values = selected_algorithm_agents.get_agents_q_values()
                     # actions_qs = {agent_id: max(q_values[agent_id], key=q_values[agent_id].get) for agent_id in q_values.keys()}
+                t1 = time.perf_counter()
+                runtimes_dict[selected_algorithm].append(t1-t0)
 
-                # t0 = time.time()
                 states, new_reward, done = env.step(actions)
                 acc_rw_episode = [acc_rw_episode[i] + new_reward[i] for i in range(n_agents)]
-                # t1 = time.time()
-                # runtime += t1-t0
 
-                print(f"Step {env.steps}")
-                print(f"Actions: {dict(sorted(actions.items()))}")
-                print(f"Rewards: {new_reward}")
-                trashes_agents_pixels = {agent_id: env.model_trash_map[position[0], position[1]] for agent_id, position in env.get_active_agents_positions_dict().items()}
-                print(f"Trashes in agents pixels: {trashes_agents_pixels}")
-                print(f"Trashes removed: {env.trashes_removed_per_agent}")
-                print(f"Trashes remaining: {len(env.trash_positions_yx)}")
-                print()
+                # print(f"Step {env.steps}")
+                # print(f"Actions: {dict(sorted(actions.items()))}")
+                # print(f"Rewards: {new_reward}")
+                # trashes_agents_pixels = {agent_id: env.model_trash_map[position[0], position[1]] for agent_id, position in env.get_active_agents_positions_dict().items()}
+                # print(f"Trashes in agents pixels: {trashes_agents_pixels}")
+                # print(f"Trashes removed: {env.trashes_removed_per_agent}")
+                # print(f"Trashes remaining: {len(env.trash_positions_yx)}")
+                # print()
 
                 # Save data #
                 if SAVE_DATA:
                     algorithm_analizer.save_registers(new_reward, reset=False)
 
             # print('Total runtime: ', runtime)
-            print('Total reward: ', acc_rw_episode)
+            # print('Total reward: ', acc_rw_episode)
             
             if SHOW_FINAL_EP_PLOT:
-                algorithm_analizer.plot_all_figs(run)
+                algorithm_analizer.plot_final_figs(run)
             
             if SAVE_PLOTS_OF_METRICS_AND_PATHS and run%1 == 0:
                 algorithm_analizer.plot_paths(run, save_plot=SAVE_PLOTS_OF_METRICS_AND_PATHS)
@@ -645,19 +644,21 @@ if __name__ == '__main__':
             metrics.save_data_as_csv()
             waypoints.save_data_as_csv()
 
-        data_table_average, wilcoxon_dict = algorithm_analizer.plot_and_tables_metrics_average(metrics_path=relative_path + '/metrics.csv', 
+            data_table_average, wilcoxon_dict = algorithm_analizer.plot_and_tables_metrics_average(metrics_path=relative_path + '/metrics.csv', 
                                                                                                table=data_table_average, wilcoxon_dict=wilcoxon_dict, 
                                                                                                show_plot=SHOW_FINAL_EVALUATION_PLOT,save_plot=SAVE_PLOTS_OF_METRICS_AND_PATHS)
     
+        
     if SAVE_DATA:
+        # Save runtimes_dict as json #
+        with open('Evaluation/Results/' + '/runtimes.json', 'w') as f:
+            json.dump(runtimes_dict, f)
+
+        # Save data table #
         if len(algorithms) > 1:
-            with open(f'Evaluation/Results/{EXTRA_NAME}LatexTableAverage{RUNS}eps_{n_agents}A.txt', "w") as f:
-                f.write(data_table_average.style.to_latex())
             with open(f'Evaluation/Results/{EXTRA_NAME}TableAverage{RUNS}eps_{n_agents}A.txt', "w") as f:
                 print(data_table_average.to_markdown(), file=f)
         else:
-            with open(f'{relative_path}/{EXTRA_NAME}LatexTableAverage{RUNS}eps_{n_agents}A.txt', "w") as f:
-                f.write(data_table_average.style.to_latex())
             with open(f'{relative_path}/{EXTRA_NAME}TableAverage{RUNS}eps_{n_agents}A.txt', "w") as f:
                 print(data_table_average.to_markdown(), file=f)
 
@@ -685,13 +686,6 @@ if __name__ == '__main__':
             collage = np.hstack([np.vstack([crop_image(cv2.imread(img), 70, 20, 580, 485) for img in algorithm]) for algorithm in images_paths])
             cv2.imwrite(f'Evaluation/Results/{EXTRA_NAME}Paths{RUNS}eps_{n_agents}A.png', collage)
             
-            # collage GP models #
-            # images_paths = [sorted([os.path.join(f'{path}/Models/', file) for file in os.listdir(f'{path}/Models/')], key=lambda x: int(x.split('/')[-1].replace('Ep', '').replace('.png', ''))) for path in saving_paths]
-            # gt_collage = np.vstack([crop_image(cv2.imread(img), 0, 0, 500, 2000) for img in images_paths[-1]])
-            # collage = np.hstack([np.vstack([crop_image(cv2.imread(img), 500, 0, 700, 2000) for img in algorithm]) for algorithm in images_paths])
-            # collage = np.hstack([gt_collage, collage])
-            # cv2.imwrite(f'Evaluation/Results/{EXTRA_NAME}Models{RUNS}eps_{n_agents}A.png', collage)
-
             # Collage average metrics #
             networks = set([path.split('/')[-2].split('.')[0] for path in saving_paths])
             collage = []
@@ -711,7 +705,6 @@ if __name__ == '__main__':
             collage = np.vstack(collage)
             cv2.imwrite(f'Evaluation/Results/{EXTRA_NAME}HeatmapsAverage{RUNS}eps_{n_agents}A.png', collage)
 
-            # Remove Paths and Models folders #
+            # Remove temp folders #
             for path in saving_paths:
                 rmtree(f'{path}/Paths')
-                # rmtree(f'{path}/Models')

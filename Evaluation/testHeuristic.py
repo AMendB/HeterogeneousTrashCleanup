@@ -12,8 +12,8 @@ import numpy as np
 from tqdm import trange
 
 algorithms = [
-	# 'WanderingAgent', 
-    # 'LawnMower', 
+	'WanderingAgent', 
+    'LawnMower', 
     'PSO', 
     'Greedy',
 	]
@@ -25,9 +25,9 @@ RUNS = 100
 
 
 # Set config #
-# scenario_map_name = 'acoruna_port'
+scenario_map_name = 'acoruna_port'
 # scenario_map_name = 'marinapalamos'
-scenario_map_name = 'comb_port'
+# scenario_map_name = 'comb_port'
 n_actions_explorers = 8
 n_actions_cleaners = 8
 n_explorers = 2
@@ -46,11 +46,11 @@ reward_function = 'negativedistance'
 reward_weights=(1, 50, 2, 0)
 
 # Set initial positions #
-random_initial_positions = True #coruna_port
+random_initial_positions = True
 if random_initial_positions:
     initial_positions = 'fixed'
 else:
-    initial_positions = np.array([[32, 7], [30, 7], [28, 7], [26, 7]])[:n_agents, :] # a coruña port
+    initial_positions = np.array([[32, 7], [30, 7], [28, 7], [26, 7]])[:n_agents, :] # acoruna_port
     # initial_positions = None
 
 # Create environment # 
@@ -87,6 +87,7 @@ for algorithm in algorithms:
     mean_cleaned_percentage = 0
     average_reward = [0 for _ in range(env.n_teams)]
     average_episode_length = [0 for _ in range(env.n_teams)]
+    env.reset_seeds()
 
     # Start episodes #
     for run in trange(RUNS):

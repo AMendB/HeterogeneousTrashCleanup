@@ -1052,6 +1052,17 @@ class MultiAgentCleanupEnvironment:
 
 		return {agent_id: rewards[agent_id] if self.active_agents[agent_id] else 0 for agent_id in range(self.n_agents)}
 	
+	def reset_seeds(self):
+		""" Reset the seeds of the environment. """
+
+		np.random.seed(self.seed)
+		self.rng_initial_agents_positions = np.random.default_rng(seed=self.seed)
+		self.rng_wind_direction = np.random.default_rng(seed=self.seed)
+		self.rng_trash_elements_number = np.random.default_rng(seed=self.seed)
+		self.rng_trash_positions_MVN = np.random.default_rng(seed=self.seed)
+		self.rng_pollution_spots_number = np.random.default_rng(seed=self.seed)
+		self.rng_pollution_spots_locations_indexes = np.random.default_rng(seed=self.seed)
+
 	def get_percentage_cleaned_trash(self):
 		""" Returns the percentage of cleaned trash. """
 

@@ -16,7 +16,7 @@ class WanderingAgent:
     
     def move(self, actual_position, trash_in_pixel: bool):
         
-        if trash_in_pixel and self.agent_is_cleaner:
+        if trash_in_pixel and self.agent_is_cleaner and self.number_of_actions > 8:
             return 9
         else: 
             if self.action is None:
@@ -68,7 +68,10 @@ class WanderingAgent:
         if self.action is not None:
             opposite_action = self.opposite_action(self.action)
             action_caused_collision[opposite_action] = True
-        action = self.rng.choice(np.where(np.logical_not(action_caused_collision))[0])
-        # action = np.random.choice(np.where(np.logical_not(action_caused_collision))[0])
+        try:
+            action = self.rng.choice(np.where(np.logical_not(action_caused_collision))[0])
+            # action = np.random.choice(np.where(np.logical_not(action_caused_collision))[0])
+        except:
+            action = np.random.randint(self.number_of_actions)
 
         return action
