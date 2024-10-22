@@ -61,7 +61,8 @@ if not 'PPO' in path_to_training_folder:
 			'BestEvalCleanPolicy.pth', 
 			'BestEvalMSEPolicy.pth', 
 			'Final_Policy.pth', 
-			'BestPolicy.pth'
+			'BestPolicy.pth',
+			'policy.pth',
 		    ]
 	
 	print(f'Algorithm: {path_to_training_folder.split("/")[-2]}\n')

@@ -716,8 +716,8 @@ class MultiAgentCleanupEnvironment:
 							self.real_trash_map[np.newaxis], # AXIS 1
 							self.model_trash_map[np.newaxis], # AXIS 2
 							fleet_position_map_colored[np.newaxis], # AXIS 3
-							# self.redundancy_mask[np.newaxis] # AXIS 4
-							gaussian_blurred_model_trash[np.newaxis] # AXIS 4
+							self.redundancy_mask[np.newaxis] # AXIS 4
+							# gaussian_blurred_model_trash[np.newaxis] # AXIS 4
 						))
 					
 					else:
@@ -752,13 +752,13 @@ class MultiAgentCleanupEnvironment:
 
 			# AXIS 1: Plot the discretized real trash map #
 			self.state_to_render_first_active_agent[1][self.non_water_mask] = np.nan
-			self.im1 = self.axs[1].imshow(self.state_to_render_first_active_agent[1], cmap ='cet_linear_bgy_10_95_c74')
-			self.axs[1].set_title("Disc. trash map")
+			self.im1 = self.axs[1].imshow(self.state_to_render_first_active_agent[1], cmap ='cet_linear_bgyw_20_98_c66')
+			self.axs[1].set_title("Real trash map")
 
 			# AXIS 2: Plot the discretized model trash map #
 			self.state_to_render_first_active_agent[2][self.non_water_mask] = np.nan
-			self.im2 = self.axs[2].imshow(self.state_to_render_first_active_agent[2], cmap ='cet_linear_bgy_10_95_c74')
-			self.axs[2].set_title("Trash detected")
+			self.im2 = self.axs[2].imshow(self.state_to_render_first_active_agent[2], cmap ='cet_linear_bgyw_20_98_c66')
+			self.axs[2].set_title("Trash detected (model)")
 
 			if self.colored_agents == True:
 				# AXIS 3: Active colored agents positions #
@@ -786,7 +786,7 @@ class MultiAgentCleanupEnvironment:
 				# AXIS 5: Redundancy mask #
 				self.state_to_render_first_active_agent[5][self.non_water_mask] = np.nan
 				self.im5 = self.axs[5].imshow(self.state_to_render_first_active_agent[5], cmap = 'cet_linear_bgy_10_95_c74', vmin = 0.0, vmax = 4.0)
-				self.axs[5].set_title("Redundancy mask")
+				self.axs[5].set_title("Vision mask")
 
 		else:
 			# UPDATE FIG INFO/DATA IN EVERY RENDER CALL #
@@ -794,6 +794,7 @@ class MultiAgentCleanupEnvironment:
 			self.im0.set_data(self.state_to_render_first_active_agent[0])
 			self.im0_scatter.set_offsets(self.trash_positions_yx[:, [1, 0]]) # update scatter plot of trash
 			# AXIS 1: Plot the trash map #
+			self.im1.set_clim(0, np.max(self.state_to_render_first_active_agent[1]))
 			self.state_to_render_first_active_agent[1][self.non_water_mask] = np.nan
 			self.im1.set_data(self.state_to_render_first_active_agent[1])
 			# AXIS 2: Plot trash detected #
