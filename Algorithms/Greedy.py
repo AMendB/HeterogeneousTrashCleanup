@@ -57,7 +57,7 @@ class OneStepGreedyFleet:
             # ALL TEAMS #
             if np.any(self.model_trash_map):
                 r_for_taking_action_that_approaches_to_trash = -self.env.get_distance_to_closest_known_trash(next_position)
-                if self.model_trash_map[next_position[0], next_position[1]] >0:
+                if self.model_trash_map[next_position[0], next_position[1]] > 0:
                     r_for_taking_action_that_approaches_to_trash = 0
             else:
                 r_for_taking_action_that_approaches_to_trash = 0

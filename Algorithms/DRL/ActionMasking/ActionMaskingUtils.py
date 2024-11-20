@@ -1,4 +1,5 @@
 import numpy as np
+from Environment.CleanupEnvironment import is_reachable
 
 class SafeActionMasking:
 
@@ -120,7 +121,7 @@ class ConsensusSafeActionMasking:
 			next_positions = np.clip(next_positions, (0,0), np.array(self.obstacles_map.shape)-1) # saturate movement if out of indexes values (map edges)
 			
 			# Check which next possible positions lead to a collision
-			actions_mask = np.array([self.obstacles_map[int(next_position[0]), int(next_position[1])] == 0 for next_position in next_positions]).astype(bool)
+			actions_mask = np.array([not is_reachable(self.obstacles_map,agents_positions[agent_id], next_position) for next_position in next_positions]).astype(bool)
 
 			# Censor the impossible actions in the Q-values
 			q_values[agent_id][actions_mask] = -np.inf
@@ -140,5 +141,5 @@ class ConsensusSafeActionMasking:
 			final_actions[agent_id] = action.copy()
 
 
-		return final_actions 
+		return final_actions
 		
