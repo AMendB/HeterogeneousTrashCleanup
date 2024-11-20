@@ -137,7 +137,7 @@ network = MultiAgentDuelingDQNAgent(env=env,
 									device=device,
 									logdir=logdir,
 									eval_every=100, #1000
-									eval_episodes=50, # 10
+									eval_episodes=100, # 10
 									prewarm_percentage=prewarm_percentage,
 									noisy=False,
 									distributional=False,
