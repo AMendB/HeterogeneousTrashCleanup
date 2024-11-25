@@ -927,7 +927,11 @@ class MultiAgentCleanupEnvironment:
 	def get_reward(self, actions):
 		""" Reward functions. Different reward functions depending on the team of the agent. """
 		
-		if self.reward_function == 'negativedistance':
+		if self.reward_function == 'negativedistance' or self.reward_function == 'negativedijkstra':
+			if 'dijkstra' in self.reward_function:
+				self.dijkstra_distance_to_trash = True
+			else:
+				self.dijkstra_distance_to_trash = False
 			
 			# EXPLORERS TEAM #
 			explorers_alive = [idx for idx, agent_team in enumerate(self.team_id_of_each_agent) if agent_team == self.explorers_team_id and self.active_agents[idx]]
@@ -1023,7 +1027,10 @@ class MultiAgentCleanupEnvironment:
 		else:
 			trash_positions = np.argwhere(self.model_trash_map > 0)
 
-		distances_to_trash = [self.dijkstra_distance_map[tuple(position)][tuple(trash_pos)] for trash_pos in trash_positions]
+		if self.dijkstra_distance_to_trash:
+			distances_to_trash = [self.dijkstra_distance_map[tuple(position)][tuple(trash_pos)] for trash_pos in trash_positions]
+		else:
+			distances_to_trash = np.linalg.norm(trash_positions - position, axis = 1)
 
 		return np.min(distances_to_trash)
 	
