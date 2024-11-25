@@ -413,6 +413,7 @@ class MultiAgentCleanupEnvironment:
 			self.observation_space_shape = (5, *self.scenario_map.shape)
 		elif self.n_agents > 1 and self.dynamic:
 			self.observation_space_shape = (6, *self.scenario_map.shape)
+		self.observation_space_shape = (5, *self.scenario_map.shape) # the channels with other agents positions is removed to test is needed for cooperation
 		self.angle_set_of_each_agent = {idx: self.fleet.vehicles[idx].angle_set for idx in range(self.n_agents)}
 
 	def set_agents_id_info(self):
@@ -772,7 +773,6 @@ class MultiAgentCleanupEnvironment:
 						observing_agent_position_with_trail[np.newaxis], # Channel 3 -> Observing agent position map with a trail
 					), dtype=np.float16)
 				elif self.n_agents > 1 and not self.dynamic: # 4 channels
-					self.observation_space_shape = (4, *self.scenario_map.shape)
 					states[agent_id] = np.concatenate(( 
 						self.visited_areas_map[np.newaxis], # Channel 0 -> Map with visited positions. 0 non visitable, 1 non visited, 0.5 visited.
 						(self.model_trash_map/(np.max(self.model_trash_map)+1E-5))[np.newaxis], # Channel 1 -> Trash model map (normalized)
@@ -795,7 +795,7 @@ class MultiAgentCleanupEnvironment:
 						(self.previous_model_trash_map/np.max(self.previous_model_trash_map+1E-5))[np.newaxis], # Channel 2 -> Previous trash model map (normalized)
 						(self.previousprevious_model_trash_map/np.max(self.previousprevious_model_trash_map+1E-5))[np.newaxis], # Channel 3 -> Previous previous trash model map (normalized)
 						observing_agent_position_with_trail[np.newaxis], # Channel 4 -> Observing agent position map with a trail
-						agent_observation_of_fleet[np.newaxis], # Channel 5 -> Others active agents position map
+						# agent_observation_of_fleet[np.newaxis], # Channel 5 -> Others active agents position map
 					), dtype=np.float16)
 
 
