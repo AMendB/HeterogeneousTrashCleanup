@@ -1,7 +1,7 @@
 import sys
 sys.path.append('.')
 
-from Environment.CleanupEnvironment import MultiAgentCleanupEnvironment
+from Environment.CleanupEnvironmentNoSharedModel import MultiAgentCleanupEnvironment
 from Algorithms.DRL.Agent.DuelingDQNAgent import MultiAgentDuelingDQNAgent
 import numpy as np
 import argparse
@@ -12,7 +12,7 @@ parser.add_argument('--n_explorers', type=int, default=2, help='Number of explor
 parser.add_argument('--n_cleaners', type=int, default=2, help='Number of cleaners agents.')
 parser.add_argument('--max_steps_per_episode', type=int, default=150, help='Max steps per episode.')
 parser.add_argument('--dynamic_env', type=str, default='True', help='Dynamic environment.')
-parser.add_argument('-rw', '--reward_function', type=str, default='backtosimpledistance', help='Reward function to use: basic_reward, extended_reward, backtosimple')
+parser.add_argument('-rw', '--reward_function', type=str, default='negativedistance', help='Reward function to use: basic_reward, extended_reward, backtosimple')
 parser.add_argument('-w', '--reward_weights', type=int, nargs='+', default=[1, 50, 2, 0], help='Reward weights for the reward function.')
 parser.add_argument('-net', '--network_type', type=str, default='independent_networks_per_team', help='Type of network to use: independent_networks_per_team, shared_network')
 parser.add_argument('-dev', '--device', type=str, default='cuda:0', help='Device to use: cuda:x, cpu')
@@ -20,12 +20,12 @@ parser.add_argument('--epsilon', type=float, default=0.5, help='Epsilon value fo
 parser.add_argument('-eps', '--episodes', type=int, default=60000, help='Number of episodes to train the network.')
 parser.add_argument('--extra_episodes', type=int, default=0, help='Extra episodes to keep training after the first training.')
 parser.add_argument('-gt', '--greedy_training', type=str, default="False", help='Use greedy training instead of epsilon-greedy training.')
-parser.add_argument('--heuristic_training', type=str, default="True", help='Use heuristic training instead of epsilon-greedy training.')
+parser.add_argument('--heuristic_training', type=str, default="False", help='Use heuristic training instead of epsilon-greedy training.')
 parser.add_argument('-t', '--target_update', type=int, default=6000, help='Number of steps to update the target network.')
 parser.add_argument('--train_every', type=int, default=15, help='Number of steps to train the network.')
 parser.add_argument('--extra_name', type=str, default='', help='Extra name to add to the logdir.')
 parser.add_argument('--preload_path', type=str, default='', help='Path to preload a model.')
-parser.add_argument('--prewarm_percentage', type=float, default=0.2, help='Percentage of memory to prewarm with Greedy actions.')
+parser.add_argument('--prewarm_percentage', type=float, default=0, help='Percentage of memory to prewarm with Greedy actions.')
 args = parser.parse_args()
 
 # Selection of PARAMETERS TO TRAIN #

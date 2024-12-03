@@ -307,6 +307,8 @@ class MultiAgentCleanupEnvironment:
 		self.scenario_map_name = scenario_map_name
 		self.scenario_map = np.genfromtxt(f'Environment/Maps/{self.scenario_map_name}.csv', delimiter=',')
 		self.visited_areas_map = self.scenario_map.copy()
+		self.visited_areas_map_team0 = self.scenario_map.copy()
+		self.visited_areas_map_team1 = self.scenario_map.copy()
 		self.number_of_agents_by_team = number_of_agents_by_team
 		self.n_agents = np.sum(self.number_of_agents_by_team)
 		self.n_teams = len(self.number_of_agents_by_team)
@@ -373,7 +375,6 @@ class MultiAgentCleanupEnvironment:
 		self.dones_by_teams = {teams: False for teams in range(self.n_teams)}  
 		self.active_agents = {key: not value for key, value in self.done.items()}
 		self.n_active_agents = sum(self.active_agents.values())
-		self.percentage_visited = 0.0
  
 		# Load agents identification info #
 		self.set_agents_id_info()
@@ -393,9 +394,12 @@ class MultiAgentCleanupEnvironment:
 
 		# Initialize model trash map #
 		if self.number_of_agents_by_team[self.explorers_team_id] > 0:
-			self.model_trash_map = np.zeros_like(self.scenario_map) 
-			self.previous_model_trash_map = self.model_trash_map.copy()
-			self.previousprevious_model_trash_map = self.previous_model_trash_map.copy()
+			self.model_trash_map_team0 = np.zeros_like(self.scenario_map) 
+			self.previous_model_trash_map_team0 = self.model_trash_map_team0.copy()
+			self.previousprevious_model_trash_map_team0 = self.previous_model_trash_map_team0.copy()
+			self.model_trash_map_team1 = np.zeros_like(self.scenario_map) 
+			self.previous_model_trash_map_team1 = self.model_trash_map_team1.copy()
+			self.previousprevious_model_trash_map_team1 = self.previous_model_trash_map_team1.copy()
 		else: # oracle model
 			self.model_trash_map = self.real_trash_map.copy()
 			self.previous_model_trash_map = np.zeros_like(self.scenario_map)
@@ -403,6 +407,9 @@ class MultiAgentCleanupEnvironment:
 
 		# Init the redundancy mask #
 		self.redundancy_mask = np.sum([agent.influence_mask for idx, agent in enumerate(self.fleet.vehicles) if self.active_agents[idx]], axis = 0)
+		self.redundancy_mask_team0 = np.sum([agent.influence_mask for idx, agent in enumerate(self.fleet.vehicles) if self.active_agents[idx] and agent.team_id == self.explorers_team_id], axis = 0)
+		self.redundancy_mask_team1 = np.sum([agent.influence_mask for idx, agent in enumerate(self.fleet.vehicles) if self.active_agents[idx] and agent.team_id == self.cleaners_team_id], axis = 0)
+
 
 		# Info for training among others # 
 		if self.n_agents == 1 and not self.dynamic:
@@ -462,13 +469,18 @@ class MultiAgentCleanupEnvironment:
 			self.inside_obstacles_map = np.zeros_like(self.scenario_map)
 		
 		self.visited_areas_map = self.scenario_map.copy()
+		self.visited_areas_map_team0 = self.scenario_map.copy()
+		self.visited_areas_map_team1 = self.scenario_map.copy()
 		self.non_water_mask = self.scenario_map != 1 - self.inside_obstacles_map # mask with True where no water
 
 		# Create an empty model after reset #
 		if self.number_of_agents_by_team[self.explorers_team_id] > 0:
-			self.model_trash_map = np.zeros_like(self.scenario_map) 
-			self.previous_model_trash_map = self.model_trash_map.copy()
-			self.previousprevious_model_trash_map = self.previous_model_trash_map.copy()
+			self.model_trash_map_team0 = np.zeros_like(self.scenario_map) 
+			self.previous_model_trash_map_team0 = self.model_trash_map_team0.copy()
+			self.previousprevious_model_trash_map_team0 = self.previous_model_trash_map_team0.copy()
+			self.model_trash_map_team1 = np.zeros_like(self.scenario_map) 
+			self.previous_model_trash_map_team1 = self.model_trash_map_team1.copy()
+			self.previousprevious_model_trash_map_team1 = self.previous_model_trash_map_team1.copy()
 		else: # oracle model
 			self.model_trash_map = self.real_trash_map.copy()
 			self.previous_model_trash_map = np.zeros_like(self.scenario_map)
@@ -488,10 +500,11 @@ class MultiAgentCleanupEnvironment:
 		self.dones_by_teams = {team: False for team in range(self.n_teams)}  
 		self.active_agents = {agent_id: True for agent_id in range(self.n_agents)}
 		self.n_active_agents = sum(self.active_agents.values())
-		self.percentage_visited = 0.0
 
 		# Compute the redundancy mask after reset #
 		self.redundancy_mask = np.sum([agent.influence_mask for idx, agent in enumerate(self.fleet.vehicles) if self.active_agents[idx]], axis = 0)
+		self.redundancy_mask_team0 = np.sum([agent.influence_mask for idx, agent in enumerate(self.fleet.vehicles) if self.active_agents[idx] and agent.team_id == self.explorers_team_id], axis = 0)
+		self.redundancy_mask_team1 = np.sum([agent.influence_mask for idx, agent in enumerate(self.fleet.vehicles) if self.active_agents[idx] and agent.team_id == self.cleaners_team_id], axis = 0)
 
 		# Detect trash from cameras and update model #
 		self.update_model_trash_map()
@@ -604,10 +617,13 @@ class MultiAgentCleanupEnvironment:
 	def update_model_trash_map(self):
 		""" The active agents capture new trash information from the environment with cameras. The length of vision depends on its area of influence. """
 		
-		self.previousprevious_model_trash_map = self.previous_model_trash_map.copy()
-		self.previous_model_trash_map = self.model_trash_map.copy()
+		self.previousprevious_model_trash_map_team0 = self.previous_model_trash_map_team0.copy()
+		self.previous_model_trash_map_team0 = self.model_trash_map_team0.copy()
+		self.previousprevious_model_trash_map_team1 = self.previous_model_trash_map_team1.copy()
+		self.previous_model_trash_map_team1 = self.model_trash_map_team1.copy()
 		if self.number_of_agents_by_team[self.explorers_team_id] > 0:
-			self.model_trash_map[self.redundancy_mask.astype(bool)] = self.real_trash_map[self.redundancy_mask.astype(bool)]
+			self.model_trash_map_team0[self.redundancy_mask_team0.astype(bool)] = self.real_trash_map[self.redundancy_mask_team0.astype(bool)]
+			self.model_trash_map_team1[self.redundancy_mask_team1.astype(bool)] = self.real_trash_map[self.redundancy_mask_team1.astype(bool)]
 		else: # oracle model
 			self.model_trash_map = self.real_trash_map.copy()
 
@@ -686,12 +702,16 @@ class MultiAgentCleanupEnvironment:
 		
 		# Update the redundancy mask after movements #
 		self.redundancy_mask = np.sum([agent.influence_mask for idx, agent in enumerate(self.fleet.vehicles) if self.active_agents[idx]], axis = 0)
+		self.redundancy_mask_team0 = np.sum([agent.influence_mask for idx, agent in enumerate(self.fleet.vehicles) if self.active_agents[idx] and agent.team_id == self.explorers_team_id], axis = 0)
+		self.redundancy_mask_team1 = np.sum([agent.influence_mask for idx, agent in enumerate(self.fleet.vehicles) if self.active_agents[idx] and agent.team_id == self.cleaners_team_id], axis = 0)
+
 
 		# Update visited map and new discovered areas divided by overlapping agents #
-		self.new_discovered_area_per_agent = {idx: ((self.visited_areas_map[agent.influence_mask.astype(bool)] == 1).astype(int) / self.redundancy_mask[agent.influence_mask.astype(bool)] ).sum() 
+		self.new_discovered_area_per_agent = {idx: ((self.visited_areas_map_team0[agent.influence_mask.astype(bool)] == 1).astype(int) / self.redundancy_mask_team0[agent.influence_mask.astype(bool)] ).sum() 
 										if self.active_agents[idx] and agent.team_id == self.explorers_team_id else 0 for idx, agent in enumerate(self.fleet.vehicles)}
 		self.visited_areas_map[(self.redundancy_mask.astype(bool) * (1-self.non_water_mask)).astype(bool)] = 0.5 # 0 non visitable, 1 not visited yet, 0.5 visited
-		self.percentage_visited = (self.visited_areas_map == 0.5).sum() / (self.visited_areas_map != 0).sum()
+		self.visited_areas_map_team0[(self.redundancy_mask_team0.astype(bool) * (1-self.non_water_mask)).astype(bool)] = 0.5 # 0 non visitable, 1 not visited yet, 0.5 visited
+		self.visited_areas_map_team1[(self.redundancy_mask_team1.astype(bool) * (1-self.non_water_mask)).astype(bool)] = 0.5 # 0 non visitable, 1 not visited yet, 0.5 visited
 
 		# Detect trash from cameras and update model #
 		self.update_model_trash_map()
@@ -766,47 +786,35 @@ class MultiAgentCleanupEnvironment:
 				agent_observation_of_fleet[agents_to_remove_positions[:,0], agents_to_remove_positions[:,1]] = 0.0
 
 				"""Each key from states dictionary is an agent, all states associated to that agent are concatenated in its value:"""
-				if self.n_agents == 1 and not self.dynamic: # 3 channels
-					states[agent_id] = np.concatenate(( 
-						self.visited_areas_map[np.newaxis], # Channel 0 -> Map with visited positions. 0 non visitable, 1 non visited, 0.5 visited.
-						(self.model_trash_map/(np.max(self.model_trash_map)+1E-5))[np.newaxis], # Channel 1 -> Trash model map (normalized)
-						observing_agent_position_with_trail[np.newaxis], # Channel 3 -> Observing agent position map with a trail
-					), dtype=np.float16)
-				elif self.n_agents > 1 and not self.dynamic: # 4 channels
-					states[agent_id] = np.concatenate(( 
-						self.visited_areas_map[np.newaxis], # Channel 0 -> Map with visited positions. 0 non visitable, 1 non visited, 0.5 visited.
-						(self.model_trash_map/(np.max(self.model_trash_map)+1E-5))[np.newaxis], # Channel 1 -> Trash model map (normalized)
-						observing_agent_position_with_trail[np.newaxis], # Channel 2 -> Observing agent position map with a trail
-						agent_observation_of_fleet[np.newaxis], # Channel 3 -> Others active agents position map
-					), dtype=np.float16)
-				elif self.n_agents == 1 and self.dynamic: # 5 channels
-					states[agent_id] = np.concatenate(( 
-						self.visited_areas_map[np.newaxis], # Channel 0 -> Map with visited positions. 0 non visitable, 1 non visited, 0.5 visited.
-						(self.model_trash_map/(np.max(self.model_trash_map)+1E-5))[np.newaxis], # Channel 1 -> Trash model map (normalized)
-						(self.previous_model_trash_map/np.max(self.previous_model_trash_map+1E-5))[np.newaxis], # Channel 2 -> Previous trash model map (normalized)
-						(self.previousprevious_model_trash_map/np.max(self.previousprevious_model_trash_map+1E-5))[np.newaxis], # Channel 3 -> Previous previous trash model map (normalized)
-						observing_agent_position_with_trail[np.newaxis], # Channel 4 -> Observing agent position map with a trail
-					), dtype=np.float16)
-				elif self.n_agents > 1 and self.dynamic: # 6 channels
-					states[agent_id] = np.concatenate(( 
-						# obstacle_map[np.newaxis], # Channel 0 -> Known boundaries/navigation map
-						self.visited_areas_map[np.newaxis], # Channel 0 -> Map with visited positions. 0 non visitable, 1 non visited, 0.5 visited.
-						(self.model_trash_map/(np.max(self.model_trash_map)+1E-5))[np.newaxis], # Channel 1 -> Trash model map (normalized)
-						(self.previous_model_trash_map/np.max(self.previous_model_trash_map+1E-5))[np.newaxis], # Channel 2 -> Previous trash model map (normalized)
-						(self.previousprevious_model_trash_map/np.max(self.previousprevious_model_trash_map+1E-5))[np.newaxis], # Channel 3 -> Previous previous trash model map (normalized)
-						observing_agent_position_with_trail[np.newaxis], # Channel 4 -> Observing agent position map with a trail
-						agent_observation_of_fleet[np.newaxis], # Channel 5 -> Others active agents position map
-					), dtype=np.float16)
+				if self.n_agents > 1 and self.dynamic: # 6 channels
+					if self.team_id_of_each_agent[agent_id] == self.explorers_team_id:
+						states[agent_id] = np.concatenate(( 
+							self.visited_areas_map_team0[np.newaxis], # Channel 0 -> Map with visited positions. 0 non visitable, 1 non visited, 0.5 visited.
+							(self.model_trash_map_team0/(np.max(self.model_trash_map_team0)+1E-5))[np.newaxis], # Channel 1 -> Trash model map (normalized)
+							(self.previous_model_trash_map_team0/np.max(self.previous_model_trash_map_team0+1E-5))[np.newaxis], # Channel 2 -> Previous trash model map (normalized)
+							(self.previousprevious_model_trash_map_team0/np.max(self.previousprevious_model_trash_map_team0+1E-5))[np.newaxis], # Channel 3 -> Previous previous trash model map (normalized)
+							observing_agent_position_with_trail[np.newaxis], # Channel 4 -> Observing agent position map with a trail
+							agent_observation_of_fleet[np.newaxis], # Channel 5 -> Others active agents position map
+						), dtype=np.float16)
+					elif self.team_id_of_each_agent[agent_id] == self.cleaners_team_id:
+						states[agent_id] = np.concatenate(( 
+							self.visited_areas_map_team1[np.newaxis], # Channel 0 -> Map with visited positions. 0 non visitable, 1 non visited, 0.5 visited.
+							(self.model_trash_map_team1/(np.max(self.model_trash_map_team1)+1E-5))[np.newaxis], # Channel 1 -> Trash model map (normalized)
+							(self.previous_model_trash_map_team1/np.max(self.previous_model_trash_map_team1+1E-5))[np.newaxis], # Channel 2 -> Previous trash model map (normalized)
+							(self.previousprevious_model_trash_map_team1/np.max(self.previousprevious_model_trash_map_team1+1E-5))[np.newaxis], # Channel 3 -> Previous previous trash model map (normalized)
+							observing_agent_position_with_trail[np.newaxis], # Channel 4 -> Observing agent position map with a trail
+							agent_observation_of_fleet[np.newaxis], # Channel 5 -> Others active agents position map
+						), dtype=np.float16)
 
 
 				if agent_id == first_available_agent and self.activate_plot_graphics:
-					gaussian_blurred_model_trash = gaussian_filter(self.model_trash_map, sigma=20, mode='constant', cval=0)
+					gaussian_blurred_model_trash = gaussian_filter(self.model_trash_map_team0, sigma=20, mode='constant', cval=0)
 					gaussian_blurred_model_trash = (1-self.non_water_mask) * gaussian_blurred_model_trash/(np.max(gaussian_blurred_model_trash)+1E-5)
 					if self.colored_agents == True:
 						self.state_to_render_first_active_agent = np.concatenate(( 
 							self.visited_areas_map[np.newaxis], # AXIS 0
 							self.real_trash_map[np.newaxis], # AXIS 1
-							self.model_trash_map[np.newaxis], # AXIS 2
+							self.model_trash_map_team0[np.newaxis], # AXIS 2
 							fleet_position_map_colored[np.newaxis], # AXIS 3
 							self.redundancy_mask[np.newaxis] # AXIS 4
 							# gaussian_blurred_model_trash[np.newaxis] # AXIS 4
@@ -816,7 +824,7 @@ class MultiAgentCleanupEnvironment:
 						self.state_to_render_first_active_agent = np.concatenate(( 
 							self.visited_areas_map[np.newaxis], # AXIS 0
 							self.real_trash_map[np.newaxis], # AXIS 1
-							self.model_trash_map[np.newaxis], # AXIS 2
+							self.model_trash_map_team0[np.newaxis], # AXIS 2
 							observing_agent_position_with_trail[np.newaxis], # AXIS 3
 							agent_observation_of_fleet[np.newaxis],	# AXIS 4
 							self.redundancy_mask[np.newaxis] # AXIS 5
@@ -935,10 +943,10 @@ class MultiAgentCleanupEnvironment:
 			
 			# EXPLORERS TEAM #
 			explorers_alive = [idx for idx, agent_team in enumerate(self.team_id_of_each_agent) if agent_team == self.explorers_team_id and self.active_agents[idx]]
-			changes_in_whole_model = np.abs(self.model_trash_map - self.previous_model_trash_map)
+			changes_in_whole_model = np.abs(self.model_trash_map_team0 - self.previous_model_trash_map_team1)
 			r_for_discover_trash = np.array(
 				[np.sum(
-					changes_in_whole_model[agent.influence_mask.astype(bool)] / self.redundancy_mask[agent.influence_mask.astype(bool)]
+					changes_in_whole_model[agent.influence_mask.astype(bool)] / self.redundancy_mask_team0[agent.influence_mask.astype(bool)]
 					) if idx in explorers_alive else 0 for idx, agent in enumerate(self.fleet.vehicles) # only explorers will get reward for finding trash
 				])
 			
@@ -948,15 +956,22 @@ class MultiAgentCleanupEnvironment:
 			cleaners_alive = [idx for idx, agent_team in enumerate(self.team_id_of_each_agent) if agent_team == self.cleaners_team_id and self.active_agents[idx]]
 			r_for_cleaned_trash = np.array([len(self.trashes_removed_per_agent[idx]) if idx in cleaners_alive and idx in self.trashes_removed_per_agent else 0 for idx in range(self.n_agents)])
 			
-			# If there is known trash, reward trough negative distance to closer trash #
-			if np.any(self.model_trash_map):
+			r_for_taking_action_that_approaches_to_trash = np.zeros(self.n_agents)
+			# If there is known trash by explorers, reward trough negative distance to closer trash #
+			if np.any(self.model_trash_map_team0):
 				# Negative distance to closest trash in each step. Continuous penalization, lower when closer to trash #
-				r_for_taking_action_that_approaches_to_trash = [-self.get_distance_to_closest_known_trash(agent.actual_agent_position) if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles)]
+				r_for_taking_action_that_approaches_to_trash = np.array([-self.get_distance_to_closest_known_trash_explorers(agent.actual_agent_position) if self.active_agents[idx] and self.team_id_of_each_agent[idx] == self.explorers_team_id else 0 for idx, agent in enumerate(self.fleet.vehicles)])
+			else:
+				r_for_taking_action_that_approaches_to_trash[0:self.number_of_agents_by_team[self.explorers_team_id]] = 0
+			# If there is known trash by cleaners, reward trough negative distance to closer trash #
+			if np.any(self.model_trash_map_team1):
+				# Negative distance to closest trash in each step. Continuous penalization, lower when closer to trash #
+				r_for_taking_action_that_approaches_to_trash = np.array([self.get_distance_to_closest_known_trash_cleaners(agent.actual_agent_position) if self.active_agents[idx] and self.team_id_of_each_agent[idx] == self.cleaners_team_id else 0 for idx, agent in enumerate(self.fleet.vehicles)])
 				# If the agent has removed trash, not penalize the distance with next closest trash #
 				if np.any(self.trashes_removed_per_agent):
 					r_for_taking_action_that_approaches_to_trash = np.array([0 if idx in self.trashes_removed_per_agent else r_for_taking_action_that_approaches_to_trash[idx] for idx, agent in enumerate(self.fleet.vehicles)])
 			else:
-				r_for_taking_action_that_approaches_to_trash = np.zeros(self.n_agents)
+				r_for_taking_action_that_approaches_to_trash[self.number_of_agents_by_team[self.explorers_team_id]:] = 0
 
 
 			ponderation_for_discover_trash = self.reward_weights[self.explorers_team_id]
@@ -968,29 +983,6 @@ class MultiAgentCleanupEnvironment:
 					  + r_for_discover_trash * ponderation_for_discover_trash \
 					  + r_for_discover_new_area * ponderation_for_discover_new_area \
 
-		elif self.reward_function == 'backtosimpledistanceppo':
-			# ALL TEAMS #
-			# Penalization for collision #
-			penalization_for_collision = np.array([-50 if idx in self.collisions_mask_dict and self.collisions_mask_dict[idx] else 0 for idx in range(self.n_agents)])
-			
-			# CLEANERS TEAM #
-			cleaners_alive = [idx for idx, agent_team in enumerate(self.team_id_of_each_agent) if agent_team == self.cleaners_team_id and self.active_agents[idx]]
-			r_for_cleaned_trash = np.array([len(self.trashes_removed_per_agent[idx]) if idx in cleaners_alive and idx in self.trashes_removed_per_agent else 0 for idx in range(self.n_agents)])
-
-			# If there is known trash, reward trough distance to closer trash #
-			if np.any(self.model_trash_map):
-				actual_distance_to_closest_trash = [self.get_distance_to_closest_known_trash(agent.actual_agent_position) if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles)]
-				r_for_taking_action_that_approaches_to_trash = np.array([self.get_distance_to_closest_known_trash(agent.previous_agent_position, previous_model=True) - actual_distance_to_closest_trash[idx] if self.active_agents[idx] else 0 for idx, agent in enumerate(self.fleet.vehicles)])
-				if np.any(self.previous_trashes_removed_per_agent):
-					r_for_taking_action_that_approaches_to_trash = np.array([self.get_distance_to_closest_known_trash(agent.previous_agent_position, previous_model=False) - actual_distance_to_closest_trash[idx] if idx in self.previous_trashes_removed_per_agent else r_for_taking_action_that_approaches_to_trash[idx] for idx, agent in enumerate(self.fleet.vehicles)])
-			else:
-				r_for_taking_action_that_approaches_to_trash = np.zeros(self.n_agents)
-
-			rewards = np.zeros(self.n_agents) \
-					  + r_for_cleaned_trash * self.reward_weights[self.cleaners_team_id] \
-					  + r_for_taking_action_that_approaches_to_trash \
-					  + penalization_for_collision \
-					  
 		else:
 			print(f"Reward function {self.reward_function} not implemented!!")
 			exit()
@@ -1019,13 +1011,28 @@ class MultiAgentCleanupEnvironment:
 		known_trash_positions = np.argwhere(self.model_trash_map > 0)
 		return known_trash_positions[np.argmin(np.linalg.norm(known_trash_positions - position, axis = 1))]
 	
-	def get_distance_to_closest_known_trash(self, position, previous_model=False):
+	def get_distance_to_closest_known_trash_explorers(self, position, previous_model=False):
 		""" Returns the distance from the closer known trash to the given position. """
 
 		if previous_model:
-			trash_positions = np.argwhere(self.previous_model_trash_map > 0)
+			trash_positions = np.argwhere(self.previous_model_trash_map_team0 > 0)
 		else:
-			trash_positions = np.argwhere(self.model_trash_map > 0)
+			trash_positions = np.argwhere(self.model_trash_map_team0 > 0)
+
+		if self.dijkstra_distance_to_trash:
+			distances_to_trash = [self.dijkstra_distance_map[tuple(position)][tuple(trash_pos)] for trash_pos in trash_positions]
+		else:
+			distances_to_trash = np.linalg.norm(trash_positions - position, axis = 1)
+
+		return np.min(distances_to_trash)
+	
+	def get_distance_to_closest_known_trash_cleaners(self, position, previous_model=False):
+		""" Returns the distance from the closer known trash to the given position. """
+
+		if previous_model:
+			trash_positions = np.argwhere(self.previous_model_trash_map_team1 > 0)
+		else:
+			trash_positions = np.argwhere(self.model_trash_map_team1 > 0)
 
 		if self.dijkstra_distance_to_trash:
 			distances_to_trash = [self.dijkstra_distance_map[tuple(position)][tuple(trash_pos)] for trash_pos in trash_positions]
@@ -1066,14 +1073,14 @@ class MultiAgentCleanupEnvironment:
 
 			sigma = 1 # standard deviation for gaussian kernel
 			real_trash_density = gaussian_filter(self.real_trash_map, sigma=sigma)
-			model_trash_density = gaussian_filter(self.model_trash_map, sigma=sigma)
+			model_trash_density = gaussian_filter(self.model_trash_map_team0, sigma=sigma)
 
 			return mean_squared_error(real_trash_density, model_trash_density, squared = squared)
 	
 	def get_changes_in_model(self):
 		""" Returns the changes in the model """
 
-		return np.sum(np.abs(self.model_trash_map - self.previous_model_trash_map))
+		return np.sum(np.abs(self.model_trash_map_team0 - self.previous_model_trash_map_team0))
 
 	def get_redundancy_max(self):
 			""" Returns the max number of agents that are in overlapping areas. """

@@ -276,7 +276,7 @@ class MultiAgentDuelingDQNAgent:
 		# Masking q's and take actions #
 		q_values = self.nogobackfleet_masking_module.mask_actions(q_values=q_values)
 
-		permanent_actions = self.consensus_safe_masking_module.query_actions(q_values=q_values, agents_positions=positions, model_trash_map=self.env.model_trash_map)
+		permanent_actions = self.consensus_safe_masking_module.query_actions(q_values=q_values, agents_positions=positions)
 		self.nogobackfleet_masking_module.update_previous_actions(permanent_actions)
 		
 		return permanent_actions
