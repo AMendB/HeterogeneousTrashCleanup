@@ -1,7 +1,7 @@
 import sys
 sys.path.append('.')
 
-from Environment.CleanupEnvironment import MultiAgentCleanupEnvironment
+from Environment.CleanupEnvironmentNoSharedModel import MultiAgentCleanupEnvironment
 from Algorithms.DRL.Agent.DuelingDQNAgent import MultiAgentDuelingDQNAgent
 import numpy as np
 import argparse
