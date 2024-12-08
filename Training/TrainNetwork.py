@@ -13,7 +13,7 @@ parser.add_argument('--n_cleaners', type=int, default=2, help='Number of cleaner
 parser.add_argument('--max_steps_per_episode', type=int, default=150, help='Max steps per episode.')
 parser.add_argument('--dynamic_env', type=str, default='True', help='Dynamic environment.')
 parser.add_argument('-rw', '--reward_function', type=str, default='negativedistance', help='Reward function to use: basic_reward, extended_reward, backtosimple')
-parser.add_argument('-w', '--reward_weights', type=int, nargs='+', default=[1, 50, 2, 0], help='Reward weights for the reward function.')
+parser.add_argument('-w', '--reward_weights', type=float, nargs='+', default=[1, 50, 2, 0], help='Reward weights for the reward function.')
 parser.add_argument('-net', '--network_type', type=str, default='independent_networks_per_team', help='Type of network to use: independent_networks_per_team, shared_network')
 parser.add_argument('-dev', '--device', type=str, default='cuda:0', help='Device to use: cuda:x, cpu')
 parser.add_argument('--epsilon', type=float, default=0.5, help='Epsilon value for epsilon-greedy training.')
