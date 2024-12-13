@@ -372,12 +372,15 @@ if __name__ == '__main__':
     from Algorithms.DRL.ActionMasking.ActionMaskingUtils import ConsensusSafeActionMasking
 
     algorithms = [
-        'Training/T/Definitivos/acoruna_drl_alone/policy',
-        'Training/T/Definitivos/acoruna_greedy_training/policy',
-        'WanderingAgent', 
-        'LawnMower', 
-        'PSO', 
-        'Greedy',
+        'Training/T/gamma/T_0.1_50.0_2.0_1.0_75.96%/policy',
+        'Training/T/gamma/T_1.0_50.0_2.0_1.0_87.39%/policy',
+        'Training/T/gamma/T_10.0_50.0_2.0_1.0_85.99%/policy',
+        # 'Training/T/Definitivos/acoruna_drl_alone/policy',
+        # 'Training/T/Definitivos/acoruna_greedy_training/policy',        
+        # 'WanderingAgent', 
+        # 'LawnMower', 
+        # 'PSO', 
+        # 'Greedy',
         # 'Training/T/Definitivos/combport_drl_alone/policy',
         # 'Training/T/Definitivos/combport_greedy_training/policy',
         # 'Training/T//',

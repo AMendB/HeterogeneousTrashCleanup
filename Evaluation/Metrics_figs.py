@@ -8,17 +8,21 @@ import os
 
 # Read the data
 folders = [
-    'Evaluation/Results/acoruna_port', 
-    'Evaluation/Results/comb_port',
+    'Evaluation/Results/gamma', 
+    # 'Evaluation/Results/acoruna_port',     
+    # 'Evaluation/Results/comb_port',
     ]
 for folder in folders:
     paths = [
-        f'{folder}/DRLIndependentgreedy.4.negativedistance_1_50_2_0/metrics.csv',
-        f'{folder}/DRLIndependent.4.negativedistance_1_50_2_0/metrics.csv',
-        f'{folder}/Greedy.4.negativedistance_1_50_2_0/metrics.csv',
-        f'{folder}/PSO.4.negativedistance_1_50_2_0/metrics.csv',
-        f'{folder}/WanderingAgent.4.negativedistance_1_50_2_0/metrics.csv',
-        f'{folder}/LawnMower.4.negativedistance_1_50_2_0/metrics.csv',
+        f'{folder}/DRLIndependent.4.negativedistance_0.1_50.0_2.0_1.0/metrics.csv',
+        f'{folder}/DRLIndependent.4.negativedistance_1_50_2_1/metrics.csv',
+        f'{folder}/DRLIndependent.4.negativedistance_10_50_2_1/metrics.csv',
+        # f'{folder}/DRLIndependentgreedy.4.negativedistance_1_50_2_0/metrics.csv',
+        # f'{folder}/DRLIndependent.4.negativedistance_1_50_2_0/metrics.csv',        
+        # f'{folder}/Greedy.4.negativedistance_1_50_2_0/metrics.csv',
+        # f'{folder}/PSO.4.negativedistance_1_50_2_0/metrics.csv',
+        # f'{folder}/WanderingAgent.4.negativedistance_1_50_2_0/metrics.csv',
+        # f'{folder}/LawnMower.4.negativedistance_1_50_2_0/metrics.csv',
         ]
 
     dfs = [pd.read_csv(path) for path in paths]
@@ -41,11 +45,12 @@ for folder in folders:
 
     for metrics_df in dfs:
         runs = metrics_df['Run'].unique()
-        algorithm_name = metrics_df['Algorithm'].unique()[0].split('.')[0]
-        if 'DRL' in algorithm_name and 'greedy' in algorithm_name:
-            algorithm_name = 'DDDQL + Greedy'
-        elif 'DRL' in algorithm_name:
-            algorithm_name = 'DDDQL'
+        algorithm_name = metrics_df['Algorithm'].unique()[0].split('negativedistance.')[-1]
+        # algorithm_name = metrics_df['Algorithm'].unique()[0].split('.')[0]
+        # if 'DRL' in algorithm_name and 'greedy' in algorithm_name:
+        #     algorithm_name = 'DDDQL + Greedy'
+        # elif 'DRL' in algorithm_name:
+        #     algorithm_name = 'DDDQL'
         
 
         # Obtain dataframes #
@@ -67,7 +72,7 @@ for folder in folders:
         # Plot MSE #
         ax_mse.plot(mse, '-', label=algorithm_name)
         ax_mse.fill_between(results_confidence_interval.index, mse - results_confidence_interval['MSE'], mse + results_confidence_interval['MSE'], alpha=0.2) #, label='Std')
-        # ax_mse.legend()
+        ax_mse.legend()
         ax_mse.set_xlim(0, max_steps_per_episode)
         ax_mse.set_xticks(xticks)
         ax_mse.tick_params(axis='x', labelsize=tick_size)
@@ -80,7 +85,7 @@ for folder in folders:
         # Plot Percentage of trash collected #
         ax_cleaned_percentage.plot(percentage_of_trash_collected, '-', label=algorithm_name)
         ax_cleaned_percentage.fill_between(results_confidence_interval.index, percentage_of_trash_collected - results_confidence_interval['Percentage_of_trash_collected'], percentage_of_trash_collected + results_confidence_interval['Percentage_of_trash_collected'], alpha=0.2) #, label='Std')
-        # ax_cleaned_percentage.legend()
+        ax_cleaned_percentage.legend()
         ax_cleaned_percentage.set_xlim(0, max_steps_per_episode)
         ax_cleaned_percentage.set_xticks(xticks)
         ax_cleaned_percentage.tick_params(axis='x', labelsize=tick_size)
