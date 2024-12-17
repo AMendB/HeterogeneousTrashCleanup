@@ -8,15 +8,15 @@ import os
 
 # Read the data
 folders = [
-    'Evaluation/Results/gamma', 
+    'Evaluation/Results/delta', 
     # 'Evaluation/Results/acoruna_port',     
     # 'Evaluation/Results/comb_port',
     ]
 for folder in folders:
     paths = [
-        f'{folder}/DRLIndependent.4.negativedistance_0.1_50.0_2.0_1.0/metrics.csv',
+        f'{folder}/DRLIndependent.4.negativedistance_1.0_10.0_2.0_1.0/metrics.csv',
         f'{folder}/DRLIndependent.4.negativedistance_1_50_2_1/metrics.csv',
-        f'{folder}/DRLIndependent.4.negativedistance_10_50_2_1/metrics.csv',
+        f'{folder}/DRLIndependent.4.negativedistance_1.0_100.0_2.0_1.0/metrics.csv',
         # f'{folder}/DRLIndependentgreedy.4.negativedistance_1_50_2_0/metrics.csv',
         # f'{folder}/DRLIndependent.4.negativedistance_1_50_2_0/metrics.csv',        
         # f'{folder}/Greedy.4.negativedistance_1_50_2_0/metrics.csv',
