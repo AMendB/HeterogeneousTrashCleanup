@@ -8,7 +8,6 @@ from tqdm import trange
 import pandas as pd
 from cycler import cycler
 
-# from Environment.MonitoringEnvironmentPenultimate import MultiAgentMonitoring
 from Environment.CleanupEnvironment import MultiAgentCleanupEnvironment
 from Evaluation.Utils.metrics_wrapper import MetricsDataCreator
 
@@ -372,9 +371,9 @@ if __name__ == '__main__':
     from Algorithms.DRL.ActionMasking.ActionMaskingUtils import ConsensusSafeActionMasking
 
     algorithms = [
-        # 'Training/T/observationfn/T_1_50_2_1_no6channel_79.42%/policy',
+        'Training/T/alpha/T_1.0_50.0_2.0_0.1_51.72%/policy',
         # 'Training/T/T_1_50_2_1_baseline_87.39%/policy',
-        'Training/T/observationfn/T_1_50_2_1_nosharedmodel_32.06%/policy',
+        'Training/T/alpha/T_1.0_50.0_2.0_10.0_81.22%/policy',
         # 'Training/T/Definitivos/acoruna_drl_alone/policy',
         # 'Training/T/Definitivos/acoruna_greedy_training/policy',        
         # 'WanderingAgent', 
