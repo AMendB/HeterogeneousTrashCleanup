@@ -374,6 +374,7 @@ class MultiAgentCleanupEnvironment:
 		self.active_agents = {key: not value for key, value in self.done.items()}
 		self.n_active_agents = sum(self.active_agents.values())
 		self.percentage_visited = 0.0
+		self.actions = None #(add7channel)
  
 		# Load agents identification info #
 		self.set_agents_id_info()
@@ -415,6 +416,7 @@ class MultiAgentCleanupEnvironment:
 			self.observation_space_shape = (6, *self.scenario_map.shape)
 		# self.observation_space_shape = (4, *self.scenario_map.shape) # the channels with model history are removed to test is needed for cooperation (nohistory)
 		# self.observation_space_shape = (5, *self.scenario_map.shape) # the channels with other agents positions is removed to test is needed for cooperation (no6channel)
+		self.observation_space_shape = (7, *self.scenario_map.shape) # extra channel to add the previous actions of the agents (add7channel)
 		self.angle_set_of_each_agent = {idx: self.fleet.vehicles[idx].angle_set for idx in range(self.n_agents)}
 
 	def set_agents_id_info(self):
@@ -490,6 +492,7 @@ class MultiAgentCleanupEnvironment:
 		self.active_agents = {agent_id: True for agent_id in range(self.n_agents)}
 		self.n_active_agents = sum(self.active_agents.values())
 		self.percentage_visited = 0.0
+		self.actions = None #(add7channel)
 
 		# Compute the redundancy mask after reset #
 		self.redundancy_mask = np.sum([agent.influence_mask for idx, agent in enumerate(self.fleet.vehicles) if self.active_agents[idx]], axis = 0)
@@ -675,6 +678,7 @@ class MultiAgentCleanupEnvironment:
 
 		# Update the steps #
 		self.steps += 1
+		self.actions = actions # (add7channel)
 
 		# Process movement actions. There are actions only for active agents #
 		self.collisions_mask_dict = self.fleet.move_fleet(actions)
@@ -765,6 +769,11 @@ class MultiAgentCleanupEnvironment:
 				agent_observation_of_fleet = fleet_position_map_denoted_by_its_team_id.copy()
 				agents_to_remove_positions = np.array([pos for idx, pos in enumerate(self.fleet.fleet_positions) if (idx == agent_id) or (not self.active_agents[idx])])  # if its the observing agent or not active, save its position to remove
 				agent_observation_of_fleet[agents_to_remove_positions[:,0], agents_to_remove_positions[:,1]] = 0.0
+				# Map with the position of the agents and the selected action (add7channel)
+				agents_previous_actions_map = np.zeros_like(self.scenario_map)
+				if self.actions is not None:
+					self.previous_actions = np.array([self.actions[idx] if self.active_agents[idx] else -1 for idx in range(self.n_agents)])
+					agents_previous_actions_map[self.fleet.fleet_positions[:,0], self.fleet.fleet_positions[:,1]] = (self.previous_actions + 1)/self.n_actions_of_each_agent # +1 to avoid 0 that is empty area
 
 				"""Each key from states dictionary is an agent, all states associated to that agent are concatenated in its value:"""
 				if self.n_agents == 1 and not self.dynamic: # 3 channels
@@ -797,6 +806,7 @@ class MultiAgentCleanupEnvironment:
 						(self.previousprevious_model_trash_map/np.max(self.previousprevious_model_trash_map+1E-5))[np.newaxis], # Channel 3 -> Previous previous trash model map (normalized) (nohistory)
 						observing_agent_position_with_trail[np.newaxis], # Channel 4 -> Observing agent position map with a trail
 						agent_observation_of_fleet[np.newaxis], # Channel 5 -> Others active agents position map (no6channel)
+						agents_previous_actions_map[np.newaxis], # Channel 6 -> Previous actions of the agents (add7channel)
 					), dtype=np.float16)
 
 
