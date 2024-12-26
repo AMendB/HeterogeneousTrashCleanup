@@ -800,7 +800,7 @@ class MultiAgentCleanupEnvironment:
 				elif self.n_agents > 1 and self.dynamic: # 6 channels
 					states[agent_id] = np.concatenate(( 
 						# obstacle_map[np.newaxis], # Channel 0 -> Known boundaries/navigation map
-						self.visited_areas_map[np.newaxis], # Channel 0 -> Map with visited positions. 0 non visitable, 1 non visited, 0.5 visited. (no1channel)
+						# self.visited_areas_map[np.newaxis], # Channel 0 -> Map with visited positions. 0 non visitable, 1 non visited, 0.5 visited. (no1channel)
 						(self.model_trash_map/(np.max(self.model_trash_map)+1E-5))[np.newaxis], # Channel 1 -> Trash model map (normalized)
 						(self.previous_model_trash_map/np.max(self.previous_model_trash_map+1E-5))[np.newaxis], # Channel 2 -> Previous trash model map (normalized) (nohistory)
 						(self.previousprevious_model_trash_map/np.max(self.previousprevious_model_trash_map+1E-5))[np.newaxis], # Channel 3 -> Previous previous trash model map (normalized) (nohistory)
