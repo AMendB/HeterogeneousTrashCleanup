@@ -8,7 +8,7 @@ import os
 
 # Read the data
 folders = [
-    'Evaluation/Results/beta', 
+    'Evaluation/Results/observationfn', 
     # 'Evaluation/Results/acoruna_port',     
     # 'Evaluation/Results/comb_port',
     ]
@@ -16,9 +16,10 @@ for folder in folders:
     paths = [
         f'{folder}/DRLIndependent.4.negativedistance_1_50_2_1_nosharedmodel/metrics.csv',
         f'{folder}/DRLIndependent.4.negativedistance_1_50_2_1_no6channel/metrics.csv',
-        f'{folder}/DRLIndependent.4.negativedistance_1_50_2_1_baseline/metrics.csv',
+        f'Evaluation/Results/DRLIndependent.4.negativedistance_1_50_2_1_baseline/metrics.csv',
         f'{folder}/DRLIndependent.4.negativedistance_1.0_50.0_2.0_1.0_nohistory/metrics.csv',
-        f'{folder}/DRLIndependent.4.negativedistance_1.0_50.0_2.0_1.0_add7channel/metrics.csv',
+        # f'{folder}/DRLIndependent.4.negativedistance_1.0_50.0_2.0_1.0_add7channel/metrics.csv',
+        # f'{folder}/DRLIndependent.4.negativedistance_1.0_50.0_2.0_1.0_no1channel/metrics.csv',
         # f'{folder}/DRLIndependentgreedy.4.negativedistance_1_50_2_0/metrics.csv',
         # f'{folder}/DRLIndependent.4.negativedistance_1_50_2_0/metrics.csv',        
         # f'{folder}/Greedy.4.negativedistance_1_50_2_0/metrics.csv',
@@ -105,7 +106,7 @@ for folder in folders:
     elif map_name == 'comb_port':
         map_name = 'scenario_B'
     # fig_mse.savefig(f'{results_folder}/MSE_{map_name}.svg')
-    fig_mse.savefig(f'{results_folder}/MSE_{map_name}.pdf')
+    # fig_mse.savefig(f'{results_folder}/MSE_{map_name}.pdf')
     # fig_cleaned_percentage.savefig(f'{results_folder}/PTC_{map_name}.svg')
-    fig_cleaned_percentage.savefig(f'{results_folder}/PTC_{map_name}.pdf')
+    # fig_cleaned_percentage.savefig(f'{results_folder}/PTC_{map_name}.pdf')
     plt.show()

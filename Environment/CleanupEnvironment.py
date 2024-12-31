@@ -415,7 +415,7 @@ class MultiAgentCleanupEnvironment:
 		elif self.n_agents > 1 and self.dynamic:
 			self.observation_space_shape = (6, *self.scenario_map.shape)
 		# self.observation_space_shape = (4, *self.scenario_map.shape) # the channels with model history are removed to test is needed for cooperation (nohistory)
-		self.observation_space_shape = (5, *self.scenario_map.shape) # the channels with other agents positions is removed to test is needed for cooperation (no6channel) (no1channel)
+		# self.observation_space_shape = (5, *self.scenario_map.shape) # the channels with other agents positions is removed to test is needed for cooperation (no6channel) (no1channel)
 		# self.observation_space_shape = (7, *self.scenario_map.shape) # extra channel to add the previous actions of the agents (add7channel)
 		self.angle_set_of_each_agent = {idx: self.fleet.vehicles[idx].angle_set for idx in range(self.n_agents)}
 
@@ -800,7 +800,7 @@ class MultiAgentCleanupEnvironment:
 				elif self.n_agents > 1 and self.dynamic: # 6 channels
 					states[agent_id] = np.concatenate(( 
 						# obstacle_map[np.newaxis], # Channel 0 -> Known boundaries/navigation map
-						# self.visited_areas_map[np.newaxis], # Channel 0 -> Map with visited positions. 0 non visitable, 1 non visited, 0.5 visited. (no1channel)
+						self.visited_areas_map[np.newaxis], # Channel 0 -> Map with visited positions. 0 non visitable, 1 non visited, 0.5 visited. (no1channel)
 						(self.model_trash_map/(np.max(self.model_trash_map)+1E-5))[np.newaxis], # Channel 1 -> Trash model map (normalized)
 						(self.previous_model_trash_map/np.max(self.previous_model_trash_map+1E-5))[np.newaxis], # Channel 2 -> Previous trash model map (normalized) (nohistory)
 						(self.previousprevious_model_trash_map/np.max(self.previousprevious_model_trash_map+1E-5))[np.newaxis], # Channel 3 -> Previous previous trash model map (normalized) (nohistory)
