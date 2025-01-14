@@ -16,7 +16,6 @@ def objective(trial):
 	target_update = trial.suggest_int("target_update", 1000, 10000, step=1000)
 	train_every = trial.suggest_int("train_every", 5, 50, step=5)
 	batch_size = trial.suggest_int("batch_size", 64, 256, step=32)
-	tau = trial.suggest_float("tau", low = 0.001, high = 0.01, step=0.001)
 
 
 	# Ajustar los pesos de la función de recompensa
@@ -81,7 +80,7 @@ def objective(trial):
 		batch_size=batch_size,
 		target_update=target_update,
 		soft_update=False,
-		tau=tau, 
+		tau=0.001, 
 		epsilon_values=[1.0, 0.05],
 		epsilon_interval=[0.0, epsilon],
 		greedy_training=greedy_training, 
@@ -130,7 +129,7 @@ if __name__ == "__main__":
 
 	# Crear estudio de Optuna
 	study = optuna.create_study(direction="maximize", study_name="DQN_hyperparametrization")
-	study.optimize(objective, n_trials=args.n_trials)
+	study.optimize(objective, n_trials=args.n_trials, show_progress_bar=True)
 
 	# Guardar los mejores resultados en un archivo JSON
 	best_trial = {
