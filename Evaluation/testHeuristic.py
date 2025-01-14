@@ -12,9 +12,9 @@ import numpy as np
 from tqdm import trange
 
 algorithms = [
-	'WanderingAgent', 
-    'LawnMower', 
-    'PSO', 
+	# 'WanderingAgent', 
+    # 'LawnMower', 
+    # 'PSO', 
     'Greedy',
 	]
 
@@ -73,15 +73,15 @@ env = MultiAgentCleanupEnvironment(scenario_map_name = scenario_map_name,
                         )
 
 for algorithm in algorithms:
-    if algorithm == "LawnMower":
+    if algorithm == 'LawnMower':
         lawn_mower_rng = np.random.default_rng(seed=100)
         agents = [LawnMowerAgent(world=env.scenario_map, number_of_actions=8, movement_length=movement_length_of_each_agent[i], forward_direction=int(lawn_mower_rng.uniform(0,8)), seed=SEED+i, agent_is_cleaner=env.team_id_of_each_agent[i]==env.cleaners_team_id) for i in range(n_agents)]
-    elif algorithm == "WanderingAgent":
+    elif algorithm == 'WanderingAgent':
         agents = [WanderingAgent(world=env.scenario_map, number_of_actions=8, movement_length=movement_length_of_each_agent[i], seed=SEED+i, agent_is_cleaner=env.team_id_of_each_agent[i]==env.cleaners_team_id) for i in range(n_agents)]
-    elif algorithm == "PSO":
+    elif algorithm == 'PSO':
         agents = ParticleSwarmOptimizationFleet(env)
         consensus_safe_masking_module = ConsensusSafeActionMasking(navigation_map = env.scenario_map, angle_set_of_each_agent=env.angle_set_of_each_agent, movement_length_of_each_agent = env.movement_length_of_each_agent)
-    elif algorithm == "Greedy":
+    elif algorithm == 'Greedy':
         agents = OneStepGreedyFleet(env)
 
     mean_cleaned_percentage = 0

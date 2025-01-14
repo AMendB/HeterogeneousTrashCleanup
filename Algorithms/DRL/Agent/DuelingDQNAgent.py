@@ -417,7 +417,7 @@ class MultiAgentDuelingDQNAgent:
 
 		print('Prewarming finished.')
 
-	def train(self, episodes, extra_episodes=0):
+	def train(self, episodes, extra_episodes=0, return_feedback=False):
 		""" Train the agents. """
 
 		self.episodes = episodes
@@ -463,6 +463,7 @@ class MultiAgentDuelingDQNAgent:
 			eval_record = [-np.inf]*self.env.n_teams
 			eval_clean_record = [-np.inf]*self.env.n_teams
 			eval_mse_record = [np.inf]*self.env.n_teams
+			list_of_ptc_evaluations_cleaners = []
 
 			for episode in trange(1, int(episodes+extra_episodes) + 1):
 
@@ -619,12 +620,14 @@ class MultiAgentDuelingDQNAgent:
 								print("Saving model in " + self.logdir)
 								eval_mse_record[team_id] = mean_mse
 								self.save_model(name=f'BestEvalMSEPolicy_network{team_id}.pth', team_id_index=team_id)
-
+					list_of_ptc_evaluations_cleaners.append(mean_cleaned_percentage)
 			# Save the final policys #
 			for team_id in self.env.teams_ids:
 				if self.env.number_of_agents_by_team[team_id] > 0:
 					self.save_model(name=f'Final_Policy_network{team_id}.pth', team_id_index=team_id)
 
+			if return_feedback:
+				return list_of_ptc_evaluations_cleaners
 		else:
 			# Percentage of experiences to store in memory #
 			buffer_filled_percentage = 0.5 # percentage of training when the buffer is filled
