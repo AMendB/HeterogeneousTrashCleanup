@@ -8,7 +8,7 @@ import argparse
 import optuna
 import json
 
-def objective(trial, args):
+def objective(trial):
 	# Hiperparámetros optimizables
 	epsilon = trial.suggest_float("epsilon", 0.5, 1.0, step=0.05)
 	gamma = trial.suggest_float("gamma", 0.80, 0.99, step=0.01)
