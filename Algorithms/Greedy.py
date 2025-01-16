@@ -19,6 +19,26 @@ class OneStepGreedyFleet:
         self.fleet = self.env.fleet
         self.reward_weights = self.env.reward_weights
 
+    def is_reachable(self, navigation_map, current_position, next_position):
+        """ Check if the there is a path between the current position and the next position. """
+        if navigation_map[int(next_position[0]), int(next_position[1])] == 0:
+            return False 
+        x, y = next_position
+        dx = x - current_position[0]
+        dy = y - current_position[1]
+        steps = max(abs(dx), abs(dy))
+        dx = dx / steps if steps != 0 else 0
+        dy = dy / steps if steps != 0 else 0
+        reachable = True
+        for step in range(1, steps + 1):
+            px = round(current_position[0] + dx * step)
+            py = round(current_position[1] + dy * step)
+            if navigation_map[px, py] == 0:
+                reachable = False
+                break
+
+        return reachable
+
     def compute_influence_mask(self, agent_position, vision_length): 
         """ Compute influence area around actual position. It is what the agent can see. """
 
@@ -45,7 +65,8 @@ class OneStepGreedyFleet:
         next_movements = np.array([(0,0) if angle < 0 else np.round([np.cos(angle), np.sin(angle)]) * agent.movement_length for angle in agent.angle_set]).astype(int)
         next_positions = agent_position + next_movements
         next_positions = np.clip(next_positions, (0,0), np.array(self.navigable_map.shape)-1) # saturate movement if out of indexes values (map edges)
-        next_allowed_actionpose_dict = {action: next_position for action, next_position in enumerate(next_positions) if self.navigable_map[next_position[0], next_position[1]] == 1} # remove next positions that leads to a non-navigable area 
+        next_allowed_actionpose_dict = {action: next_position for action, next_position in enumerate(next_positions) if self.is_reachable(self.navigable_map, agent_position, next_position)} # remove next positions that leads to a collision
+        # next_allowed_actionpose_dict = {action: next_position for action, next_position in enumerate(next_positions) if self.navigable_map[next_position[0], next_position[1]] == 1} # remove next positions that leads to a collision
         
         best_action = None
         best_reward = -np.inf
@@ -128,7 +149,8 @@ class OneStepGreedyFleet:
         next_movements = np.array([(0,0) if angle < 0 else np.round([np.cos(angle), np.sin(angle)]) * agent.movement_length for angle in agent.angle_set]).astype(int)
         next_positions = agent_position + next_movements
         next_positions = np.clip(next_positions, (0,0), np.array(self.navigable_map.shape)-1) # saturate movement if out of indexes values (map edges)
-        next_allowed_actionpose_dict = {action: next_position for action, next_position in enumerate(next_positions) if self.navigable_map[next_position[0], next_position[1]] == 1} # remove next positions that leads to a non-navigable area 
+        next_allowed_actionpose_dict = {action: next_position for action, next_position in enumerate(next_positions) if self.is_reachable(self.navigable_map, agent_position, next_position)} # remove next positions that leads to a collision
+        # next_allowed_actionpose_dict = {action: next_position for action, next_position in enumerate(next_positions) if self.navigable_map[next_position[0], next_position[1]] == 1} # remove next positions that leads to a non-navigable area 
 
         rewards = {}
         for action, next_position in enumerate(next_positions):

@@ -13,6 +13,8 @@ import json
 from scipy.ndimage import gaussian_filter
 import heapq
 
+from Algorithms.a_star import a_star_find_path
+
 
 class DiscreteVehicle: # class for single vehicle
 
@@ -36,6 +38,7 @@ class DiscreteVehicle: # class for single vehicle
 		self.influence_mask = self.compute_influence_mask()
 		if n_actions == 8:
 			self.angle_set = np.linspace(0, 2 * np.pi, n_actions, endpoint=False) # array with the 8 cardinal points in RADIANS, dividing a circle in 8 directions: [0. , 0.78539816, 1.57079633, 2.35619449, 3.14159265, 3.92699082, 4.71238898, 5.49778714]
+			self.movement_set = np.array([np.round([np.cos(angle), np.sin(angle)]) * self.movement_length for angle in self.angle_set]).astype(int)
 		elif n_actions == 9: # there is an action to stay in the same position (loiter mode)
 			self.angle_set = np.linspace(0, 2 * np.pi, n_actions-1, endpoint=False)
 			self.angle_set = np.append(self.angle_set, -1) # add the action to loter mode (-1)
@@ -352,6 +355,8 @@ class MultiAgentCleanupEnvironment:
 				self.deployment_positions[[32,30,28,26], [7,7,7,7]] = 1 # A Coruna port
 			elif 'marinapalamos' in self.scenario_map_name:
 				self.deployment_positions[[16,14,12,10], [9,9,9,9]] = 1 # marinapalamos
+			elif 'challenging_map' in self.scenario_map_name:
+				self.deployment_positions[[46,48,50,52], [3,3,3,3]] = 1 # Challenging map
 			elif 'comb_port' in self.scenario_map_name:
 				self.deployment_positions[[16,14,12,10], [7,7,7,7]] = 1 # comb_port
 			self.initial_positions = np.argwhere(self.deployment_positions == 1)[self.rng_initial_agents_positions.choice(len(np.argwhere(self.deployment_positions == 1)), self.n_agents, replace=False)]
@@ -938,11 +943,7 @@ class MultiAgentCleanupEnvironment:
 	def get_reward(self, actions):
 		""" Reward functions. Different reward functions depending on the team of the agent. """
 		
-		if self.reward_function == 'negativedistance' or self.reward_function == 'negativedijkstra':
-			if 'dijkstra' in self.reward_function:
-				self.dijkstra_distance_to_trash = True
-			else:
-				self.dijkstra_distance_to_trash = False
+		if self.reward_function == 'negativedistance' or self.reward_function == 'negativedijkstra' or self.reward_function == 'negativeastar':
 			
 			# EXPLORERS TEAM #
 			explorers_alive = [idx for idx, agent_team in enumerate(self.team_id_of_each_agent) if agent_team == self.explorers_team_id and self.active_agents[idx]]
@@ -1036,8 +1037,11 @@ class MultiAgentCleanupEnvironment:
 		else:
 			trash_positions = np.argwhere(self.model_trash_map > 0)
 
-		if self.dijkstra_distance_to_trash:
+		if 'dijkstra' in self.reward_function:
 			distances_to_trash = [self.dijkstra_distance_map[tuple(position)][tuple(trash_pos)] for trash_pos in trash_positions]
+		elif 'astar' in self.reward_function:
+			# Calculate the distance to the closest trash with A* algorithm
+			distances_to_trash = [a_star_find_path(self.scenario_map, tuple(position), tuple(trash_pos), return_distance=True) for trash_pos in trash_positions]
 		else:
 			distances_to_trash = np.linalg.norm(trash_positions - position, axis = 1)
 
@@ -1141,7 +1145,7 @@ if __name__ == '__main__':
 	
 	seed = 24
 	np.random.seed(seed)
-	scenario_map_name = 'acoruna_port' # ypacarai_map_low_res, ypacarai_lake_58x41, acoruna_port, marinapalamos, comb_port
+	scenario_map_name = 'acoruna_port' # ypacarai_map_low_res, ypacarai_lake_58x41, acoruna_port, marinapalamos, comb_port, challenging_map
 
 	# Agents info #
 	n_actions_explorers = 8

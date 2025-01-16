@@ -25,9 +25,10 @@ RUNS = 100
 
 
 # Set config #
-scenario_map_name = 'acoruna_port'
+# scenario_map_name = 'acoruna_port'
 # scenario_map_name = 'marinapalamos'
 # scenario_map_name = 'comb_port'
+scenario_map_name = 'challenging_map'
 n_actions_explorers = 8
 n_actions_cleaners = 8
 n_explorers = 2
@@ -42,7 +43,9 @@ max_distance_travelled_explorers = 400
 max_distance_travelled_cleaners = 200
 max_steps_per_episode = 150
 
-reward_function = 'negativedistance'
+# reward_function = 'negativedijkstra'
+reward_function = 'negativeastar'
+# reward_function = 'negativedistance'
 reward_weights=(1, 50, 2, 0)
 
 # Set initial positions #
