@@ -48,6 +48,9 @@ prewarm_percentage = args.prewarm_percentage
 
 # Load parameters from Optuna #
 if args.path_optuna_params:
+	path_optuna_params = args.path_optuna_params
+	if path_optuna_params[-1] != '/':
+		path_optuna_params += '/'
 	f = open(args.path_optuna_params + 'best_trial_optuna.json',)
 	best_params = json.load(f)
 	f.close()
