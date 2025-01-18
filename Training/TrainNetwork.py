@@ -5,6 +5,7 @@ from Environment.CleanupEnvironment import MultiAgentCleanupEnvironment
 from Algorithms.DRL.Agent.DuelingDQNAgent import MultiAgentDuelingDQNAgent
 import numpy as np
 import argparse
+import json
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--scenario_map_name', type=str, default='acoruna_port', help='Name of the scenario map.')
@@ -26,6 +27,7 @@ parser.add_argument('--train_every', type=int, default=15, help='Number of steps
 parser.add_argument('--extra_name', type=str, default='', help='Extra name to add to the logdir.')
 parser.add_argument('--preload_path', type=str, default='', help='Path to preload a model.')
 parser.add_argument('--prewarm_percentage', type=float, default=0, help='Percentage of memory to prewarm with Greedy actions.')
+parser.add_argument('--path_optuna_params', type=str, default='', help='Load parameters from Optuna.')
 args = parser.parse_args()
 
 # Selection of PARAMETERS TO TRAIN #
@@ -44,7 +46,19 @@ train_every = args.train_every
 preload_path = args.preload_path
 prewarm_percentage = args.prewarm_percentage
 
-
+# Load parameters from Optuna #
+if args.path_optuna_params:
+	f = open(args.path_optuna_params + 'best_trial_optuna.json',)
+	best_params = json.load(f)
+	f.close()
+	best_params = best_params['params']
+	reward_weights = tuple([best_params['reward_weight_1'], best_params['reward_weight_2'], best_params['reward_weight_3'], best_params['reward_weight_4']])
+	epsilon = best_params['epsilon']
+	gamma = best_params['gamma']
+	lr = best_params['learning_rate']
+	target_update = best_params['target_update']
+	train_every = best_params['train_every']
+	batch_size = best_params['batch_size']
 
 
 

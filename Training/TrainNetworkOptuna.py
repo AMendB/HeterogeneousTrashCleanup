@@ -71,7 +71,9 @@ def objective(trial):
 		training_type = "_heuristic"
 	else:
 		training_type = ""
-	logdir = f'optuna_trials_{scenario_map_name}_{reward_function}{training_type}/{trial.number}'
+	global folder
+	folder = f'optuna_trials_{scenario_map_name}_{reward_function}{training_type}'
+	logdir = f'{folder}/trial_{trial.number}'
 
 	# Crear agente
 	network = MultiAgentDuelingDQNAgent(
@@ -136,7 +138,7 @@ if __name__ == "__main__":
 		"value": study.best_trial.value,
 		"params": study.best_trial.params
 	}
-	with open("optuna_trials/best_trial_results_optuna.json", "w") as f:
+	with open(f"{folder}/best_trial_optuna.json", "w") as f:
 		json.dump(best_trial, f, indent=4)
 
 	# Mostrar los mejores resultados
