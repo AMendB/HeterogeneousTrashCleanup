@@ -305,11 +305,13 @@ class MultiAgentCleanupEnvironment:
 		self.rng_trash_positions_MVN = np.random.default_rng(seed=self.seed)
 		self.rng_pollution_spots_number = np.random.default_rng(seed=self.seed)
 		self.rng_pollution_spots_locations_indexes = np.random.default_rng(seed=self.seed)
+		self.rng_obstacle_number = np.random.default_rng(seed=self.seed)
+		self.rng_obstacle_positions = np.random.default_rng(seed=self.seed)
 		
 		# Load the scenario config and other useful variables #
 		self.scenario_map_name = scenario_map_name
 		self.scenario_map = np.genfromtxt(f'Environment/Maps/{self.scenario_map_name}.csv', delimiter=',')
-		self.visited_areas_map = self.scenario_map.copy()
+		self.scenario_map_backup = self.scenario_map.copy()
 		self.number_of_agents_by_team = number_of_agents_by_team
 		self.n_agents = np.sum(self.number_of_agents_by_team)
 		self.n_teams = len(self.number_of_agents_by_team)
@@ -334,8 +336,9 @@ class MultiAgentCleanupEnvironment:
 		self.colored_agents = True
 		
 		# Graph for Dijkstra #
-		self.graph = self.grid_to_graph()
-		self.dijkstra_distance_map, self.predecessor_map = self.calculate_distance_and_predecessor_maps()
+		if 'dijkstra' in self.reward_function:
+			self.graph = self.grid_to_graph()
+			self.dijkstra_distance_map, self.predecessor_map = self.calculate_distance_and_predecessor_maps()
 
 		# Initial positions #
 		self.backup_fleet_initial_positions_entry = fleet_initial_positions
@@ -367,7 +370,7 @@ class MultiAgentCleanupEnvironment:
 			self.initial_positions = np.argwhere(self.deployment_positions == 1)[self.rng_initial_agents_positions.choice(len(np.argwhere(self.deployment_positions == 1)), self.n_agents, replace=False)]
 		else:
 			raise NotImplementedError("Check initial positions!")
-
+		
 		# Limits to be declared a death/done agent and initialize done dict #
 		self.max_distance_travelled_by_team = max_distance_travelled_by_team
 		self.max_distance_travelled_of_each_agent = np.repeat(max_distance_travelled_by_team, number_of_agents_by_team)
@@ -393,6 +396,11 @@ class MultiAgentCleanupEnvironment:
 							 vision_length_of_each_agent = self.vision_length_of_each_agent,
 							 navigation_map = self.scenario_map,
 							 check_collisions_within = self.flag_to_check_collisions_within)
+		
+		# Randomly generate obstacles if activated #
+		self.generate_obstacles()
+		self.visited_areas_map = self.scenario_map.copy()
+		self.non_water_mask = self.scenario_map != 1 # - self.inside_obstacles_map # mask with True where no water
 
 		# Create trash map #
 		self.real_trash_map = self.init_real_trash_map()
@@ -450,28 +458,52 @@ class MultiAgentCleanupEnvironment:
 			self.agents_colormap = matplotlib.colors.ListedColormap(self.colors_agents)
 			self.n_colors_agents_render = len(self.colors_agents)
 
-	def reset_env(self):
-		""" Reset the environment """
-			
-		# Reset the trash map #
-		self.real_trash_map = self.init_real_trash_map()
+	def generate_obstacles(self):
+		""" Generate randomly the obstacles map. """
 
-		# Randomly generated obstacles #
+		self.scenario_map = self.scenario_map_backup.copy()
+
 		if self.obstacles:
-			self.inside_obstacles_map = np.zeros_like(self.scenario_map)
 			# Generate a random inside obstacles map #
-			obstacles_pos_indx = np.random.choice(np.arange(0, len(self.visitable_locations)), size = 20, replace = False)
+			self.inside_obstacles_map = np.zeros_like(self.scenario_map)
+			obstacles_pos_indx = self.rng_obstacle_positions.choice(np.arange(0, len(self.visitable_locations)), size=self.rng_obstacle_number.integers(15, 20), replace=False)
+			# Exclude the initial positions of the agents #
+			initial_positions_indx = np.array([np.where(np.all(self.visitable_locations == pos, axis=1))[0][0] for pos in self.initial_positions])
+			obstacles_pos_indx = np.delete(obstacles_pos_indx, np.where(np.isin(obstacles_pos_indx, initial_positions_indx))[0])
 			self.inside_obstacles_map[self.visitable_locations[obstacles_pos_indx, 0], self.visitable_locations[obstacles_pos_indx, 1]] = 1.0
-
+			
+			# Update the scenario map and visitable locations #
+			self.scenario_map = self.scenario_map - self.inside_obstacles_map
+			self.visitable_locations = np.vstack(np.where(self.scenario_map != 0)).T # coords of visitable cells
+			
 			# Update the obstacle map for every agent #
 			for i in range(self.n_agents):
 				self.fleet.vehicles[i].navigation_map = self.scenario_map - self.inside_obstacles_map
 		else:
 			self.inside_obstacles_map = np.zeros_like(self.scenario_map)
-		
-		self.visited_areas_map = self.scenario_map.copy()
-		self.non_water_mask = self.scenario_map != 1 - self.inside_obstacles_map # mask with True where no water
 
+	def reset_env(self):
+		""" Reset the environment """
+
+		# Reset the scenario map and visitable locations #
+		self.scenario_map = self.scenario_map_backup.copy()
+		self.visitable_locations = np.vstack(np.where(self.scenario_map != 0)).T # coords of visitable cells
+
+		# Get the N random initial positions #
+		if self.random_inititial_positions == 'area' or self.random_inititial_positions == 'fixed':
+			self.initial_positions = np.argwhere(self.deployment_positions == 1)[self.rng_initial_agents_positions.choice(len(np.argwhere(self.deployment_positions == 1)), self.n_agents, replace=False)]
+		elif self.random_inititial_positions is True:
+			random_positions_indx = self.rng_initial_agents_positions.choice(np.arange(0, len(self.visitable_locations)), self.n_agents, replace=False)
+			self.initial_positions = self.visitable_locations[random_positions_indx]
+
+		# Randomly generate obstacles if activated #
+		self.generate_obstacles()
+		self.visited_areas_map = self.scenario_map.copy()
+		self.non_water_mask = self.scenario_map != 1 # - self.inside_obstacles_map # mask with True where no water
+
+		# Reset the trash map #
+		self.real_trash_map = self.init_real_trash_map()
+		
 		# Create an empty model after reset #
 		if self.number_of_agents_by_team[self.explorers_team_id] > 0:
 			self.model_trash_map = np.zeros_like(self.scenario_map) 
@@ -481,13 +513,6 @@ class MultiAgentCleanupEnvironment:
 			self.model_trash_map = self.real_trash_map.copy()
 			self.previous_model_trash_map = np.zeros_like(self.scenario_map)
 			self.previousprevious_model_trash_map = np.zeros_like(self.scenario_map)
-
-		# Get the N random initial positions #
-		if self.random_inititial_positions == 'area' or self.random_inititial_positions == 'fixed':
-			self.initial_positions = np.argwhere(self.deployment_positions == 1)[self.rng_initial_agents_positions.choice(len(np.argwhere(self.deployment_positions == 1)), self.n_agents, replace=False)]
-		elif self.random_inititial_positions is True:
-			random_positions_indx = self.rng_initial_agents_positions.choice(np.arange(0, len(self.visitable_locations)), self.n_agents, replace=False)
-			self.initial_positions = self.visitable_locations[random_positions_indx]
 
 		# Reset the positions of the fleet #
 		self.steps = 0
@@ -740,9 +765,9 @@ class MultiAgentCleanupEnvironment:
 		states = {}
 		# Channel 0 -> Known boundaries/map
 		if self.obstacles:
-			obstacle_map = self.scenario_map - self.inside_obstacles_map
+			self.obstacle_map = self.scenario_map - self.inside_obstacles_map
 		else:
-			obstacle_map = self.scenario_map
+			self.obstacle_map = self.scenario_map
 
 		# Create fleet position map #
 		fleet_position_map_denoted_by_its_team_id = np.zeros_like(self.scenario_map)
@@ -1017,7 +1042,9 @@ class MultiAgentCleanupEnvironment:
 		self.rng_trash_positions_MVN = np.random.default_rng(seed=self.seed)
 		self.rng_pollution_spots_number = np.random.default_rng(seed=self.seed)
 		self.rng_pollution_spots_locations_indexes = np.random.default_rng(seed=self.seed)
-
+		self.rng_obstacle_number = np.random.default_rng(seed=self.seed)
+		self.rng_obstacle_positions = np.random.default_rng(seed=self.seed)
+		
 	def get_percentage_cleaned_trash(self):
 		""" Returns the percentage of cleaned trash. """
 
@@ -1187,7 +1214,7 @@ if __name__ == '__main__':
 							   reward_function = 'negativedistance',
 							   reward_weights = (1, 20, 2, 10),
 							   dynamic = True,
-							   obstacles = False,
+							   obstacles = True,
 							   show_plot_graphics = True,
 							 )
 	

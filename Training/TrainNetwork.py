@@ -13,6 +13,7 @@ parser.add_argument('--n_explorers', type=int, default=2, help='Number of explor
 parser.add_argument('--n_cleaners', type=int, default=2, help='Number of cleaners agents.')
 parser.add_argument('--max_steps_per_episode', type=int, default=150, help='Max steps per episode.')
 parser.add_argument('--dynamic_env', type=str, default='True', help='Dynamic environment.')
+parser.add_argument('--obstacles', type=str, default='False', help='Obstacles in the environment.')
 parser.add_argument('-rw', '--reward_function', type=str, default='negativedistance', help='Reward function to use: basic_reward, extended_reward, backtosimple')
 parser.add_argument('-w', '--reward_weights', type=float, nargs='+', default=[1, 50, 2, 0], help='Reward weights for the reward function.')
 parser.add_argument('-net', '--network_type', type=str, default='independent_networks_per_team', help='Type of network to use: independent_networks_per_team, shared_network')
@@ -109,7 +110,7 @@ env = MultiAgentCleanupEnvironment(scenario_map_name = scenario_map_name,
 							reward_function = reward_function, 
 							reward_weights = reward_weights,
 							dynamic = True if args.dynamic_env.capitalize() == "True" else False,
-							obstacles = False,
+							obstacles = True if args.obstacles.capitalize() == "True" else False,
 							show_plot_graphics = SHOW_PLOT_GRAPHICS,
 							)
 

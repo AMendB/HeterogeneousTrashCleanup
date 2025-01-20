@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 # Load the image
-name = 'acoruna_port'
+name = 'challenging_map'
 image = cv2.imread(f'Environment/Maps/{name}.png', 0)
 
 # Binarize the image

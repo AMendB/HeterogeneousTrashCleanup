@@ -8,7 +8,6 @@ class OneStepGreedyFleet:
         # Get environment info #
         self.env = env
         self.n_agents = self.env.n_agents
-        self.scenario_map = self.env.scenario_map.copy() 
         self.explorers_team_id = self.env.explorers_team_id
         self.cleaners_team_id = self.env.cleaners_team_id
         self.team_id_of_each_agent = self.env.team_id_of_each_agent
@@ -42,13 +41,13 @@ class OneStepGreedyFleet:
     def compute_influence_mask(self, agent_position, vision_length): 
         """ Compute influence area around actual position. It is what the agent can see. """
 
-        influence_mask = np.zeros_like(self.scenario_map) 
+        influence_mask = np.zeros_like(self.navigable_map) 
 
         pose_x, pose_y = agent_position
 
         # State - coverage area #
-        range_x_axis = np.arange(0, self.scenario_map.shape[0]) # posible positions in x-axis
-        range_y_axis = np.arange(0, self.scenario_map.shape[1]) # posible positions in y-axis
+        range_x_axis = np.arange(0, self.navigable_map.shape[0]) # posible positions in x-axis
+        range_y_axis = np.arange(0, self.navigable_map.shape[1]) # posible positions in y-axis
 
         # Compute the circular mask (area) #
         mask = (range_x_axis[np.newaxis, :] - pose_x) ** 2 + (range_y_axis[:, np.newaxis] - pose_y) ** 2 <= vision_length ** 2 
@@ -128,7 +127,7 @@ class OneStepGreedyFleet:
     def get_agents_actions(self):
         """ Get the actions for each agent given the conditions of the environment. """
         
-        self.navigable_map = self.scenario_map.copy() # 1 where navigable, 0 where not navigable
+        self.navigable_map = self.env.scenario_map.copy() # 1 where navigable, 0 where not navigable
         self.visited_areas_map = self.env.visited_areas_map.copy()
         self.model_trash_map = self.env.model_trash_map
         self.percentage_visited = self.env.percentage_visited
@@ -195,7 +194,7 @@ class OneStepGreedyFleet:
     def get_agents_q_values(self):
         """ Get the q_values for each agent given the conditions of the environment. """
         
-        self.navigable_map = self.scenario_map.copy() # 1 where navigable, 0 where not navigable
+        self.navigable_map = self.env.scenario_map.copy() # 1 where navigable, 0 where not navigable
         self.visited_areas_map = self.env.visited_areas_map.copy()
         self.model_trash_map = self.env.model_trash_map 
         self.percentage_visited = self.env.percentage_visited

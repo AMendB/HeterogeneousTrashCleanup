@@ -41,6 +41,7 @@ def objective(trial):
 	max_distance_travelled_explorers = 400
 	max_distance_travelled_cleaners = 200
 	dynamic_env = True if args.dynamic_env.capitalize() == "True" else False
+	obstacles = True if args.obstacles.capitalize() == "True" else False
 	greedy_training = True if args.greedy_training.capitalize() == "True" else False
 	heuristic_training = True if args.heuristic_training.capitalize() == "True" else False
 	prewarm_percentage = args.prewarm_percentage
@@ -61,7 +62,7 @@ def objective(trial):
 		reward_function=reward_function,
 		reward_weights=reward_weights,
 		dynamic=dynamic_env,
-		obstacles=False,
+		obstacles=obstacles,
 		show_plot_graphics=False,
 	)
 
@@ -120,6 +121,7 @@ if __name__ == "__main__":
 	parser.add_argument('--n_cleaners', type=int, default=2, help='Number of cleaners agents.')
 	parser.add_argument('--max_steps_per_episode', type=int, default=150, help='Max steps per episode.')
 	parser.add_argument('--dynamic_env', type=str, default='True', help='Dynamic environment.')
+	parser.add_argument('--obstacles', type=str, default='False', help='Obstacles in the environment.')
 	parser.add_argument('-rw', '--reward_function', type=str, default='negativedistance', help='Reward function to use: basic_reward, extended_reward, backtosimple')
 	parser.add_argument('-dev', '--device', type=str, default='cuda:0', help='Device to use: cuda:x, cpu')
 	parser.add_argument('-eps', '--episodes', type=int, default=1000, help='Number of episodes for each trial.')
