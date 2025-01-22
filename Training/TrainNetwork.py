@@ -130,8 +130,10 @@ else:
 	else:
 		training_type = ""
 
-	if n_explorers == 0 or n_cleaners == 0:
-		logdir = f'Training/T{training_type}_curriculum_RW_{reward_function.split("_")[0]}_' + '_'.join(map(str, reward_weights)) + f'_{int(episodes/1000)}k{f"+{int(extra_episodes/1000)}k" if extra_episodes>0 else ""}_ep{epsilon}_hu{int(target_update/1000)}k_te{train_every}_prewarm{prewarm_percentage}_{scenario_map_name}' + args.extra_name
+	if n_cleaners == 0:
+		logdir = f'Training/T{training_type}_curriculum_explorers_RW_{reward_function.split("_")[0]}_' + '_'.join(map(str, reward_weights)) + f'_{int(episodes/1000)}k{f"+{int(extra_episodes/1000)}k" if extra_episodes>0 else ""}_ep{epsilon}_hu{int(target_update/1000)}k_te{train_every}_prewarm{prewarm_percentage}_{scenario_map_name}' + args.extra_name
+	elif n_explorers == 0:
+		logdir = f'Training/T{training_type}_curriculum_cleaners_RW_{reward_function.split("_")[0]}_' + '_'.join(map(str, reward_weights)) + f'_{int(episodes/1000)}k{f"+{int(extra_episodes/1000)}k" if extra_episodes>0 else ""}_ep{epsilon}_hu{int(target_update/1000)}k_te{train_every}_prewarm{prewarm_percentage}_{scenario_map_name}' + args.extra_name
 	else:
 		logdir = f'Training/T{training_type}_RW_{reward_function.split("_")[0]}_' + '_'.join(map(str, reward_weights)) + f'_{int(episodes/1000)}k{f"+{int(extra_episodes/1000)}k" if extra_episodes>0 else ""}_ep{epsilon}_hu{int(target_update/1000)}k_te{train_every}_prewarm{prewarm_percentage}_{scenario_map_name}' + args.extra_name
 
