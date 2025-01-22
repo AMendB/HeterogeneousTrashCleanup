@@ -253,13 +253,9 @@ class MultiAgentDuelingDQNAgent:
 					# Compute randomly the q's #
 					q_values = {agent_id: np.random.rand(n_actions_of_each_agent[agent_id]) for agent_id in states.keys() if not done[agent_id]}
 			elif self.heuristic_training:
-				rand_value = np.random.rand()
-				if -1 > rand_value:
+				if 0.5 > np.random.rand():
 					# PSO algorithm compute the q's #
 					q_values = self.pso_fleet.get_agents_q_values()
-				elif 0.8 > rand_value:
-					# Greedy algorithm compute the q's #
-					q_values = self.greedy_fleet.get_agents_q_values()
 				else:
 					# Compute randomly the q's #
 					q_values = {agent_id: np.random.rand(n_actions_of_each_agent[agent_id]) for agent_id in states.keys() if not done[agent_id]}
@@ -276,7 +272,8 @@ class MultiAgentDuelingDQNAgent:
 		# Masking q's and take actions #
 		q_values = self.nogobackfleet_masking_module.mask_actions(q_values=q_values)
 
-		permanent_actions = self.consensus_safe_masking_module.query_actions(q_values=q_values, agents_positions=positions)
+		# permanent_actions = self.consensus_safe_masking_module.query_actions(q_values=q_values, agents_positions=positions, model_trash_map=self.env.model_trash_map, team_id_of_each_agent=self.env.team_id_of_each_agent)
+		permanent_actions = self.consensus_safe_masking_module.query_actions(q_values=q_values, agents_positions=positions, model_trash_map=self.env.model_trash_map)
 		self.nogobackfleet_masking_module.update_previous_actions(permanent_actions)
 		
 		return permanent_actions
