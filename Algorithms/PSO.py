@@ -127,3 +127,4 @@ class ParticleSwarmOptimizationFleet:
         self.best_location_per_agent = [None]*self.n_agents
         self.best_global_location = None
         self.velocities = [[0, 0]]*self.n_agents
+        self.scenario_map = self.env.scenario_map.copy() 

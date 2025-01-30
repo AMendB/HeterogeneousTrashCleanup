@@ -358,8 +358,11 @@ class MultiAgentCleanupEnvironment:
 				self.deployment_positions[[32,30,28,26], [7,7,7,7]] = 1 # A Coruna port
 			elif 'marinapalamos' in self.scenario_map_name:
 				self.deployment_positions[[16,14,12,10], [9,9,9,9]] = 1 # marinapalamos
+			elif 'challenging_map_big' in self.scenario_map_name:
+				self.deployment_positions[[74,76,78,80,82,84], [4,4,4,4,4,4]] = 1 # Challenging map
 			elif 'challenging_map' in self.scenario_map_name:
 				self.deployment_positions[[46,48,50,52], [3,3,3,3]] = 1 # Challenging map
+				# self.deployment_positions[[44,46,48,50,52,54], [3,3,3,3,3,4]] = 1 # Challenging map
 			elif 'comb_port' in self.scenario_map_name:
 				self.deployment_positions[[16,14,12,10], [7,7,7,7]] = 1 # comb_port
 			self.initial_positions = np.argwhere(self.deployment_positions == 1)[self.rng_initial_agents_positions.choice(len(np.argwhere(self.deployment_positions == 1)), self.n_agents, replace=False)]
@@ -466,7 +469,10 @@ class MultiAgentCleanupEnvironment:
 		if self.obstacles:
 			# Generate a random inside obstacles map #
 			self.inside_obstacles_map = np.zeros_like(self.scenario_map)
-			obstacles_pos_indx = self.rng_obstacle_positions.choice(np.arange(0, len(self.visitable_locations)), size=self.rng_obstacle_number.integers(15, 20), replace=False)
+			if 'big' in self.scenario_map_name:
+				obstacles_pos_indx = self.rng_obstacle_positions.choice(np.arange(0, len(self.visitable_locations)), size=self.rng_obstacle_number.integers(25, 35), replace=False)
+			else:
+				obstacles_pos_indx = self.rng_obstacle_positions.choice(np.arange(0, len(self.visitable_locations)), size=self.rng_obstacle_number.integers(15, 20), replace=False)
 			# Exclude the initial positions of the agents #
 			initial_positions_indx = np.array([np.where(np.all(self.visitable_locations == pos, axis=1))[0][0] for pos in self.initial_positions])
 			obstacles_pos_indx = np.delete(obstacles_pos_indx, np.where(np.isin(obstacles_pos_indx, initial_positions_indx))[0])
@@ -478,7 +484,7 @@ class MultiAgentCleanupEnvironment:
 			
 			# Update the obstacle map for every agent #
 			for i in range(self.n_agents):
-				self.fleet.vehicles[i].navigation_map = self.scenario_map - self.inside_obstacles_map
+				self.fleet.vehicles[i].navigation_map = self.scenario_map
 		else:
 			self.inside_obstacles_map = np.zeros_like(self.scenario_map)
 
@@ -540,15 +546,23 @@ class MultiAgentCleanupEnvironment:
 		
 		return self.states
 	
-	def generate_trash_positions(self, max_number_of_trash_elements_per_spot = 60, max_number_of_pollution_spots = 4):
+	def generate_trash_positions(self, max_number_of_trash_elements_per_spot = 70, max_number_of_pollution_spots = 4):
 		""" Generate the positions of the trash elements with a MVN distribution. """
 
 		# Random position of pollution spots inside of the navigable map #
 		# pollution_spots_number = self.rng_pollution_spots_number.integers(1, max_number_of_pollution_spots+1)
+		if 'big' in self.scenario_map_name:
+			max_number_of_trash_elements_per_spot = 80
+			min_number_of_trash_elements_per_spot = 40
+			scale = 18
+		else:
+			max_number_of_trash_elements_per_spot = 75
+			min_number_of_trash_elements_per_spot = 35
+			scale = 10
 		pollution_spots_number = 1
 		pollution_spots_locations_indexes = self.rng_pollution_spots_locations_indexes.choice(np.arange(0, len(self.visitable_locations)), pollution_spots_number, replace=False)
-		number_of_trash_elements_in_each_spot = self.rng_trash_elements_number.normal(loc=max_number_of_trash_elements_per_spot, scale=10, size=pollution_spots_number).round().astype(int)
-		number_of_trash_elements_in_each_spot[number_of_trash_elements_in_each_spot <= 0] = 10 # minimum number of trash elements in a spot
+		number_of_trash_elements_in_each_spot = self.rng_trash_elements_number.normal(loc=max_number_of_trash_elements_per_spot, scale=scale, size=pollution_spots_number).round().astype(int)
+		number_of_trash_elements_in_each_spot[number_of_trash_elements_in_each_spot <= 0] = min_number_of_trash_elements_per_spot
 		
 		# Generate the trash positions #
 		trash_positions_yx = np.array([])
@@ -564,7 +578,7 @@ class MultiAgentCleanupEnvironment:
 		""" Initialize the trash map with a number of trash elements. """
 
 		# Establish the wind direction during the episode #
-		self.wind_direction = np.array([self.rng_wind_direction.uniform(0.01, 0.10), self.rng_wind_direction.uniform(-0.10, 0.10)])
+		self.wind_direction = np.array([self.rng_wind_direction.uniform(-0.10, 0.10), self.rng_wind_direction.uniform(-0.10, 0.10)])
 		
 		# Generate the trash positions #
 		self.trash_positions_yx = self.generate_trash_positions()
@@ -602,7 +616,7 @@ class MultiAgentCleanupEnvironment:
 		# Movement of trash if dynamic #
 		if self.dynamic:
 			# Movement of trash: a random component and a wind component #
-			random_component = np.random.uniform(-0.08, 0.08, self.trash_positions_yx.shape)
+			random_component = np.random.uniform(-0.09, 0.09, self.trash_positions_yx.shape)
 			self.trash_positions_yx += random_component + self.wind_direction
 
 			# Saturate trash positions #
@@ -1172,7 +1186,7 @@ if __name__ == '__main__':
 	
 	seed = 24
 	np.random.seed(seed)
-	scenario_map_name = 'acoruna_port' # ypacarai_map_low_res, ypacarai_lake_58x41, acoruna_port, marinapalamos, comb_port, challenging_map
+	scenario_map_name = 'acoruna_port' # ypacarai_map_low_res, ypacarai_lake_58x41, acoruna_port, marinapalamos, comb_port, challenging_map, challenging_map_big
 
 	# Agents info #
 	n_actions_explorers = 8

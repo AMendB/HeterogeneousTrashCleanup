@@ -101,7 +101,7 @@ class ConsensusSafeActionMasking:
 
 		self.navigation_map = new_navigation_map.copy()
 
-	def query_actions(self, q_values: dict, agents_positions: dict):
+	def query_actions(self, q_values: dict, agents_positions: dict, model_trash_map = None, team_id_of_each_agent = None):
 
 		# 1) The largest q-value agent decides first
 		# 2) If there are multiple agents with the same q-value, the agent is selected randomly
@@ -119,7 +119,14 @@ class ConsensusSafeActionMasking:
 			# Compute all next possible positions
 			next_positions = agents_positions[agent_id] + self.potential_movements_of_each_agent[agent_id]
 			next_positions = np.clip(next_positions, (0,0), np.array(self.obstacles_map.shape)-1) # saturate movement if out of indexes values (map edges)
-			
+
+			if model_trash_map is not None:
+				# Check if agent is a cleaner
+				if team_id_of_each_agent[agent_id] == 1:
+					# Check if there is trash in the next positions. If so, give a very high value to the q-value of the action that leads to the trash, ponderated in function of the number of trash items in the next position
+					trash_in_next_positions = np.array([model_trash_map[int(next_position[0]), int(next_position[1])] for next_position in next_positions])
+					q_values[agent_id] += trash_in_next_positions * 10000
+
 			# Check which next possible positions lead to a collision
 			actions_mask = np.array([not is_reachable(self.obstacles_map,agents_positions[agent_id], next_position) for next_position in next_positions]).astype(bool)
 

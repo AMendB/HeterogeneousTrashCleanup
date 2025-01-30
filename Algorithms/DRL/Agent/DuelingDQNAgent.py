@@ -272,8 +272,10 @@ class MultiAgentDuelingDQNAgent:
 		# Masking q's and take actions #
 		q_values = self.nogobackfleet_masking_module.mask_actions(q_values=q_values)
 
-		# permanent_actions = self.consensus_safe_masking_module.query_actions(q_values=q_values, agents_positions=positions, model_trash_map=self.env.model_trash_map, team_id_of_each_agent=self.env.team_id_of_each_agent)
-		permanent_actions = self.consensus_safe_masking_module.query_actions(q_values=q_values, agents_positions=positions)
+		if deterministic:
+			permanent_actions = self.consensus_safe_masking_module.query_actions(q_values=q_values, agents_positions=positions, model_trash_map=self.env.model_trash_map, team_id_of_each_agent=self.env.team_id_of_each_agent)
+		else:
+			permanent_actions = self.consensus_safe_masking_module.query_actions(q_values=q_values, agents_positions=positions)
 		self.nogobackfleet_masking_module.update_previous_actions(permanent_actions)
 		
 		return permanent_actions
@@ -428,7 +430,6 @@ class MultiAgentDuelingDQNAgent:
 		if self.greedy_training:
 			self.greedy_fleet = OneStepGreedyFleet(env=self.env)
 		elif self.heuristic_training:
-			self.greedy_fleet = OneStepGreedyFleet(env=self.env)
 			self.pso_fleet = ParticleSwarmOptimizationFleet(env=self.env)
 
 		# START TRAINING #

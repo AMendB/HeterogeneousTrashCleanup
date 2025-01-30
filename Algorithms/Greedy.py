@@ -96,10 +96,11 @@ class OneStepGreedyFleet:
                 r_for_cleaned_trash = 0
 
             # Exchange ponderation between exploration/exploitation when the 80% of the map is visited #
-            if self.percentage_visited > 0.8:
-                ponderation_for_discover_new_area = self.reward_weights[self.explorers_team_id]
-            else:
-                ponderation_for_discover_new_area = self.reward_weights[2]
+            # if self.percentage_visited > 0.8:
+            #     ponderation_for_discover_new_area = self.reward_weights[self.explorers_team_id]
+            # else:
+            #     ponderation_for_discover_new_area = self.reward_weights[2]
+            ponderation_for_discover_new_area = self.reward_weights[2]
 
             reward = r_for_taking_action_that_approaches_to_trash \
                         + r_for_discover_new_area * ponderation_for_discover_new_area \
@@ -150,7 +151,8 @@ class OneStepGreedyFleet:
         next_positions = np.clip(next_positions, (0,0), np.array(self.navigable_map.shape)-1) # saturate movement if out of indexes values (map edges)
         next_allowed_actionpose_dict = {action: next_position for action, next_position in enumerate(next_positions) if self.is_reachable(self.navigable_map, agent_position, next_position)} # remove next positions that leads to a collision
         # next_allowed_actionpose_dict = {action: next_position for action, next_position in enumerate(next_positions) if self.navigable_map[next_position[0], next_position[1]] == 1} # remove next positions that leads to a non-navigable area 
-
+        
+        best_reward = -np.inf
         rewards = {}
         for action, next_position in enumerate(next_positions):
             if action in next_allowed_actionpose_dict:
@@ -177,17 +179,27 @@ class OneStepGreedyFleet:
                     r_for_cleaned_trash = 0
 
                 # Exchange ponderation between exploration/exploitation when the 80% of the map is visited #
-                if self.percentage_visited > 0.8:
-                    ponderation_for_discover_new_area = self.reward_weights[self.explorers_team_id]
-                else:
-                    ponderation_for_discover_new_area = self.reward_weights[2]
+                # if self.percentage_visited > 0.8:
+                #     ponderation_for_discover_new_area = self.reward_weights[self.explorers_team_id]
+                # else:
+                #     ponderation_for_discover_new_area = self.reward_weights[2]
+                ponderation_for_discover_new_area = self.reward_weights[2]
 
-                rewards[action] = r_for_taking_action_that_approaches_to_trash \
+                reward = r_for_taking_action_that_approaches_to_trash \
                             + r_for_discover_new_area * ponderation_for_discover_new_area \
                             + r_for_cleaned_trash * self.reward_weights[self.cleaners_team_id] \
                             
+                rewards[action] = reward
+                
+                if reward > best_reward:
+                    best_reward = reward
             else:
                 rewards[action] = -np.inf    
+
+        # Check if the best reward is the same for multiple actions. If so, choose randomly between them and add an extra.
+        if list(rewards.values()).count(best_reward) > 1:
+            best_action = np.random.choice([action for action, reward in rewards.items() if reward == best_reward])     
+            rewards[best_action] += 1   
 
         return np.array([*rewards.values()], dtype = np.float32)
 
