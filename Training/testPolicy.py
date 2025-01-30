@@ -50,7 +50,7 @@ if not 'PPO' in path_to_training_folder:
 							batch_size=64,
 							target_update=1000,
 							seed = SEED,
-							concensus_actions=exp_config['concensus_actions'],
+							consensus_actions=exp_config['consensus_actions'],
 							device='cuda:0',
 							independent_networks_per_team = exp_config['independent_networks_per_team'],
 							curriculum_learning_team=exp_config['curriculum_learning_team'],

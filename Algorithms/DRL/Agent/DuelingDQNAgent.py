@@ -37,7 +37,7 @@ class MultiAgentDuelingDQNAgent:
 			save_every=None,
 			train_every=1,
 			masked_actions= False,
-			concensus_actions= False,
+			consensus_actions= False,
 			device='cpu',
 			seed = 0,
 			eval_every = None,
@@ -106,7 +106,7 @@ class MultiAgentDuelingDQNAgent:
 		self.learning_starts = learning_starts
 		self.train_every = train_every
 		self.masked_actions = masked_actions
-		self.concensus_actions = concensus_actions
+		self.consensus_actions = consensus_actions
 		self.noisy = noisy
 		self.distributional = distributional
 		self.num_atoms = num_atoms
@@ -179,7 +179,7 @@ class MultiAgentDuelingDQNAgent:
 			self.dqn_target.reset_noise()
 
 		# Masking utilities #
-		if self.concensus_actions:
+		if self.consensus_actions:
 			self.consensus_safe_masking_module = ConsensusSafeActionMasking(navigation_map = self.env.scenario_map, 
 																   angle_set_of_each_agent= self.env.angle_set_of_each_agent, 
 																   movement_length_of_each_agent = self.env.movement_length_of_each_agent)
@@ -237,7 +237,7 @@ class MultiAgentDuelingDQNAgent:
 
 		return actions
 
-	def select_concensus_actions(self, states: dict, positions: np.ndarray, n_actions_of_each_agent: int, done: dict, deterministic: bool = False):
+	def select_consensus_actions(self, states: dict, positions: np.ndarray, n_actions_of_each_agent: int, done: dict, deterministic: bool = False):
 		""" Select an action masked to avoid collisions and so """
 		
 		# Update navigation map if there are dynamic obstacles #
@@ -467,6 +467,8 @@ class MultiAgentDuelingDQNAgent:
 
 				done = {i:False for i in range(self.env.n_agents)}
 				states = self.env.reset_env()
+				if self.consensus_actions:
+					self.consensus_safe_masking_module.update_map(self.env.scenario_map)
 				score = [0]*self.env.n_teams
 				length = [0]*self.env.n_teams
 				losses = [[] for _ in range(self.env.n_teams)]
@@ -496,7 +498,7 @@ class MultiAgentDuelingDQNAgent:
 					steps_per_team = [steps+1 if not episode_finished_per_teams[team_id] else steps for team_id, steps in enumerate(steps_per_team)]
 
 					# Select the action using the current policy #
-					actions = self.select_concensus_actions(states=states, positions=self.env.get_active_agents_positions_dict(), n_actions_of_each_agent=self.action_dim_of_each_agent, done = done)
+					actions = self.select_consensus_actions(states=states, positions=self.env.get_active_agents_positions_dict(), n_actions_of_each_agent=self.action_dim_of_each_agent, done = done)
 
 					# Process the agent step #
 					next_states, reward, done = self.step(actions)
@@ -656,6 +658,8 @@ class MultiAgentDuelingDQNAgent:
 
 				done = {i:False for i in range(self.env.n_agents)}
 				states = self.env.reset_env()
+				if self.consensus_actions:
+					self.consensus_safe_masking_module.update_map(self.env.scenario_map)
 				score = 0
 				length = 0
 				losses = []
@@ -682,8 +686,8 @@ class MultiAgentDuelingDQNAgent:
 					steps += 1
 
 					# Select the action using the current policy #
-					if self.concensus_actions:
-						actions = self.select_concensus_actions(states=states, positions=self.env.get_active_agents_positions_dict(), n_actions_of_each_agent=self.action_dim_of_each_agent, done = done)
+					if self.consensus_actions:
+						actions = self.select_consensus_actions(states=states, positions=self.env.get_active_agents_positions_dict(), n_actions_of_each_agent=self.action_dim_of_each_agent, done = done)
 					elif self.masked_actions:
 						actions = self.select_masked_actions(states=states, positions=self.env.fleet.get_positions())
 					else:
@@ -959,6 +963,8 @@ class MultiAgentDuelingDQNAgent:
 
 				# Reset the environment #
 				states = self.env.reset_env()
+				if self.consensus_actions:
+					self.consensus_safe_masking_module.update_map(self.env.scenario_map)
 				done = {agent_id: False for agent_id in range(self.env.n_agents)}
 				# acc_r = np.array([0]*self.env.n_agents)
 				
@@ -968,8 +974,8 @@ class MultiAgentDuelingDQNAgent:
 					states = {agent_id: np.float16(np.uint8(state * 255)/255) for agent_id, state in states.items()}
 
 					# Select the action using the current policy
-					if self.concensus_actions:
-						actions = self.select_concensus_actions(states=states, positions=self.env.get_active_agents_positions_dict(), n_actions_of_each_agent=self.action_dim_of_each_agent, done = done, deterministic=True)
+					if self.consensus_actions:
+						actions = self.select_consensus_actions(states=states, positions=self.env.get_active_agents_positions_dict(), n_actions_of_each_agent=self.action_dim_of_each_agent, done = done, deterministic=True)
 					elif self.masked_actions:
 						actions = self.select_masked_actions(states=states, positions=self.env.fleet.get_positions())
 					else:
@@ -1014,6 +1020,8 @@ class MultiAgentDuelingDQNAgent:
 
 				# Reset the environment #
 				states = self.env.reset_env()
+				if self.consensus_actions:
+					self.consensus_safe_masking_module.update_map(self.env.scenario_map)
 				done = {agent_id: False for agent_id in range(self.env.n_agents)}
 				
 
@@ -1022,8 +1030,8 @@ class MultiAgentDuelingDQNAgent:
 					total_length += 1
 
 					# Select the action using the current policy
-					if self.concensus_actions:
-						actions = self.select_concensus_actions(states=states, positions=self.env.get_active_agents_positions_dict(), n_actions_of_each_agent=self.action_dim_of_each_agent, done = done, deterministic=True)
+					if self.consensus_actions:
+						actions = self.select_consensus_actions(states=states, positions=self.env.get_active_agents_positions_dict(), n_actions_of_each_agent=self.action_dim_of_each_agent, done = done, deterministic=True)
 					elif self.masked_actions:
 						actions = self.select_masked_actions(states=states, positions=self.env.fleet.get_positions())
 					else:
@@ -1067,7 +1075,7 @@ class MultiAgentDuelingDQNAgent:
 			"beta": self.beta,
 			"num_atoms": self.num_atoms,
 			"masked_actions": self.masked_actions,
-			"concensus_actions": self.concensus_actions,
+			"consensus_actions": self.consensus_actions,
 			"independent_networks_per_team": self.independent_networks_per_team,
 			"curriculum_learning_team": self.curriculum_learning_team,
 			"soft_update": self.soft_update,

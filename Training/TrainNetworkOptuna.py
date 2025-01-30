@@ -96,7 +96,7 @@ def objective(trial):
 		save_every=10000,
 		train_every=train_every,
 		masked_actions=False,
-		concensus_actions=True,
+		consensus_actions=True,
 		device=device,
 		logdir=logdir,
 		eval_every=50,
