@@ -359,7 +359,7 @@ class MultiAgentCleanupEnvironment:
 			elif 'marinapalamos' in self.scenario_map_name:
 				self.deployment_positions[[16,14,12,10], [9,9,9,9]] = 1 # marinapalamos
 			elif 'challenging_map_big' in self.scenario_map_name:
-				self.deployment_positions[[74,76,78,80,82,84], [4,4,4,4,4,4]] = 1 # Challenging map
+				self.deployment_positions[[50,52,54,56,58,60], [2,2,2,2,2,2]] = 1 # Challenging map big
 			elif 'challenging_map' in self.scenario_map_name:
 				self.deployment_positions[[46,48,50,52], [3,3,3,3]] = 1 # Challenging map
 				# self.deployment_positions[[44,46,48,50,52,54], [3,3,3,3,3,4]] = 1 # Challenging map
@@ -470,7 +470,7 @@ class MultiAgentCleanupEnvironment:
 			# Generate a random inside obstacles map #
 			self.inside_obstacles_map = np.zeros_like(self.scenario_map)
 			if 'big' in self.scenario_map_name:
-				obstacles_pos_indx = self.rng_obstacle_positions.choice(np.arange(0, len(self.visitable_locations)), size=self.rng_obstacle_number.integers(25, 35), replace=False)
+				obstacles_pos_indx = self.rng_obstacle_positions.choice(np.arange(0, len(self.visitable_locations)), size=self.rng_obstacle_number.integers(20, 30), replace=False)
 			else:
 				obstacles_pos_indx = self.rng_obstacle_positions.choice(np.arange(0, len(self.visitable_locations)), size=self.rng_obstacle_number.integers(15, 20), replace=False)
 			# Exclude the initial positions of the agents #
@@ -552,12 +552,12 @@ class MultiAgentCleanupEnvironment:
 		# Random position of pollution spots inside of the navigable map #
 		# pollution_spots_number = self.rng_pollution_spots_number.integers(1, max_number_of_pollution_spots+1)
 		if 'big' in self.scenario_map_name:
-			max_number_of_trash_elements_per_spot = 80
-			min_number_of_trash_elements_per_spot = 40
-			scale = 18
+			max_number_of_trash_elements_per_spot = 100
+			min_number_of_trash_elements_per_spot = 60
+			scale = 14
 		else:
 			max_number_of_trash_elements_per_spot = 75
-			min_number_of_trash_elements_per_spot = 35
+			min_number_of_trash_elements_per_spot = 40
 			scale = 10
 		pollution_spots_number = 1
 		pollution_spots_locations_indexes = self.rng_pollution_spots_locations_indexes.choice(np.arange(0, len(self.visitable_locations)), pollution_spots_number, replace=False)
