@@ -2,6 +2,7 @@ import sys
 import json
 import numpy as np
 import os
+import argparse
 sys.path.append('.')
 
 # DDQN #
@@ -12,7 +13,11 @@ from Algorithms.DRL.Agent.DuelingDQNAgent import MultiAgentDuelingDQNAgent
 from Environment.EnvPPOWrapper import EnvWrapper
 from Algorithms.PPO.ppo import PPO
 
-path_to_training_folder = 'Training/T//'
+parser = argparse.ArgumentParser()
+parser.add_argument('--path', type=str, default='T_RW_negativedijkstra_2.626225214357622_14.33181947501113_5.826858678174348_1.7319722255470185_60k_ep0.8_hu10k_te15_prewarm0.0_challenging_map_big')
+args = parser.parse_args()
+
+path_to_training_folder = f'Training/T/{args.path}/'
 
 f = open(path_to_training_folder + 'environment_config.json',)
 env_config = json.load(f)
