@@ -22,7 +22,7 @@ parser.add_argument('--epsilon', type=float, default=0.5, help='Epsilon value fo
 parser.add_argument('-eps', '--episodes', type=int, default=60000, help='Number of episodes to train the network.')
 parser.add_argument('--extra_episodes', type=int, default=0, help='Extra episodes to keep training after the first training.')
 parser.add_argument('-gt', '--greedy_training', type=str, default="False", help='Use greedy training instead of epsilon-greedy training.')
-parser.add_argument('--heuristic_training', type=str, default="False", help='Use heuristic training instead of epsilon-greedy training.')
+parser.add_argument('--pso_training', type=str, default="False", help='Use PSO training instead of epsilon-greedy training.')
 parser.add_argument('-t', '--target_update', type=int, default=6000, help='Number of steps to update the target network.')
 parser.add_argument('--train_every', type=int, default=15, help='Number of steps to train the network.')
 parser.add_argument('--extra_name', type=str, default='', help='Extra name to add to the logdir.')
@@ -41,7 +41,7 @@ epsilon = args.epsilon
 episodes = args.episodes
 extra_episodes = args.extra_episodes
 greedy_training = True if args.greedy_training.capitalize() == "True" else False
-heuristic_training = True if args.heuristic_training.capitalize() == "True" else False
+pso_training = True if args.pso_training.capitalize() == "True" else False
 target_update = args.target_update
 train_every = args.train_every
 preload_path = args.preload_path
@@ -125,8 +125,8 @@ if memory_size == int(1E3):
 else:
 	if greedy_training:
 		training_type = "_greedy"
-	elif heuristic_training:
-		training_type = "_heuristic"
+	elif pso_training:
+		training_type = "_pso"
 	else:
 		training_type = ""
 
@@ -146,7 +146,7 @@ network = MultiAgentDuelingDQNAgent(env=env,
 									epsilon_values=[1.0, 0.05],
 									epsilon_interval=[0.0, epsilon], #0.5
 									greedy_training=greedy_training, # epsilon is used to take to take greedy actions policy during training instead of random
-									heuristic_training=heuristic_training, # epsilon is used to take to take greedy or pso actions policy during training instead of random
+									pso_training=pso_training, # epsilon is used to take to take greedy or pso actions policy during training instead of random
 									learning_starts=100, 
 									gamma=0.99,
 									lr=1e-4,

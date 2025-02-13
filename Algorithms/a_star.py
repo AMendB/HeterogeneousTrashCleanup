@@ -170,9 +170,21 @@ if __name__ == "__main__":
     start_pos = (2, 2)
     goal_pos = (18, 18)
     # Find the path
-    path = a_star_find_path(grid, start_pos, goal_pos)
+    # path = a_star_find_path(grid, start_pos, goal_pos)
+    # if path:
+    #     print(f"Path found with {len(path)} steps!")
+    #     visualize_path(grid, path)
+    # else:
+    #     print("No path found!")
+
+
+
+    scenario_map = np.genfromtxt(f'Environment/Maps/challenging_map_big.csv', delimiter=',')
+    start = (10, 10)
+    goal = (62, 13)
+    path = a_star_find_path(scenario_map, start, goal)
     if path:
         print(f"Path found with {len(path)} steps!")
-        visualize_path(grid, path)
+        visualize_path(scenario_map, path)
     else:
         print("No path found!")

@@ -14,8 +14,8 @@ from tqdm import trange
 algorithms = [
 	# 'WanderingAgent', 
     # 'LawnMower', 
-    # 'PSO', 
-    'Greedy',
+    'PSO', 
+    # 'Greedy',
 	]
 
 SEED = 3
@@ -27,12 +27,20 @@ RUNS = 100
 # Set config #
 # scenario_map_name = 'acoruna_port'
 # scenario_map_name = 'marinapalamos'
-# scenario_map_name = 'comb_port'
-scenario_map_name = 'challenging_map'
+scenario_map_name = 'comb_port'
+# scenario_map_name = 'challenging_map_big'
 n_actions_explorers = 8
 n_actions_cleaners = 8
-n_explorers = 2
-n_cleaners = 2
+if 'big' in scenario_map_name:
+    n_explorers = 3
+    n_cleaners = 3
+else:
+    n_explorers = 2
+    n_cleaners = 2
+if 'challenging' in scenario_map_name:
+    obstacles = True
+else:
+    obstacles = False
 n_agents = n_explorers + n_cleaners
 movement_length_explorers = 2
 movement_length_cleaners = 1
@@ -41,12 +49,16 @@ vision_length_explorers = 4
 vision_length_cleaners = 1
 max_distance_travelled_explorers = 400
 max_distance_travelled_cleaners = 200
-max_steps_per_episode = 150
+if 'big' in scenario_map_name:
+    max_steps_per_episode = 170
+else:
+    max_steps_per_episode = 150
 
-# reward_function = 'negativedijkstra'
-reward_function = 'negativeastar'
+reward_function = 'negativedijkstra'
+# reward_function = 'negativeastar'
 # reward_function = 'negativedistance'
-reward_weights=(1, 50, 2, 0)
+# reward_weights=(1, 50, 2, 0)
+reward_weights=(2.626225214357622, 14.33181947501113, 5.826858678174348, 1.7319722255470185)
 
 # Set initial positions #
 random_initial_positions = True
@@ -71,7 +83,7 @@ env = MultiAgentCleanupEnvironment(scenario_map_name = scenario_map_name,
                         reward_function = reward_function,
                         reward_weights = reward_weights,
                         dynamic = True,
-                        obstacles = False,
+                        obstacles = obstacles,
                         show_plot_graphics = SHOW_RENDER,
                         )
 
@@ -79,15 +91,19 @@ for algorithm in algorithms:
     if algorithm == 'LawnMower':
         lawn_mower_rng = np.random.default_rng(seed=100)
         agents = [LawnMowerAgent(world=env.scenario_map, number_of_actions=8, movement_length=movement_length_of_each_agent[i], forward_direction=int(lawn_mower_rng.uniform(0,8)), seed=SEED+i, agent_is_cleaner=env.team_id_of_each_agent[i]==env.cleaners_team_id) for i in range(n_agents)]
+        consensus_safe_masking_module = ConsensusSafeActionMasking(navigation_map = env.scenario_map, angle_set_of_each_agent=env.angle_set_of_each_agent, movement_length_of_each_agent = env.movement_length_of_each_agent)
     elif algorithm == 'WanderingAgent':
         agents = [WanderingAgent(world=env.scenario_map, number_of_actions=8, movement_length=movement_length_of_each_agent[i], seed=SEED+i, agent_is_cleaner=env.team_id_of_each_agent[i]==env.cleaners_team_id) for i in range(n_agents)]
+        consensus_safe_masking_module = ConsensusSafeActionMasking(navigation_map = env.scenario_map, angle_set_of_each_agent=env.angle_set_of_each_agent, movement_length_of_each_agent = env.movement_length_of_each_agent)
     elif algorithm == 'PSO':
         agents = ParticleSwarmOptimizationFleet(env)
         consensus_safe_masking_module = ConsensusSafeActionMasking(navigation_map = env.scenario_map, angle_set_of_each_agent=env.angle_set_of_each_agent, movement_length_of_each_agent = env.movement_length_of_each_agent)
     elif algorithm == 'Greedy':
         agents = OneStepGreedyFleet(env)
+        consensus_safe_masking_module = ConsensusSafeActionMasking(navigation_map = env.scenario_map, angle_set_of_each_agent=env.angle_set_of_each_agent, movement_length_of_each_agent = env.movement_length_of_each_agent)
 
     mean_cleaned_percentage = 0
+    mse_error_accumulated = 0
     average_reward = [0 for _ in range(env.n_teams)]
     average_episode_length = [0 for _ in range(env.n_teams)]
     env.reset_seeds()
@@ -104,9 +120,15 @@ for algorithm in algorithms:
         # Reset algorithms #
         if algorithm in ['LawnMower']:
             for i in range(n_agents):
-                agents[i].reset(int(lawn_mower_rng.uniform(0,8)) if algorithm == 'LawnMower' else None)
+                agents[i].reset(int(lawn_mower_rng.uniform(0,8)) if algorithm == 'LawnMower' else None, env.scenario_map)
+            consensus_safe_masking_module.update_map(env.scenario_map)
+        elif algorithm in ['WanderingAgent']:
+            for i in range(n_agents):
+                agents[i].reset(env.scenario_map)
+            consensus_safe_masking_module.update_map(env.scenario_map)
         elif algorithm in ['PSO']:
             agents.reset()
+            consensus_safe_masking_module.update_map(env.scenario_map)
         
         acc_rw_episode = [0 for _ in range(n_agents)]
         ep_length_per_teams = [0 for _ in range(env.n_teams)]
@@ -119,15 +141,20 @@ for algorithm in algorithms:
             # Take new actions #
             if algorithm  in ['WanderingAgent', 'LawnMower']:
                 actions = {agent_id: agents[agent_id].move(actual_position=position, trash_in_pixel=env.model_trash_map[position[0], position[1]]) for agent_id, position in env.get_active_agents_positions_dict().items()}
+                q_values = {agent_id: np.array([1 if i == actions[agent_id] else 0 for i in range(8)]).astype(float) for agent_id in range(n_agents)}
+                actions = consensus_safe_masking_module.query_actions(q_values=q_values, agents_positions=env.get_active_agents_positions_dict(), model_trash_map=env.model_trash_map, team_id_of_each_agent=env.team_id_of_each_agent)
             elif algorithm == 'PSO':
                 q_values = agents.get_agents_q_values()
-                actions = consensus_safe_masking_module.query_actions(q_values=q_values, agents_positions=env.get_active_agents_positions_dict(), model_trash_map=env.model_trash_map)
+                actions = consensus_safe_masking_module.query_actions(q_values=q_values, agents_positions=env.get_active_agents_positions_dict(), model_trash_map=env.model_trash_map, team_id_of_each_agent=env.team_id_of_each_agent)
             elif algorithm == 'Greedy':
-                actions = agents.get_agents_actions()
+                # actions = agents.get_agents_actions()
+                q_values = agents.get_agents_q_values()
+                actions = consensus_safe_masking_module.query_actions(q_values=q_values, agents_positions=env.get_active_agents_positions_dict(), model_trash_map=env.model_trash_map, team_id_of_each_agent=env.team_id_of_each_agent)
 
             # t0 = time.time()
-            states, new_reward, done = env.step(actions)
+            states, new_reward, done = env.step(actions, dont_calculate_rewards=False)
             acc_rw_episode = [acc_rw_episode[i] + new_reward[i] for i in range(n_agents)]
+            mse_error_accumulated += env.get_model_mse()
             ep_length_per_teams = [ep_length_per_teams[team_id] + 1 if not env.dones_by_teams[team_id] else ep_length_per_teams[team_id] for team_id in env.teams_ids]
             # t1 = time.time()
             # runtime += t1-t0
@@ -155,8 +182,8 @@ for algorithm in algorithms:
             average_episode_length[team] += ep_length_per_teams[team]
     
     # Print algorithm results #
-    print(f'Algorithm: {algorithm}. Scenario: {env.scenario_map_name}, with {n_explorers} explorers and {n_cleaners} cleaners. Dynamic: {env.dynamic}. Reward function: {env.reward_function}, Reward weights: {env.reward_weights}.')
+    print(f'Algorithm: {algorithm}. Scenario: {env.scenario_map_name}, with {n_explorers} explorers and {n_cleaners} cleaners. Dynamic: {env.dynamic}. Obstacles: {env.obstacles}. Reward function: {env.reward_function}, Reward weights: {env.reward_weights}.')
 
     for team in range(env.n_teams):
-        print(f'Average reward for {algorithm} team {team} with {n_explorers if team==0 else n_cleaners} agents: {average_reward[team]/RUNS}, with an episode average length of {average_episode_length[team]/RUNS}. Cleaned percentage: {round(mean_cleaned_percentage/RUNS*100, 2)}%')
+        print(f'Average reward for {algorithm} team {team} with {n_explorers if team==0 else n_cleaners} agents: {average_reward[team]/RUNS}. Episode average length of {average_episode_length[team]/RUNS}. Cleaned percentage: {round(mean_cleaned_percentage/RUNS*100, 2)}%. Accumulated MSE: Mean MSE accumulated: {round(mse_error_accumulated / RUNS, 4)}')
     print()

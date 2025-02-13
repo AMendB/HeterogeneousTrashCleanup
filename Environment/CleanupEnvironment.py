@@ -13,7 +13,7 @@ import json
 from scipy.ndimage import gaussian_filter
 import heapq
 
-from Algorithms.a_star import a_star_find_path
+from Algorithms.a_star2 import a_star_find_path
 
 
 class DiscreteVehicle: # class for single vehicle
@@ -470,7 +470,7 @@ class MultiAgentCleanupEnvironment:
 			# Generate a random inside obstacles map #
 			self.inside_obstacles_map = np.zeros_like(self.scenario_map)
 			if 'big' in self.scenario_map_name:
-				obstacles_pos_indx = self.rng_obstacle_positions.choice(np.arange(0, len(self.visitable_locations)), size=self.rng_obstacle_number.integers(20, 30), replace=False)
+				obstacles_pos_indx = self.rng_obstacle_positions.choice(np.arange(0, len(self.visitable_locations)), size=self.rng_obstacle_number.integers(30, 40), replace=False)
 			else:
 				obstacles_pos_indx = self.rng_obstacle_positions.choice(np.arange(0, len(self.visitable_locations)), size=self.rng_obstacle_number.integers(15, 20), replace=False)
 			# Exclude the initial positions of the agents #
@@ -717,7 +717,7 @@ class MultiAgentCleanupEnvironment:
 				
 		return distance_map, predecessor_map
 	
-	def step(self, actions: dict):
+	def step(self, actions: dict, dont_calculate_rewards = False):
 		"""Execute all updates for each step"""
 
 		# Update the steps #
@@ -746,7 +746,7 @@ class MultiAgentCleanupEnvironment:
 		self.update_model_trash_map()
 
 		# Compute reward #
-		rewards = self.get_reward(actions)
+		rewards = self.get_reward(actions, dont_calculate_rewards)
 
 		# Update the states of the agents #
 		self.capture_states()
@@ -979,9 +979,10 @@ class MultiAgentCleanupEnvironment:
 		
 		return real_trash_map
 
-	def get_reward(self, actions):
+	def get_reward(self, actions, dont_calculate_rewards = False):
 		""" Reward functions. Different reward functions depending on the team of the agent. """
-		
+		if dont_calculate_rewards:
+			return {agent_id: 0 for agent_id in range(self.n_agents)}
 		if self.reward_function == 'negativedistance' or self.reward_function == 'negativedijkstra' or self.reward_function == 'negativeastar':
 			
 			# EXPLORERS TEAM #

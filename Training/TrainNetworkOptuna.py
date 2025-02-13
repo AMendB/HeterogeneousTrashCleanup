@@ -45,7 +45,7 @@ def objective(trial):
 	dynamic_env = True if args.dynamic_env.capitalize() == "True" else False
 	obstacles = True if args.obstacles.capitalize() == "True" else False
 	greedy_training = True if args.greedy_training.capitalize() == "True" else False
-	heuristic_training = True if args.heuristic_training.capitalize() == "True" else False
+	pso_training = True if args.pso_training.capitalize() == "True" else False
 	prewarm_percentage = args.prewarm_percentage
 
 	# Crear entorno
@@ -70,8 +70,8 @@ def objective(trial):
 
 	if greedy_training:
 		training_type = "_greedy"
-	elif heuristic_training:
-		training_type = "_heuristic"
+	elif pso_training:
+		training_type = "_pso"
 	else:
 		training_type = ""
 	global folder
@@ -89,7 +89,7 @@ def objective(trial):
 		epsilon_values=[1.0, 0.05],
 		epsilon_interval=[0.0, epsilon],
 		greedy_training=greedy_training, 
-		heuristic_training=heuristic_training, 
+		pso_training=pso_training, 
 		learning_starts=100, 
 		gamma=gamma,
 		lr=lr,
@@ -128,7 +128,7 @@ if __name__ == "__main__":
 	parser.add_argument('-dev', '--device', type=str, default='cuda:0', help='Device to use: cuda:x, cpu')
 	parser.add_argument('-eps', '--episodes', type=int, default=1000, help='Number of episodes for each trial.')
 	parser.add_argument('-gt', '--greedy_training', type=str, default="False", help='Use greedy training instead of epsilon-greedy training.')
-	parser.add_argument('--heuristic_training', type=str, default="False", help='Use heuristic training instead of epsilon-greedy training.')
+	parser.add_argument('--pso_training', type=str, default="False", help='Use PSO training instead of epsilon-greedy training.')
 	parser.add_argument('--prewarm_percentage', type=float, default=0, help='Percentage of memory to prewarm with Greedy actions.')
 	args = parser.parse_args()
 

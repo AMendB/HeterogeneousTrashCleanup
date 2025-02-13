@@ -18,12 +18,15 @@ with open(f"{folder}/{runtime_json}") as f:
     runtimes = json.load(f)
 
 # Rename the keys
-if 'DRLIndependentgreedy' in runtimes:
+if 'DRLIndNetsGreedy' in runtimes:
     # runtimes.pop('DRLIndependentgreedy')
-    runtimes['DDDQL + Greedy'] = runtimes.pop('DRLIndependentgreedy')
-if 'DRLIndependent_Networks_Per_Team' in runtimes:
+    runtimes['DDDQL + Greedy A-Star'] = runtimes.pop('DRLIndNetsGreedy')
+if 'DRLIndNetsPSO' in runtimes:
+    # runtimes.pop('DRLIndependentgreedy')
+    runtimes['DDDQL + PSO'] = runtimes.pop('DRLIndNetsPSO')
+if 'DRLIndNets' in runtimes:
     # runtimes.pop('DRLIndependent_Networks_Per_Team')
-    runtimes['DDDQL'] = runtimes.pop('DRLIndependent_Networks_Per_Team')
+    runtimes['DDDQL'] = runtimes.pop('DRLIndNets')
 
 # Print mean of the runtimes for each algorithm
 for key, value in runtimes.items():

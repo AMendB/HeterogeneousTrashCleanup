@@ -8,16 +8,21 @@ import os
 
 # Read the data
 folders = [
-    'Evaluation/Results/observationfn', 
+    'Evaluation/Results/CHALLENGING', 
     # 'Evaluation/Results/acoruna_port',     
     # 'Evaluation/Results/comb_port',
     ]
 for folder in folders:
     paths = [
-        f'{folder}/DRLIndependent.4.negativedistance_1_50_2_1_nosharedmodel/metrics.csv',
-        f'{folder}/DRLIndependent.4.negativedistance_1_50_2_1_no6channel/metrics.csv',
-        f'Evaluation/Results/DRLIndependent.4.negativedistance_1_50_2_1_baseline/metrics.csv',
-        f'{folder}/DRLIndependent.4.negativedistance_1.0_50.0_2.0_1.0_nohistory/metrics.csv',
+        f'{folder}/DRLIndNets.6.negativedijkstra_2.626225214357622_14.33181947501113_5.826858678174348_1.7319722255470185',
+        f'{folder}/DRLIndNetsGreedy.6.negativedijkstra_2.626225214357622_14.33181947501113_5.826858678174348_1.7319722255470185',
+        f'{folder}/DRLIndNetsPSO.6.negativedijkstra_2.626225214357622_14.33181947501113_5.826858678174348_1.7319722255470185',
+        f'{folder}/Greedy.6.negativedistance_2.626225214357622_14.33181947501113_5.826858678174348_1.7319722255470185',
+        f'{folder}/GreedyAstar.6.negativeastar_2.626225214357622_14.33181947501113_5.826858678174348_1.7319722255470185',
+        # f'{folder}/LawnMower.6.negativedijkstra_2.626225214357622_14.33181947501113_5.826858678174348_1.7319722255470185',
+        f'{folder}/PSO.6.negativedijkstra_2.626225214357622_14.33181947501113_5.826858678174348_1.7319722255470185',
+        # f'{folder}/WanderingAgent.6.negativedijkstra_2.626225214357622_14.33181947501113_5.826858678174348_1.7319722255470185',
+        # f'{folder}/',
         # f'{folder}/DRLIndependent.4.negativedistance_1.0_50.0_2.0_1.0_add7channel/metrics.csv',
         # f'{folder}/DRLIndependent.4.negativedistance_1.0_50.0_2.0_1.0_no1channel/metrics.csv',
         # f'{folder}/DRLIndependentgreedy.4.negativedistance_1_50_2_0/metrics.csv',
@@ -28,7 +33,7 @@ for folder in folders:
         # f'{folder}/LawnMower.4.negativedistance_1_50_2_0/metrics.csv',
         ]
 
-    dfs = [pd.read_csv(path) for path in paths]
+    dfs = [pd.read_csv(path + '/metrics.csv') for path in paths]
     max_steps_per_episode = dfs[0]['Step'].max()
 
     figsize=(9, 7)
@@ -48,7 +53,7 @@ for folder in folders:
 
     for metrics_df in dfs:
         runs = metrics_df['Run'].unique()
-        algorithm_name = metrics_df['Algorithm'].unique()[0].split('negativedistance.')[-1]
+        algorithm_name = metrics_df['Algorithm'].unique()[0].split('.')[0]
         # algorithm_name = metrics_df['Algorithm'].unique()[0].split('.')[0]
         # if 'DRL' in algorithm_name and 'greedy' in algorithm_name:
         #     algorithm_name = 'DDDQL + Greedy'
@@ -105,6 +110,8 @@ for folder in folders:
         map_name = 'scenario_A'
     elif map_name == 'comb_port':
         map_name = 'scenario_B'
+    elif 'challenging' in map_name:
+        map_name = 'scenario_C'
     # fig_mse.savefig(f'{results_folder}/MSE_{map_name}.svg')
     # fig_mse.savefig(f'{results_folder}/MSE_{map_name}.pdf')
     # fig_cleaned_percentage.savefig(f'{results_folder}/PTC_{map_name}.svg')

@@ -266,6 +266,7 @@ class AlgorithmRecorderAndAnalizer:
 
         # Obtain dataframes #
         numeric_columns = metrics_df.select_dtypes(include=[np.number])
+        number_of_steps_for_each_run = numeric_columns.groupby('Run').size()
         # Padding each episode with less steps than the max_steps_per_episode with the last value in the episode #
         numeric_columns = numeric_columns.groupby('Run').apply(lambda group: group.set_index('Step').reindex(range(self.env.max_steps_per_episode+1), method='ffill').reset_index()).reset_index(drop=True)
         # Calculate mean and std #
@@ -321,7 +322,7 @@ class AlgorithmRecorderAndAnalizer:
         table.loc['AccumulatedReward1-'+name_rw, name_alg] = [np.mean(accrw1['33%']), 1.96*np.std(accrw1['33%'])/np.sqrt(len(self.runs)), np.mean(accrw1['66%']),1.96*np.std(accrw1['66%'])/np.sqrt(len(self.runs)), np.mean(accrw1['100%']), 1.96*np.std(accrw1['100%'])/np.sqrt(len(self.runs))]
         table.loc['AccumulatedReward2-'+name_rw, name_alg] = [np.mean(accrw2['33%']), 1.96*np.std(accrw2['33%'])/np.sqrt(len(self.runs)), np.mean(accrw2['66%']),1.96*np.std(accrw2['66%'])/np.sqrt(len(self.runs)), np.mean(accrw2['100%']), 1.96*np.std(accrw2['100%'])/np.sqrt(len(self.runs))]
         table.loc['AccumulatedReward3-'+name_rw, name_alg] = [np.mean(accrw3['33%']), 1.96*np.std(accrw3['33%'])/np.sqrt(len(self.runs)), np.mean(accrw3['66%']),1.96*np.std(accrw3['66%'])/np.sqrt(len(self.runs)), np.mean(accrw3['100%']), 1.96*np.std(accrw3['100%'])/np.sqrt(len(self.runs))]
-        
+        table.loc['AverageSteps-'+name_rw, name_alg] = [0,0,0,0, number_of_steps_for_each_run.mean(), 1.96*number_of_steps_for_each_run.std()/np.sqrt(len(self.runs))]
 
         # To do WILCOXON TEST, extract the MSE vector of len(vector)=runs from df at steps 33%, 66% and 100% of n_steps_per_episode for each episode #
         n_steps_per_episode = self.env.max_steps_per_episode
@@ -371,16 +372,20 @@ if __name__ == '__main__':
     from Algorithms.DRL.ActionMasking.ActionMaskingUtils import ConsensusSafeActionMasking
 
     algorithms = [
-        'Training/T/observationfn/T_1.0_50.0_2.0_1.0_no1channel_86.59%/policy',
-        # 'Training/T/T_1_50_2_1_baseline_87.39%/policy',
-        # 'Training/T/Definitivos/acoruna_drl_alone/policy',
-        # 'Training/T/Definitivos/acoruna_greedy_training/policy',        
-        # 'WanderingAgent', 
-        # 'LawnMower', 
-        # 'PSO', 
-        # 'Greedy',
-        # 'Training/T/Definitivos/combport_drl_alone/policy',
-        # 'Training/T/Definitivos/combport_greedy_training/policy',
+        # 'Training/T/DEF/Def__negativedijkstra_acoruna_port/policy',
+        # 'Training/T/DEF/Def_greedy_negativedijkstra_acoruna_port/policy',
+        # 'Training/T/DEF/Def_PSO_negativedijkstra_acoruna_port/policy',
+        # 'Training/T/DEF/Def__negativedijkstra_comb_port/policy',
+        # 'Training/T/DEF/Def_greedy_negativedijkstra_comb_port/policy',
+        # 'Training/T/DEF/Def_PSO_negativedijkstra_comb_port/policy',
+        'Training/T/DEF/Def__negativedijkstra_challenging_map_big/policy',
+        'Training/T/DEF/Def_greedy_negativedijkstra_challenging_map_big/policy',
+        'Training/T/DEF/Def_PSO_negativedijkstra_challenging_map_big/policy',
+        'WanderingAgent', 
+        'LawnMower', 
+        'PSO', 
+        'Greedy',
+        'GreedyAstar',
         # 'Training/T//',
         ]
 
@@ -413,15 +418,45 @@ if __name__ == '__main__':
 
     for path_to_training_folder in algorithms:
 
-        if path_to_training_folder in ['WanderingAgent', 'LawnMower', 'PSO', 'Greedy']:
+        if path_to_training_folder in ['WanderingAgent', 'LawnMower', 'PSO', 'Greedy', 'GreedyAstar']:
             selected_algorithm = path_to_training_folder
 
-            # Set config #
-            scenario_map_name = 'acoruna_port' # 'ypacarai_lake', 'acoruna_port', 'marinapalamos', 'comb_port'
+            # If any of the algorithms contains 'Training', extract the scenario_map_name and reward weights from the environment_config.json #
+            if np.any([alg.find('Training') != -1 for alg in algorithms]):
+                # Get one that contains 'Training' #
+                path = [alg for alg in algorithms if alg.find('Training') != -1][0]
+                path = '/'.join(path.split('/')[:-1]) + '/'
+                f = open(path + 'environment_config.json',)
+                config = json.load(f)
+                f.close()
+                scenario_map_name = config['scenario_map_name']
+                reward_weights= tuple(config['reward_weights'])
+                reward_function = config['reward_function']
+                if 'greedyastar' in path_to_training_folder.lower():
+                    reward_function = 'negativeastar'
+                elif 'greedy' in path_to_training_folder.lower():
+                    reward_function = 'negativedistance'
+                else:
+                    reward_function = config['reward_function']
+                n_explorers = env_config['number_of_agents_by_team'][0]
+                n_cleaners = env_config['number_of_agents_by_team'][1]
+                obstacles = env_config['obstacles']
+            else:
+                scenario_map_name = 'acoruna_port' # 'ypacarai_lake', 'acoruna_port', 'marinapalamos', 'comb_port'
+                reward_weights=(1, 50, 2, 0)
+                if 'greedyastar' in path_to_training_folder.lower():
+                    reward_function = 'negativeastar'
+                elif 'greedy' in path_to_training_folder.lower():
+                    reward_function = 'negativedistance' 
+                else:
+                    reward_function = 'negativedijkstra' # 'negativedistance', 'negativedijkstra', 'negativeastar'
+                n_explorers = 2
+                n_cleaners = 2
+                obstacles = False
+            
+            # Set the rest of the environment config #
             n_actions_explorers = 8
             n_actions_cleaners = 8
-            n_explorers = 2
-            n_cleaners = 2
             n_agents = n_explorers + n_cleaners
             movement_length_explorers = 2
             movement_length_cleaners = 1
@@ -432,8 +467,6 @@ if __name__ == '__main__':
             max_distance_travelled_cleaners = 200
             max_steps_per_episode = 150
 
-            reward_function = 'negativedistance' # 'basic_reward', 'extended_reward', 'backtosimple'
-            reward_weights=(1, 50, 2, 0)
 
             # Set initial positions #
             random_initial_positions = True
@@ -459,7 +492,7 @@ if __name__ == '__main__':
                                     reward_function = reward_function,
                                     reward_weights = reward_weights,
                                     dynamic = True,
-                                    obstacles = False,
+                                    obstacles = obstacles,
                                     show_plot_graphics = SHOW_RENDER,
                                     )
             scenario_map = env.scenario_map
@@ -467,12 +500,14 @@ if __name__ == '__main__':
             if selected_algorithm == "LawnMower":
                 lawn_mower_rng = np.random.default_rng(seed=100)
                 selected_algorithm_agents = [LawnMowerAgent(world=scenario_map, number_of_actions=8, movement_length=movement_length_of_each_agent[i], forward_direction=int(lawn_mower_rng.uniform(0,8)), seed=SEED+i, agent_is_cleaner=env.team_id_of_each_agent[i]==env.cleaners_team_id) for i in range(n_agents)]
+                consensus_safe_masking_module = ConsensusSafeActionMasking(navigation_map = env.scenario_map, angle_set_of_each_agent=env.angle_set_of_each_agent, movement_length_of_each_agent = env.movement_length_of_each_agent)
             elif selected_algorithm == "WanderingAgent":
                 selected_algorithm_agents = [WanderingAgent(world=scenario_map, number_of_actions=8, movement_length=movement_length_of_each_agent[i], seed=SEED+i, agent_is_cleaner=env.team_id_of_each_agent[i]==env.cleaners_team_id) for i in range(n_agents)]
+                consensus_safe_masking_module = ConsensusSafeActionMasking(navigation_map = env.scenario_map, angle_set_of_each_agent=env.angle_set_of_each_agent, movement_length_of_each_agent = env.movement_length_of_each_agent)
             elif selected_algorithm == "PSO":
                 selected_algorithm_agents = ParticleSwarmOptimizationFleet(env)
-                consensus_safe_masking_module = ConsensusSafeActionMasking(navigation_map = scenario_map, angle_set_of_each_agent=env.angle_set_of_each_agent, movement_length_of_each_agent = env.movement_length_of_each_agent)
-            elif selected_algorithm == "Greedy":
+                consensus_safe_masking_module = ConsensusSafeActionMasking(navigation_map = env.scenario_map, angle_set_of_each_agent=env.angle_set_of_each_agent, movement_length_of_each_agent = env.movement_length_of_each_agent)
+            elif selected_algorithm == "Greedy" or selected_algorithm == "GreedyAstar":
                 selected_algorithm_agents = OneStepGreedyFleet(env)
 
         else:
@@ -512,13 +547,16 @@ if __name__ == '__main__':
 
             independent_networks_per_team = exp_config['independent_networks_per_team']
             greedy_training = exp_config['greedy_training']
+            pso_training = exp_config['pso_training']
 
-            if independent_networks_per_team and not greedy_training:
-                selected_algorithm = "DRLIndependent_Networks_Per_Team"
-            elif independent_networks_per_team and greedy_training:
-                selected_algorithm = "DRLIndependentgreedy"
+            if independent_networks_per_team and not greedy_training and not pso_training:
+                selected_algorithm = "DRLIndNets"
+            elif independent_networks_per_team and greedy_training and not pso_training:
+                selected_algorithm = "DRLIndNetsGreedy"
+            elif independent_networks_per_team and not greedy_training and pso_training:
+                selected_algorithm = "DRLIndNetsPSO"
             else:
-                selected_algorithm = "DRLNetwork"
+                selected_algorithm = "DRLOneNetwork"
                 # raise NotImplementedError("This algorithm is not implemented. Choose one that is.")
 
             network = MultiAgentDuelingDQNAgent(env=env,
@@ -526,7 +564,7 @@ if __name__ == '__main__':
                                     batch_size=exp_config['batch_size'],
                                     target_update=1000,
                                     seed = SEED,
-                                    concensus_actions=exp_config['concensus_actions'],
+                                    consensus_actions=exp_config['consensus_actions'],
                                     device='cuda:0',
                                     independent_networks_per_team = independent_networks_per_team,
                                     )
@@ -584,9 +622,15 @@ if __name__ == '__main__':
                 network.nogobackfleet_masking_module.reset()
             elif selected_algorithm in ['LawnMower']:
                 for i in range(n_agents):
-                    selected_algorithm_agents[i].reset(int(lawn_mower_rng.uniform(0,8)) if selected_algorithm == 'LawnMower' else None)
+                    selected_algorithm_agents[i].reset(int(lawn_mower_rng.uniform(0,8)) if selected_algorithm == 'LawnMower' else None, env.scenario_map)
+                consensus_safe_masking_module.update_map(env.scenario_map)
+            elif selected_algorithm in ['WanderingAgent']:
+                for i in range(n_agents):
+                    selected_algorithm_agents[i].reset(env.scenario_map)
+                consensus_safe_masking_module.update_map(env.scenario_map)
             elif selected_algorithm in ['PSO']:
                 selected_algorithm_agents.reset()
+                consensus_safe_masking_module.update_map(env.scenario_map)
             
             acc_rw_episode = [0 for _ in range(n_agents)]
 
@@ -598,20 +642,27 @@ if __name__ == '__main__':
                 # Take new actions #
                 t0 = time.perf_counter()
                 if 'DRL' in selected_algorithm:
-                    actions = network.select_concensus_actions(states=states, positions=env.get_active_agents_positions_dict(), n_actions_of_each_agent=env.n_actions_of_each_agent, done = done, deterministic=True)
+                    states = {agent_id: np.float16(np.uint8(state * 255)/255) for agent_id, state in states.items()} # Get the same format as training
+                    actions = network.select_consensus_actions(states=states, positions=env.get_active_agents_positions_dict(), n_actions_of_each_agent=env.n_actions_of_each_agent, done = done, deterministic=True)
                 elif selected_algorithm in ['WanderingAgent', 'LawnMower']:
                     actions = {agent_id: selected_algorithm_agents[agent_id].move(actual_position=position, trash_in_pixel=env.model_trash_map[position[0], position[1]]) for agent_id, position in env.get_active_agents_positions_dict().items()}
+                    q_values = {agent_id: np.array([1 if i == actions[agent_id] else 0 for i in range(8)]).astype(float) for agent_id in range(n_agents)}
+                    actions = consensus_safe_masking_module.query_actions(q_values=q_values, agents_positions=env.get_active_agents_positions_dict(), model_trash_map=env.model_trash_map, team_id_of_each_agent=env.team_id_of_each_agent)
                 elif selected_algorithm == 'PSO':
                     q_values = selected_algorithm_agents.get_agents_q_values()
-                    actions = consensus_safe_masking_module.query_actions(q_values=q_values, agents_positions=env.get_active_agents_positions_dict(), model_trash_map=env.model_trash_map)
-                elif selected_algorithm == 'Greedy':
-                    actions = selected_algorithm_agents.get_agents_actions()
+                    actions = consensus_safe_masking_module.query_actions(q_values=q_values, agents_positions=env.get_active_agents_positions_dict(), model_trash_map=env.model_trash_map, team_id_of_each_agent=env.team_id_of_each_agent)
+                elif selected_algorithm == 'Greedy' or selected_algorithm == 'GreedyAstar':
+                    q_values = selected_algorithm_agents.get_agents_q_values()
+                    actions = consensus_safe_masking_module.query_actions(q_values=q_values, agents_positions=env.get_active_agents_positions_dict(), model_trash_map=env.model_trash_map, team_id_of_each_agent=env.team_id_of_each_agent)
+                    
+                    # actions = selected_algorithm_agents.get_agents_actions()
+
                     # q_values = selected_algorithm_agents.get_agents_q_values()
                     # actions_qs = {agent_id: max(q_values[agent_id], key=q_values[agent_id].get) for agent_id in q_values.keys()}
                 t1 = time.perf_counter()
                 runtimes_dict[selected_algorithm].append(t1-t0)
 
-                states, new_reward, done = env.step(actions)
+                states, new_reward, done = env.step(actions, dont_calculate_rewards=True)
                 acc_rw_episode = [acc_rw_episode[i] + new_reward[i] for i in range(n_agents)]
 
                 # print(f"Step {env.steps}")
@@ -707,5 +758,5 @@ if __name__ == '__main__':
             cv2.imwrite(f'Evaluation/Results/{EXTRA_NAME}HeatmapsAverage{RUNS}eps_{n_agents}A.png', collage)
 
             # Remove temp folders #
-            for path in saving_paths:
-                rmtree(f'{path}/Paths')
+            # for path in saving_paths:
+            #     rmtree(f'{path}/Paths')
